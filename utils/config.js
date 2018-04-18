@@ -1,11 +1,14 @@
 const fs = require('fs')
 const os = require('os')
-
+const cache = require('./cache')
 const config_path = process.cwd() +'/config.json'
 
 var data = require('../config.json')
 
 var app , handler
+
+
+
 
 async function save(d){
   if(d.token) data.token = d.token

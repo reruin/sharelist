@@ -9,18 +9,77 @@ block content
   section.wrap
     .menu
       - if(access)
-        a.btn.btn-danger(href='?a=clear_cache') 清除缓存
-        a.btn.btn-default(href='?a=signout') 登出
 
+        .panel.panel-default
+          .panel-heading
+            | 操作
+          .panel-body
+            form.form-horizontal(method='post')
+              input(type='hidden',name='a',value='clear_cache')
+              button.btn.btn-danger(href='?a=clear_cache') 清除缓存
+
+        .panel.panel-default
+          .panel-heading
+            | 口令
+          .panel-body
+            form.form-horizontal(method='post')
+              input(type='hidden',name='a',value='token')
+              .form-group
+                label.control-label.col-sm-2(for='token') 密码
+                .col-sm-10
+                  input.form-control(type='text', name='token' , placeholder='新口令',required)
+              .form-group
+                .col-sm-offset-2.col-sm-10
+                  button.btn.btn-default(type='submit') 提交
+        .panel.panel-default
+          .panel-heading
+            | 虚拟路径
+            a.create-path 添加
+          .panel-body
+            form.form-horizontal#j_path(method='post')
+              .group-path
+                input(type='hidden',name='a',value='path')
+                each i in config.path
+                  .form-group.item
+                    label.control-label.col-sm-2(for='path') 路径
+                    .col-sm-2
+                      input.form-control(type='text', name='name', value=i.name,placeholder='名称',required)
+                    .col-sm-7
+                      input.form-control(type='text', name='path', value=i.path,placeholder='GoogleDrive 分享的文件夹ID',required)
+                    .col-sm-1
+                      button.btn.btn-default.remove-path(type='button') -
+              .form-group
+                .col-sm-offset-2.col-sm-10
+                  button.btn.btn-default(type='submit') 提交
+            
       - else
         .input-group
-          input.form-control(type='text',name='token', placeholder='输入口令')
+          input.form-control#j_token(type='text',name='token', placeholder='输入口令')
           span.input-group-btn
             button.btn.btn-default#signin(type='button') 登录
-        script.
-          document.querySelector('#signin').addEventListener('click' , function(){
-            location.href = '/manage/'+ document.querySelector('input').value
-          })
+  script(scr='https://cdn.bootcss.com/jquery/3.3.1/jquery.min.js')
+  
+  script.
+    $(function(){
+      $('#signin').on('click' , function(){
+        location.href = '/manage/'+ $('#j_token').val()
+      })
+
+      var item
+      if($('.item').length){
+        item = $('.item:first').clone()
+        item.find('input').val('')
+      }
+      $('body').on('click','.create-path' , function(){
+        $('.group-path').append( item.clone() )
+      })
+      .on('click' ,'.remove-path' , function(){
+        $(this).parents('.item').remove()
+      })
+
+      $('.sl-message').fadeOut(3000)
+    })
+   
 
   include footer
 

@@ -9,7 +9,6 @@ const koaStatic = require('koa-static')
 const less = require('./middleware/koa-less')
 const addr = require('./middleware/koa-addr')
 const paths = require('./middleware/koa-paths')
-const install = require('./middleware/koa-gdlist-install')
 
 const routers = require('./routers/index')
 const cors = require('@koa/cors');

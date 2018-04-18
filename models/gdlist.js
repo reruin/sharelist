@@ -2,7 +2,7 @@
 const http = require('../utils/http')
 const base = require('../utils/base')
 const cache = require('../utils/cache')
-const config = require('../config')
+const config = require('../utils/config')
 const host = 'https://drive.google.com'
 const format = require('../utils/format')
 
@@ -86,13 +86,12 @@ const file = async(id) =>{
 // path => gd folder => files
 const path = async(p) => {
   let pl = p.join('.') , hit , resp
-
   if(cache(pl)){
     hit = cache(pl)
   }
   else{
     if(pl == ''){
-      hit = {id:config.path , type:'folder'}
+      hit = mount()
     }
 
     else{
@@ -126,6 +125,31 @@ const path = async(p) => {
 
   return resp
   
+}
+
+const mount = () =>{
+  let data = config.data , key
+  if(Array.isArray( data.path )){
+    if(data.path.length == 1){
+      key = data.path[0].path
+    }else{
+      //根路径不判断缓存，防止添加路径路径时丢失
+      let disk = data.path.map((i,index)=>({
+        id : i.path,
+        name : i.name,
+        size : '-',
+        updated_at : '-',
+        type : 'folder'
+      }))
+      cache('root' , disk)
+      key = 'root'
+    }
+    
+  }else{
+    key = data.path
+  }
+  return {id:key , type:'folder'}
+
 }
 
 

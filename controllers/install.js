@@ -15,10 +15,18 @@ module.exports = {
   }
   ,
   async save(ctx){
-    let { token , path } =  ctx.request.body
+    let { token , name , path } =  ctx.request.body
+    let cfg = {token}
+    if(Array.isArray(name)){
+      cfg.path = name.map((i ,index)=>{
+        return { name:i , path:path[index]}
+      })
+    }else{
+      cfg.path = [{name , path}]
+    }
     let result = { status : 0 , message : ''}
     if( token && path ){
-      await config.save({token , path})
+      await config.save( cfg )
       ctx.redirect('/')
     }else{
       result.status = -1

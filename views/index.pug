@@ -16,7 +16,7 @@ block content
     ul.list
       each i in data
         li
-          a.clearfix(href=url+'/'+i.name , target=i.type == 'folder' ? '' : '_blank')
+          a.clearfix(href=url+'/'+i.name+(i.type=='folder'?'':'?preview') , target=i.type == 'folder' ? '' : '_blank')
             .row
               span.file-name.col-md-7.col-sm-6.col-xs-9
                 i.ic(class=i.type)

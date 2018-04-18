@@ -30,7 +30,7 @@ wget https://github.com/reruin/gdlist/archive/master.zip -O gdlist.zip
 unzip gdlist
 cd gdlist-master
 npm install yarn -g
-yarn pm2 -g
+yarn add pm2 -g
 pm2 start bin/www
 pm2 save
 pm2 startup

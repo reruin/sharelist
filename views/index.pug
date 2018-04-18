@@ -1,0 +1,35 @@
+extends layout
+
+block content
+  
+  header
+    .wrap
+      -if(parent)
+        a.back(href=parent)
+      a.home(href='/') GDList
+  section.wrap
+    .list-header
+      .row
+        .col-md-7.col-sm-6.col-xs-10 File
+        .col-md-2.col-sm-2.col-xs-2.text-right Size
+        .col-md-3.col-sm-4.hidden-xs.text-right Last Modified
+    ul.list
+      each i in data
+        li
+          a.clearfix(href=url+'/'+i.name , target=i.type == 'folder' ? '' : '_blank')
+            .row
+              span.file-name.col-md-7.col-sm-6.col-xs-9
+                i.ic(class=i.type)
+                | #{i.name}
+              span.file-size.col-md-2.col-sm-2.col-xs-3.text-right
+                | #{i.size}
+              span.file-modified.col-md-3.col-sm-4.hidden-xs.text-right
+                | #{i.updated_at}
+      
+  include footer
+
+
+
+  
+
+  

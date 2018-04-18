@@ -1,0 +1,29 @@
+extends layout
+
+block content
+  include message
+  
+  header
+    .wrap
+      a.home(href='/') GDList
+  section.wrap
+    .page-header
+      h4.text-center 初始化
+    form.form-horizontal(action='',method='post')
+      .form-group
+        label.control-label.col-sm-2(for='path') 根路径
+        .col-sm-10
+          input.form-control(type='text', name='path',placeholder='GoogleDrive 分享的文件夹ID')
+      .form-group
+        label.control-label.col-sm-2(for='token') 密码
+        .col-sm-10
+          input.form-control(type='text', name='token' , placeholder='用于管理登录')
+      
+      .form-group
+        .col-sm-offset-2.col-sm-10
+          button.btn.btn-default(type='submit') 提交
+
+
+  include footer
+
+  

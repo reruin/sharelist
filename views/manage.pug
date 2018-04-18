@@ -1,0 +1,27 @@
+extends layout
+
+block content
+  include message
+  
+  header
+    .wrap
+      a.home(href='/') GDList
+  section.wrap
+    .menu
+      - if(access)
+        a.btn.btn-danger(href='?a=clear_cache') 清除缓存
+        a.btn.btn-default(href='?a=signout') 登出
+
+      - else
+        .input-group
+          input.form-control(type='text',name='token', placeholder='输入口令')
+          span.input-group-btn
+            button.btn.btn-default#signin(type='button') 登录
+        script.
+          document.querySelector('#signin').addEventListener('click' , function(){
+            location.href = '/manage/'+ document.querySelector('input').value
+          })
+
+  include footer
+
+  

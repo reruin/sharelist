@@ -1,0 +1,25 @@
+extends layout
+
+block content
+  
+  header.detail
+      a.home #{data.name}
+      a.download.ic.download(href=data.url)
+  section.wrap
+    .detail
+      -if(data.type == 'image')
+        img(src=data.url)
+      -else if(data.type == 'video')
+        video(src=data.url,controls='controls',autoplay='autoplay')
+      -else if(data.type == 'audio')
+        audio(src=data.url,controls='controls',autoplay='autoplay')
+      -else
+        p 暂无法预览   
+  hr
+  include footer
+
+
+
+  
+
+  

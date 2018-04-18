@@ -1,7 +1,7 @@
 const service = require('./../models/gdlist')
 const base = require('../utils/base')
 const request = require('request')
-const config = require('../utils/config')
+const config = require('../config')
 const cache = require('../utils/cache')
 
 module.exports = {

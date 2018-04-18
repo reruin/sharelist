@@ -2,7 +2,7 @@
 const http = require('../utils/http')
 const base = require('../utils/base')
 const cache = require('../utils/cache')
-const config = require('../utils/config')
+const config = require('../config')
 const host = 'https://drive.google.com'
 const format = require('../utils/format')
 

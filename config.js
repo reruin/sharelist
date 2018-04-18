@@ -1,14 +1,9 @@
 const fs = require('fs')
 const os = require('os')
-const cache = require('./cache')
-const config_path = process.cwd() +'/config.json'
+const config_path = process.cwd() +'/config/config.json'
+const port = process.env.PORT || 33001
 
-var data = require('../config.json')
-
-var app , handler
-
-
-
+var data = {port}
 
 async function save(d){
   if(d.token) data.token = d.token
@@ -32,7 +27,6 @@ function installed(){
   return data.token && data.path
 }
 
-
 module.exports = {
- data, save , installed
+ data, save , installed , port
 }

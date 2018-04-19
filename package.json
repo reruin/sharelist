@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "bin": "bin/www",
   "repository": "https://github.com/reruin/gdlist",
-  "license": "Apache License 2.0",
+  "license": "Apache-2.0",
   "scripts": {
     "start": "set NODE_ENV=dev && node bin/www",
     "dev": "./node_modules/.bin/nodemon app",

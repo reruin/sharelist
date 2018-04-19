@@ -5,6 +5,16 @@ const port = process.env.PORT || 33001
 
 var data = {port}
 
+try{
+  var cfg =fs.readFileSync(config_path,'utf-8');  
+  if(cfg){
+    data = JSON.parse(cfg)
+  }
+  console.log('Load config from file')
+}catch(e){
+
+}
+
 async function save(d){
   if(d.token) data.token = d.token
   if(d.path) data.path = d.path

@@ -1,0 +1,8 @@
+version: "3"
+services:
+  gdlist:
+    image: reruin/gdlist
+    volumes:
+      - $HOME/gdlist:/app/config
+    ports:
+      - "33001:33001"

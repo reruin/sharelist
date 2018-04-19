@@ -2,7 +2,7 @@
 const http = require('../utils/http')
 const base = require('../utils/base')
 const cache = require('../utils/cache')
-const config = require('../utils/config')
+const config = require('../config')
 const host = 'https://drive.google.com'
 const format = require('../utils/format')
 
@@ -37,11 +37,13 @@ const folder = async(id) => {
   let { body } = await http.get(host+'/drive/folders/'+id)
   let code = (body.match(/window\['_DRIVE_ivd'\]\s*=\s*'([^']+)'/) || ['',''])[1]
   let data = code.replace(/\\x22/g,'"').replace(/\\x5b/g,'[').replace(/\\x5d/g,']').replace(/\\(r|n)/g,'')
-
-  data = JSON.parse(data)
-  if(data.length){
-    data = data[0]
+  if(data){
+    data = JSON.parse(data)
+    if(data.length){
+      data = data[0]
+    }
   }
+  
   let gdlist = data ? data.map((i)=>{
     return {
       id:i[0],

@@ -1,4 +1,4 @@
-const config = require('../utils/config')
+const config = require('../config')
 
 module.exports = async (ctx , next)=>{
   if(config.data.path && config.data.path.length){

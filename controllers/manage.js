@@ -1,4 +1,3 @@
-const service = require('./../models/gdlist')
 const base = require('../utils/base')
 const request = require('request')
 const config = require('../config')
@@ -34,14 +33,14 @@ module.exports = {
     }
 
     if(act == 'path'){
-      let { name , path  } = ctx.request.body
+      let { name , path , provider  } = ctx.request.body
       
       if(Array.isArray(name)){
         path = name.map((i ,index)=>{
-          return { name:i , path:path[index]}
+          return { name:i , path:provider[index]+'://'+path[index]}
         })
       }else{
-        path = [{name , path}]
+        path = [{name , path:provider+'://'+path}]
       }
 
       let result = { status : 0 , message : ''}

@@ -3,7 +3,7 @@ MAINTAINER reruin
 
 ADD . /app/
 WORKDIR /app
-VOLUME /app/config
+VOLUME /app/cache
 
 RUN npm install
 

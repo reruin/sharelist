@@ -12,6 +12,7 @@
   },
   "dependencies": {
     "@koa/cors": "^2.2.1",
+    "fast-xml-parser": "^3.3.9",
     "koa": "^2.2.0",
     "koa-bodyparser": "^3.2.0",
     "koa-json": "^2.0.2",

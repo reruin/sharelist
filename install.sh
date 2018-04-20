@@ -3,7 +3,7 @@
 PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 
 echo "+============================================================+"
-echo "|                       GDList Installer                     |"
+echo "|                    ShareList Installer                     |"
 echo "|                                                            |"
 echo "|                                         <reruin@gmail.com> |"
 echo "|------------------------------------------------------------|"
@@ -11,7 +11,7 @@ echo "|                                         https://reruin.net |"
 echo "+============================================================+"
 echo ""
 
-echo -e "\n|   GDList is installing ... "
+echo -e "\n|   ShareList is installing ... "
 
 # deps
 if [ -n "$(command -v apt-get)" ]
@@ -26,13 +26,10 @@ then
   yum -y install nodejs >/dev/null 2>&1
 fi
 
-wget https://github.com/reruin/gdlist/archive/master.zip -O gdlist.zip
-unzip gdlist
-cd gdlist-master
 npm install yarn -g
 yarn add pm2 -g
 pm2 start bin/www
 pm2 save
 pm2 startup
 
-echo -e "|\n|   Success: The GDList has been installed\n|"
+echo -e "|\n|   Success: ShareList has been installed\n|"

@@ -1,3 +1,5 @@
+const fastXmlParser = require('fast-xml-parser');
+
 function rnd(min , max){
   return Math.floor(min+Math.random()*(max-min));  
 
@@ -32,5 +34,21 @@ module.exports = {
 
   base64_decode(v){
     return new Buffer(v.replace(/_/g,'/'), 'base64').toString()
+  },
+
+  params (url){
+    url = url.split('?')[1]
+    let reg = /(?:&)?([^=]+)=([^&]*)/ig,
+    obj = {},
+    m
+
+    while(m = reg.exec(url)) obj[m[1]] = m[2]
+
+    return obj
+  },
+
+  xml2json(d){
+    return fastXmlParser.parse(d);
+
   }
 }

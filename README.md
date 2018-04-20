@@ -1,9 +1,8 @@
-# gdlist
+# ShareList
 
-Google Drive List
+在线挂载 GoogleDrive、OneDrive 的简易工具 ， 只需提供分享文件夹ID。
 
-
-## Install
+## 安装
 ### Shell script
 ````bash
 wget --no-check-certificate -qO- https://raw.githubusercontent.com/reruin/gdlist/master/install.sh | bash
@@ -22,4 +21,6 @@ OR
 docker-compose up
 ````
 
-It will be available at: `http://localhost:33001`
+访问 `http://localhost:33001` 
+
+

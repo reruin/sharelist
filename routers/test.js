@@ -3,9 +3,9 @@
  */
 
 const router = require('koa-router')()
-const sharelist = require('../controllers/sharelist')
+const onedirve = require('../controllers/onedrive')
 
 const routers = router
-  .get('/:path(.*)', sharelist.index)
+  .get('/', onedirve.index)
  
 module.exports = routers

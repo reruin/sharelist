@@ -25,8 +25,12 @@ block content
             .group-path
               .form-group.item
                 .col-sm-2
+                  select.form-control(name='provider',placeholder='类型',required)
+                    option(value='gd') GoogleDrive
+                    option(value='od') OneDrive
+                .col-sm-2
                   input.form-control(type='text', name='name',placeholder='名称',required)
-                .col-sm-9
+                .col-sm-7
                   input.form-control(type='text', name='path',placeholder='GoogleDrive 分享的文件夹ID',required)
                 .col-sm-1
                   button.btn.btn-default.remove-path(type='button') -

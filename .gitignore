@@ -3,6 +3,7 @@
 
 *.css
 db.json
+config.json
 build/
 # Logs
 logs

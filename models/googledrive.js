@@ -9,10 +9,7 @@ const format = require('../utils/format')
 const last_hash = {}
 
 const guest_type = (v)=> {
-  if(v == '' || v == null){
-    return 'folder'
-  }
-  else if(['mp4' , 'mpeg' , 'wmv' , 'webm' , 'avi' , 'rmvb' , 'mov' , 'mkv','f4v','flv'].indexOf(v) >= 0){
+  if(['mp4' , 'mpeg' , 'wmv' , 'webm' , 'avi' , 'rmvb' , 'mov' , 'mkv','f4v','flv'].indexOf(v) >= 0){
     return 'video'
   }
   else if(['mp3' , 'm4a' ,'wav' , 'ape' , 'flac' , 'ogg'].indexOf(v)>=0){
@@ -31,9 +28,8 @@ const guest_type = (v)=> {
 
 // gd folder => files
 const folder = async(id) => {
-  if(cache(id)){
-    return cache(id)
-  }
+  if(cache(id)) return cache(id)
+
   let { body } = await http.get(host+'/drive/folders/'+id)
   let code = (body.match(/window\['_DRIVE_ivd'\]\s*=\s*'([^']+)'/) || ['',''])[1]
   let data = code.replace(/\\x22/g,'"').replace(/\\x5b/g,'[').replace(/\\x5d/g,']').replace(/\\(r|n)/g,'')
@@ -43,8 +39,8 @@ const folder = async(id) => {
       data = data[0]
     }
   }
-  
-  let gdlist = data ? data.map((i)=>{
+  let children = data ? data.map((i)=>{
+    // console.log(i[3],i[44],i[13])
     return {
       id:i[0],
       name:i[2],
@@ -54,14 +50,14 @@ const folder = async(id) => {
       updated_at:format.datetime(i[10]),
       size:format.byte(i[13]),
       ext:i[44],
-      type : guest_type(i[44])
+      type : i[13] ? guest_type(i[44]) : 'folder',
+      provider:'gd',
+
     }
   }) : []
 
-
-  cache(id , gdlist)
-
-  return gdlist
+  cache(id,children)
+  return children
 }
 
 
@@ -85,74 +81,5 @@ const file = async(id) =>{
 }
 
 
-// path => gd folder => files
-const path = async(p) => {
-  let pl = p.join('.') , hit , resp
-  if(cache(pl)){
-    hit = cache(pl)
-  }
-  else{
-    if(pl == ''){
-      hit = mount()
-    }
 
-    else{
-      let parent = await path( p.slice(0,-1) )
-
-      let cur = decodeURIComponent(p[p.length - 1])
-
-      if( parent ){
-        let hash = base.hash(parent , 'name')
-        if(hash[cur]){
-          hit = hash[cur]
-          cache(pl , hit)
-        }else{
-          return false
-        }
-      }else{
-        return false
-      }
-    }
-  }
-
-  // /a/b/c
-  if( hit.type == 'folder' ){
-    resp = await folder(hit.id)
-  }
-  // /a/b/c.jpg
-  else{
-    resp = await file(hit.id)
-    resp = { url : resp , type : hit.type , name : hit.name}
-  }
-
-  return resp
-  
-}
-
-const mount = () =>{
-  let data = config.data , key
-  if(Array.isArray( data.path )){
-    if(data.path.length == 1){
-      key = data.path[0].path
-    }else{
-      //根路径不判断缓存，防止添加路径路径时丢失
-      let disk = data.path.map((i,index)=>({
-        id : i.path,
-        name : i.name,
-        size : '-',
-        updated_at : '-',
-        type : 'folder'
-      }))
-      cache('root' , disk)
-      key = 'root'
-    }
-    
-  }else{
-    key = data.path
-  }
-  return {id:key , type:'folder'}
-
-}
-
-
-module.exports = { path }
+module.exports = { folder , file }

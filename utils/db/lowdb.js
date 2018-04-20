@@ -1,7 +1,7 @@
 const low = require('lowdb')
 const FileSync = require('lowdb/adapters/FileSync')
 // const lodashId = require('lodash-id')
-const adapter = new FileSync(process.cwd()+'/db.json')
+const adapter = new FileSync(process.cwd()+'/cache/db.json')
 const db = low(adapter)
 
 db._.mixin({

@@ -1,6 +1,6 @@
 const fs = require('fs')
 const os = require('os')
-const config_path = process.cwd() +'/config/config.json'
+const config_path = process.cwd() +'/cache/config.json'
 const port = process.env.PORT || 33001
 
 var data = {port}

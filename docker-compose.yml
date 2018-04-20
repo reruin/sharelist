@@ -1,8 +1,8 @@
 version: "3"
 services:
   gdlist:
-    image: reruin/gdlist
+    image: reruin/sharelist
     volumes:
-      - $HOME/gdlist:/app/config
+      - $HOME/gdlist:/app/cache
     ports:
       - "33001:33001"

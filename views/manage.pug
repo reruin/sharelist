@@ -41,11 +41,14 @@ block content
                 input(type='hidden',name='a',value='path')
                 each i in config.path
                   .form-group.item
-                    label.control-label.col-sm-2(for='path') 路径
+                    .col-sm-2
+                      select.form-control(name='provider', value=(i.path.match(/^.*(?=\:\/\/)/) || [''])[0],placeholder='类型',required)
+                        option(value='gd', selected=/^gd\:\/\//.test(i.path) ? 'selected' : null) GoogleDrive
+                        option(value='od', selected=/^od\:\/\//.test(i.path) ? 'selected' : null) OneDrive
                     .col-sm-2
                       input.form-control(type='text', name='name', value=i.name,placeholder='名称',required)
                     .col-sm-7
-                      input.form-control(type='text', name='path', value=i.path,placeholder='GoogleDrive 分享的文件夹ID',required)
+                      input.form-control(type='text', name='path', value=i.path.replace(/^.*\:\/\//,''),placeholder='GoogleDrive/OneDrive 分享的文件夹ID',required)
                     .col-sm-1
                       button.btn.btn-default.remove-path(type='button') -
               .form-group

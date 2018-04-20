@@ -1,4 +1,4 @@
-const service = require('./../models/gdlist')
+const service = require('./../models/index')
 const base = require('../utils/base')
 const request = require('request')
 const cache = {}
@@ -31,41 +31,6 @@ module.exports = {
         ctx.redirect( data.url )
       }
       
-    }
-    
-  },
-
-  async link(ctx) {
-    let reallink = ''
-
-    let id  = ctx.params.id
-
-    let url = await service.link(id)
-
-    let act = ctx.query.output
-
-    if( miss ){
-      if( act == 'json'){
-        ctx.body = {status : -1 , message : "can't find"}
-      }else{
-        ctx.body = "can't find this file"
-      }
-    }else{
-      if( act == 'proxy' ){
-        ctx.body = ctx.req.pipe(request(reallink))
-      }
-      else if(act == 'raw'){
-        ctx.body = reallink
-      }
-      else if(act == 'json'){
-        ctx.body = {status : 0, url : reallink , ext , title}
-      }
-      else if(act == 'preview'){
-        ctx.body = output(reallink , ext)
-      }
-      else{
-        ctx.redirect( reallink )
-      }
     }
     
   }

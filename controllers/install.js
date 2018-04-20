@@ -15,14 +15,14 @@ module.exports = {
   }
   ,
   async save(ctx){
-    let { token , name , path } =  ctx.request.body
+    let { token , name , path , provider} =  ctx.request.body
     let cfg = {token}
     if(Array.isArray(name)){
       cfg.path = name.map((i ,index)=>{
-        return { name:i , path:path[index]}
+        return { name:i , path:provider[index]+'://'+path[index]}
       })
     }else{
-      cfg.path = [{name , path}]
+      cfg.path = [{name , path:provider+'://'+path}]
     }
     let result = { status : 0 , message : ''}
     if( token && path ){

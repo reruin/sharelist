@@ -675,6 +675,12 @@ extsprintf@^1.2.0:
   version "1.4.0"
   resolved "https://registry.yarnpkg.com/extsprintf/-/extsprintf-1.4.0.tgz#e2689f8f356fad62cca65a3a91c5df5f9551692f"
 
+fast-xml-parser@^3.3.9:
+  version "3.3.9"
+  resolved "https://registry.yarnpkg.com/fast-xml-parser/-/fast-xml-parser-3.3.9.tgz#1fe8aa6c2b8005276987c3ef77f92994d61e08d9"
+  dependencies:
+    nimnjs "^1.2.2"
+
 fclone@1.0.11, fclone@^1:
   version "1.0.11"
   resolved "https://registry.yarnpkg.com/fclone/-/fclone-1.0.11.tgz#10e85da38bfea7fc599341c296ee1d77266ee640"
@@ -1463,6 +1469,21 @@ needle@^2.1.0:
 negotiator@0.6.1:
   version "0.6.1"
   resolved "https://registry.yarnpkg.com/negotiator/-/negotiator-0.6.1.tgz#2b327184e8992101177b28563fb5e7102acd0ca9"
+
+nimn-date-parser@^1.0.0:
+  version "1.0.0"
+  resolved "https://registry.yarnpkg.com/nimn-date-parser/-/nimn-date-parser-1.0.0.tgz#4ce55d1fd5ea206bbe82b76276f7b7c582139351"
+
+nimn_schema_builder@^1.0.0:
+  version "1.1.0"
+  resolved "https://registry.yarnpkg.com/nimn_schema_builder/-/nimn_schema_builder-1.1.0.tgz#b370ccf5b647d66e50b2dcfb20d0aa12468cd247"
+
+nimnjs@^1.2.2:
+  version "1.2.2"
+  resolved "https://registry.yarnpkg.com/nimnjs/-/nimnjs-1.2.2.tgz#503ecba3f0119dbc312c31d53b21a14442fa9bc4"
+  dependencies:
+    nimn-date-parser "^1.0.0"
+    nimn_schema_builder "^1.0.0"
 
 node-pre-gyp@^0.6.39:
   version "0.6.39"

@@ -1,8 +1,8 @@
 {
-  "name": "gdlist",
+  "name": "sharelist",
   "version": "0.1.0",
   "bin": "bin/www",
-  "repository": "https://github.com/reruin/gdlist",
+  "repository": "https://github.com/reruin/sharelist",
   "license": "Apache-2.0",
   "scripts": {
     "start": "set NODE_ENV=dev && node bin/www",
@@ -12,7 +12,6 @@
   },
   "dependencies": {
     "@koa/cors": "^2.2.1",
-    "fast-xml-parser": "^3.3.9",
     "koa": "^2.2.0",
     "koa-bodyparser": "^3.2.0",
     "koa-json": "^2.0.2",

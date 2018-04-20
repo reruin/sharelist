@@ -51,7 +51,6 @@ const updateAuth = async() => {
     let params = base.params(resp.headers.location)
     _authkey = params.authkey
     let cid = params.resid.split('!')[0].toLowerCase()
-    console.log('params',params)
     resp = await http.get('https://onedrive.live.com/?authkey='+params.authkey+'&id='+params.resid+'&cid='+cid , {followRedirect:false})
 
     _cookie = resp.headers['set-cookie'].join('; ')
@@ -165,7 +164,6 @@ const conv = async(shareid)=>{
 // 似乎没有办法只根据 id + authkey 获取到 ~
 const file = async(id , cid) =>{
   let resp
-  console.log('get file from cid:',cid)
   if(cache(cid)){
     resp = cache(cid)
   }else{

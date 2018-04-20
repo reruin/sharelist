@@ -5,7 +5,7 @@ block content
   
   header
     .wrap
-      a.home(href='/') GDList
+      a.home(href='/') ShareList
   section.wrap
     .menu
       - if(access)
@@ -60,7 +60,7 @@ block content
           input.form-control#j_token(type='text',name='token', placeholder='输入口令')
           span.input-group-btn
             button.btn.btn-default#signin(type='button') 登录
-  script(scr='https://cdn.bootcss.com/jquery/3.3.1/jquery.min.js')
+  script(src='https://cdn.bootcss.com/jquery/3.3.1/jquery.min.js')
   
   script.
     $(function(){

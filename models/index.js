@@ -59,7 +59,6 @@ const path = async(p) => {
       }
     }
   }
-
   let provider = providers[hit.provider]
   if(provider){
     // folder /a/b/c
@@ -69,7 +68,6 @@ const path = async(p) => {
 
       if(cache(hit.id)){
         resp = cache(hit.id)
-        console.log('hit cache',hit.id)
       }else{
         resp = await provider.folder(hit.id)
         cache(hit.id , resp)
@@ -94,7 +92,7 @@ const mount = () =>{
     // 如果只有一个目录 则直接列出
     if(data.path.length == 1){
       key = data.path[0].path.replace(/^.*\:\/\//,'')
-      provider = (key.match(/^.*(?=\:\/\/)/) || [''])[0]
+      provider = (data.path[0].path.match(/^.*(?=\:\/\/)/) || [''])[0]
     }else{
       //根路径不判断缓存，防止添加路径路径时丢失
       let disk = data.path.map((i,index)=>({

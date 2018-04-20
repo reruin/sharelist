@@ -11,7 +11,7 @@ module.exports = {
     opts.url = url
     opts.method = 'HEAD'
     opts.headers = base.extend(opts.headers || {} , headers)
-    opts.proxy = 'http://127.0.0.1:1087'
+    // opts.proxy = 'http://127.0.0.1:1087'
     return new Promise(function (resolve, reject) {
       request(opts, function(error, response, body){
           resolve(response)
@@ -34,7 +34,7 @@ module.exports = {
       opts.headers = base.extend(opts.headers || {} , headers)
     }
     opts.url = url
-    opts.proxy = 'http://127.0.0.1:1087'
+    // opts.proxy = 'http://127.0.0.1:1087'
     
 		return new Promise(function (resolve, reject) {
 			request(opts, function(error, response, body){

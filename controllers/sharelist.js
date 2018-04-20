@@ -9,10 +9,10 @@ module.exports = {
     let data = await service.path(ctx.paths)
     let base_url = ctx.url == '/' ? '' : ctx.url
     let parent = ctx.paths.length ? ('/' + ctx.paths.slice(0,-1).join('/')) : ''
+    
     if( data === false){
       ctx.status = 404
     }
-
     else if(Array.isArray(data)){
       await ctx.render('index',{
         data , url : base_url , parent

@@ -7,7 +7,7 @@
   "scripts": {
     "start": "set NODE_ENV=dev && node bin/www",
     "dev": "./node_modules/.bin/nodemon app",
-    "prd": "pm2 start app --env prod",
+    "prd": "pm2 start bin/www --env prod",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "dependencies": {

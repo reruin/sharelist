@@ -8,6 +8,11 @@ var app = require('../app')
 var http = require('http');
 var os = require('os')
 var config = require('../config')
+var fs = require('fs')
+if(!fs.existsSync('./cache')){
+  fs.mkdirSync('./cache');
+}
+
 /**
  * Get port from environment and store in Express.
  */

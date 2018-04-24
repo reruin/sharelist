@@ -8,27 +8,24 @@ const format = require('../utils/format')
 
 const last_hash = {}
 
-const guest_type = (v)=> {
-  if(['mp4' , 'mpeg' , 'wmv' , 'webm' , 'avi' , 'rmvb' , 'mov' , 'mkv','f4v','flv'].indexOf(v) >= 0){
-    return 'video'
-  }
-  else if(['mp3' , 'm4a' ,'wav' , 'ape' , 'flac' , 'ogg'].indexOf(v)>=0){
-    return 'audio'
-  }
-  else if(['doc' , 'docx','ppt','pptx','xls','xlsx','pdf'].indexOf(v)>=0){
-    return 'doc'
-  }
-  else if(['jpg','jpeg','png','gif','bmp','tiff'].indexOf(v) >= 0){
-    return 'image'
-  }
-  else{
-    return 'other'
-  }
-}
-
 // gd folder => files
 const folder = async(id) => {
-  if(cache(id)) return cache(id)
+  let resid = 'gd_' + id , resp = {id , type:'folder' , provider:'gd'}
+  if(cache(resid)) {
+    resp = cache(resid)
+
+    if(
+      resp.updated_at && 
+      resp.children &&
+      ( Date.now() - resp.updated_at < config.data.cache_refresh_dir)
+
+    ){
+      console.log('get gd folder from cache')
+      return resp
+    }
+  }
+
+
 
   let { body } = await http.get(host+'/drive/folders/'+id)
   let code = (body.match(/window\['_DRIVE_ivd'\]\s*=\s*'([^']+)'/) || ['',''])[1]
@@ -41,7 +38,7 @@ const folder = async(id) => {
   }
   let children = data ? data.map((i)=>{
     // console.log(i[3],i[44],i[13])
-    return {
+    return base.extend({
       id:i[0],
       name:i[2],
       parent:i[1][0],
@@ -50,18 +47,35 @@ const folder = async(id) => {
       updated_at:format.datetime(i[10]),
       size:format.byte(i[13]),
       ext:i[44],
-      type : i[13] ? guest_type(i[44]) : 'folder',
-      provider:'gd',
-
-    }
+      type : i[13] ? base.mime_type(i[44]) : 'folder',
+      provider:'gd'
+    } , format.ln(i[2]))
   }) : []
 
-  cache(id,children)
-  return children
+
+  //folder 额外保存 
+  resp.children = children
+  resp.updated_at = Date.now()
+
+  cache(resid,resp)
+  return resp
 }
 
+/**
+ * 获取文件实际路径
+ */
+const file = async(id , data) =>{
+  if(
+    data && 
+    data.url_updated && 
+    data.url &&
+    ( Date.now() - data.url_updated < config.data.cache_refresh_file)
 
-const file = async(id) =>{
+  ){
+    console.log('get gd file from cache')
+    return data
+  }
+
 
   let reallink = ''
   let { body , headers }  = await http.get(host + '/uc?id='+id+'&export=download',{followRedirect : false})
@@ -71,15 +85,19 @@ const file = async(id) =>{
     let url = (body.match(/\/uc\?export=download[^"']+/i) || [''])[0]
     url = url.replace(/&amp;/g,'&')
     let cookie = headers['set-cookie'].join('; ')
-    ///uc?export=download&confirm=uIJj&id=0B0vQvfdCBUFjOXM1UXV0MHhkeGM
     let resp = await http.get(host + url , {headers:{'Cookie':cookie} , followRedirect : false})
     if(resp.headers && resp.headers.location){
       reallink = resp.headers.location
     }
   }
-  return reallink
+
+  data.url = reallink
+  data.url_updated = Date.now()
+
+  //强制保存 ， data 是指向 父级 的引用
+  cache.save()
+  return data
 }
 
 
-
-module.exports = { folder , file }
+module.exports = {  folder , file }

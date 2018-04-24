@@ -6,96 +6,103 @@ const config = require('../config')
 const format = require('../utils/format')
 const gd = require('./googledrive')
 const od = require('./onedrive')
+const remote = require('./remote')
 
-var providers = {gd , od}
 
-const guest_type = (v)=> {
-  if(v == '' || v == null){
-    return 'folder'
+class ShareList {
+  constructor(root){
+    this.root = root
+    this.providers = {gd , od , remote}
   }
-  else if(['mp4' , 'mpeg' , 'wmv' , 'webm' , 'avi' , 'rmvb' , 'mov' , 'mkv','f4v','flv'].indexOf(v) >= 0){
-    return 'video'
-  }
-  else if(['mp3' , 'm4a' ,'wav' , 'ape' , 'flac' , 'ogg'].indexOf(v)>=0){
-    return 'audio'
-  }
-  else if(['doc' , 'docx','ppt','pptx','xls','xlsx','pdf'].indexOf(v)>=0){
-    return 'doc'
-  }
-  else if(['jpg','jpeg','png','gif','bmp','tiff'].indexOf(v) >= 0){
-    return 'image'
-  }
-  else{
-    return 'other'
-  }
-}
 
-// path => folder => files
-const path = async(p) => {
-  let pl = p.join('.') , hit , resp
-  if(cache(pl)){
-    hit = cache(pl)
-  }
-  else{
+  async path(paths , query , paths_raw){
+    let pl = paths.join('/') , hit , resp , miss
+
+    //1. 获取到对象
+    /// path -> resid 缓存
+    if(cache(pl)){
+      if(cache(cache(pl))){
+        console.log(`from path(${pl})' -> res`)
+        return cache(cache(pl))
+      }else{
+        cache.clear(pl)
+      }
+    }
+
     if(pl == ''){
-      hit = mount()
+      hit = this.mount()
     }
 
     else{
-      let parent = await path( p.slice(0,-1) )
-
-      let cur = decodeURIComponent(p[p.length - 1])
-
+      let parent = await this.path( paths.slice(0,-1) , query , paths_raw)
+      let curname = decodeURIComponent(paths[paths.length - 1])
+      //父目录必然是 folder
       if( parent ){
-        let hash = base.hash(parent , 'name')
-        if(hash[cur]){
-          hit = hash[cur]
-          cache(pl , hit)
+        let children = parent.children || []
+        let index = base.search(children , 'name' ,  curname)
+        console.log()
+        if(index != -1){
+          hit = children[index]
+          //只为目录做缓存
+          if(hit.type == 'folder')
+            cache(pl , hit.provider+'_'+hit.id)
         }else{
           return false
         }
-      }else{
+      }
+      //无法完成匹配
+      else{
         return false
       }
     }
-  }
-  let provider = providers[hit.provider]
-  if(provider){
-    // folder /a/b/c
-    if( hit.type == 'folder' ){
-      resp = await provider.folder(hit.id)
-      return resp
 
-      if(cache(hit.id)){
-        resp = cache(hit.id)
-      }else{
-        resp = await provider.folder(hit.id)
-        cache(hit.id , resp)
+    //2. 根据对象属性 做下一步操作
+    if(hit.provider == 'root'){
+      return hit
+    }
+
+    let provider = this.providers[hit.provider]
+    
+
+    if(provider){
+      // folder /a/b/c
+      if( hit.type == 'folder' ){
+        resp = await provider.folder(hit.id , {query , paths_raw})
+        //存在 id 变化 ，例如 OneDrive 的shareid <-> resid
+        //重新缓存 path -> resid
+        if(hit.id != resp.id){
+          cache(pl , hit.provider+'_'+resp.id)
+        }
         return resp
       }
+      // file  /a/b/c.jpg
+      else{
+        resp = await provider.file(hit.id , hit)
+      }
     }
-    // file  /a/b/c.jpg
-    else{
-      resp = await provider.file(hit.id , hit.parent)
-      resp = { url : resp , type : hit.type , name : hit.name}
-    }
+
+    return resp
   }
-  
 
-  return resp
-  
-}
 
-const mount = () =>{
-  let data = config.data , key , provider
-  if(Array.isArray( data.path )){
+  mount(){
+    let paths = this.root , key
+    let ods = paths.filter((i)=>(/^od\:\/\//.test(i.path)))
+    if(ods && ods.length){
+      cache('$onedrive.authid',ods[0].path.replace('od://',''))
+    }
+
     // 如果只有一个目录 则直接列出
-    if(data.path.length == 1){
-      key = data.path[0].path.replace(/^.*\:\/\//,'')
-      provider = (data.path[0].path.match(/^.*(?=\:\/\/)/) || [''])[0]
+    if(paths.lengths == 1){
+      paths = paths[0].path
+      return { 
+        id: paths.replace(/^.*\:\/\//,'') , 
+        provider : (paths.match(/^.*(?=\:\/\/)/) || [''])[0], 
+        type:'folder'
+      }
     }else{
       //根路径不判断缓存，防止添加路径路径时丢失
-      let disk = data.path.map((i,index)=>({
+      let disk = paths.map((i,index)=>({
         id : i.path.replace(/^.*\:\/\//,''),
         provider:(i.path.match(/^.*(?=\:\/\/)/) || [''])[0],
         name : i.name,
@@ -103,27 +110,11 @@ const mount = () =>{
         updated_at : '-',
         type : 'folder'
       }))
-      cache('root' , disk)
-      key = 'root'
-      //因为已经缓存 所以任意指定个 provider 即可
-      provider = 'gd'
+      
+      return {id:'$root' , provider:'root', type:'folder' , children : disk}
     }
-
-    //设定获取onedrive authkey 的 shareid
-    let ods = data.path.filter((i)=>(/^od\:\/\//.test(i.path)))
-    if(ods && ods.length){
-      cache('$onedrive.authid',ods[0].path.replace('od://',''))
-    }
-    
   }
-  //兼容旧版本
-  else{
-    key = data.path
-    provider = 'gd'
-  }
-  return {id:key , type:'folder',provider}
-
 }
 
 
-module.exports = { path }
+module.exports = new ShareList(config.data.path)

@@ -6,29 +6,6 @@ const config = require('../config')
 const format = require('../utils/format')
 const qs = require('querystring')
 
-const last_hash = {}
-
-const guest_type = (v)=> {
-  if(v == '' || v == null){
-    return 'folder'
-  }
-  else if(['mp4' , 'mpeg' , 'wmv' , 'webm' , 'avi' , 'rmvb' , 'mov' , 'mkv','f4v','flv'].indexOf(v) >= 0){
-    return 'video'
-  }
-  else if(['mp3' , 'm4a' ,'wav' , 'ape' , 'flac' , 'ogg'].indexOf(v)>=0){
-    return 'audio'
-  }
-  else if(['doc' , 'docx','ppt','pptx','xls','xlsx','pdf'].indexOf(v)>=0){
-    return 'doc'
-  }
-  else if(['jpg','jpeg','png','gif','bmp','tiff'].indexOf(v) >= 0){
-    return 'image'
-  }
-  else{
-    return 'other'
-  }
-}
-
 var _authkey , _appid , _rootcid , _cookie
 
 //有两个接口可获取信息
@@ -60,14 +37,32 @@ const updateAuth = async() => {
 }
 
 // 非公开接口 ~ 可获取最详细的信息
-const folder = async(id) => {
+const folder = async(id , _) => {
+  _ = _ || {}
+  let nocache = _.nocache
   // shareid
   if(/^s!/.test(id)){
     id = await conv(id)
   }
 
-  if(cache(id)) return cache(id)
-  
+  let resid = 'od_' + id , resp = {id , type:'folder' , provider:'od',children:[]}
+
+
+  if(cache(resid) && !nocache) {
+    resp = cache(resid)
+    
+    if(
+      resp.updated_at && 
+      resp.children &&
+      ( Date.now() - resp.updated_at < config.data.cache_refresh_dir)
+
+    ){
+      console.log('get od folder from cache')
+      return resp
+    }
+  }
+
+
   let {authkey ,cookie, appid} = await getAuth()
 
   let children = []
@@ -109,7 +104,6 @@ const folder = async(id) => {
   r = await http.get( 'https://skyapi.onedrive.live.com/API/2/GetItems?'+qs.stringify(opts) , {followRedirect:false,headers})
   // r = JSON.parse(r)
 
-  console.log('get from api')
   r = JSON.parse(r.body)
   if(r.error){
     console.log(r)
@@ -119,7 +113,7 @@ const folder = async(id) => {
     children = r.folder ? r.folder.children.map((i)=>{
       let ext = i.extension ? i.extension.replace(/\./g,'') : ''
 
-      return {
+      return base.extend({
         id:i.id,
         name: i.name + (i.folder ? '' : i.extension),
         parent:i.parentId,
@@ -128,145 +122,63 @@ const folder = async(id) => {
         updated_at:i.displayModifiedDate.replace(/\//g,'-'),
         size:i.displaySize,
         ext: ext,
-        type : i.folder ? 'folder' : guest_type(ext),
+        type : i.folder ? 'folder' : base.mime_type(ext),
         provider:'od',
-        download: i.folder ? '' : i.urls.download
-      }
+        url: i.folder ? '' : i.urls.download,
+        url_updated:Date.now()
+      } , format.ln(i.name + (i.folder ? '' : i.extension)))
     }) : []
 
-    cache(id , children)
+    resp.updated_at = Date.now()
+    resp.children = children
+    cache(resid,resp)
   }
-  
-  return children
-
+  return resp
 }
 
 // shareid => id
 const conv = async(shareid)=>{
-  if(cache(shareid)){
-    return cache(shareid)
+  if(cache('od_'+shareid)){
+    return cache('od_'+shareid)
+  }
+
+  let url = 'https://1drv.ms/f/'+shareid.replace('od_','')
+  let r = await http.get(url , {followRedirect:false})
+  if(r.headers && r.headers.location){
+    let params = base.params(r.headers.location)
+    // cache('$onedrive.authkey' , params.authkey)
+    cache('od_'+shareid , params.resid)
+    return params.resid
   }else{
-    let url = 'https://1drv.ms/f/'+shareid
-    let r = await http.get(url , {followRedirect:false})
-    if(r.headers && r.headers.location){
-      let params = base.params(r.headers.location)
-      // cache('$onedrive.authkey' , params.authkey)
-      cache(shareid , params.resid)
-      return params.resid
-    }else{
-      return ''
-    }
+    return ''
   }
 
 }
 
 
 // 似乎没有办法只根据 id + authkey 获取到 ~
-const file = async(id , cid) =>{
-  let resp
-  if(cache(cid)){
-    resp = cache(cid)
-  }else{
-    resp = await folder(cid)
+const file = async(id , data) =>{
+  if(
+    data && 
+    data.url_updated && 
+    data.url &&
+    ( Date.now() - data.url_updated < config.data.cache_refresh_file)
+
+  ){
+    console.log('get od file from cache')
+    return data
   }
 
-  let hash = base.hash(resp , 'id')
-  if(hash[id]){
-    return hash[id].download
+  //刷新父路径
+  let parent = await folder(data.parent , {nocache:true})
+
+  let index = base.search(parent.children , 'id' , id)
+
+  if(index != -1){
+    return parent.children[index]
   }else{
     return ''
   }
-
-
-  // ???????????????? 没有用 ~
-  // let link = ''
-  // let url = 'https://storage.live.com/items/'+id+'?'+name+'&authkey='+authkey
-  
-  // let resp = await http.header(url , {followRedirect:false})
-
-  // console.log(resp.headers)
-
-  // if(resp.headers){
-  //   link = resp.headers['location'] || resp.headers['content-location']
-  //   // invalid authkey
-  //   if(link.indexOf('login.live.com')>=0){
-  //     await getAuthKey()
-  //     // again 
-  //     link = file(id , name)
-  //   }
-  // }
-
-  // return link
-}
-
-
-// path => gd folder => files
-const path = async(p) => {
-  let pl = p.join('.') , hit , resp
-  if(cache(pl)){
-    hit = cache(pl)
-  }
-  else{
-    if(pl == ''){
-      hit = mount()
-    }
-
-    else{
-      let parent = await path( p.slice(0,-1) )
-
-      let cur = decodeURIComponent(p[p.length - 1])
-
-      if( parent ){
-        let hash = base.hash(parent , 'name')
-        if(hash[cur]){
-          hit = hash[cur]
-          cache(pl , hit)
-        }else{
-          return false
-        }
-      }else{
-        return false
-      }
-    }
-  }
-
-  // /a/b/c
-  if( hit.type == 'folder' ){
-    resp = await folder(hit.id)
-  }
-  // /a/b/c.jpg
-  else{
-    resp = await file(hit.id)
-    resp = { url : resp , type : hit.type , name : hit.name}
-  }
-
-  return resp
-  
-}
-
-const mount = () =>{
-  let data = config.data , key
-  if(Array.isArray( data.path )){
-    if(data.path.length == 1){
-      key = data.path[0].path
-    }else{
-      //根路径不判断缓存，防止添加路径路径时丢失
-      let disk = data.path.map((i,index)=>({
-        id : i.path,
-        name : i.name,
-        size : '-',
-        updated_at : '-',
-        type : 'folder'
-      }))
-      cache('root' , disk)
-      key = 'root'
-    }
-    
-  }else{
-    key = data.path
-  }
-  return {id:key , type:'folder'}
-
 }
 
 

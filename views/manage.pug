@@ -15,9 +15,29 @@ block content
             | 操作
           .panel-body
             form.form-horizontal(method='post')
-              input(type='hidden',name='a',value='clear_cache')
-              button.btn.btn-danger(href='?a=clear_cache') 清除缓存
-
+              input(type='hidden',name='a',value='cfg')
+              .form-group
+                .col-sm-3
+                  label 启用下载中转（包括预览）
+                .col-sm-3
+                  select.form-control(name='enabled_proxy',value=config.enabled_proxy,required)
+                    option(value='1', selected=config.enabled_proxy==1 ? 'selected' : null) 启用
+                    option(value='0', selected=config.enabled_proxy==0 ? 'selected' : null) 关闭
+              .form-group
+                .col-sm-3
+                  label 目录缓存时长(秒)
+                .col-sm-3
+                  input.form-control(type='text', name='cache_refresh_dir' , value=config.cache_refresh_dir / 1000,required)
+              .form-group
+                .col-sm-3
+                  label 链接缓存时长(秒)
+                .col-sm-3
+                  input.form-control(type='text', name='cache_refresh_file' , value=config.cache_refresh_file / 1000,required)
+              .form-group.text-center
+                button.btn.btn-default(type='submit') 提交
+            form.form-horizontal(method='post')
+                  input(type='hidden',name='a',value='clear_cache')
+                  button.btn.btn-danger(href='?a=clear_cache') 清除缓存
         .panel.panel-default
           .panel-heading
             | 口令
@@ -25,12 +45,10 @@ block content
             form.form-horizontal(method='post')
               input(type='hidden',name='a',value='token')
               .form-group
-                label.control-label.col-sm-2(for='token') 密码
-                .col-sm-10
+                .col-sm-12
                   input.form-control(type='text', name='token' , placeholder='新口令',required)
-              .form-group
-                .col-sm-offset-2.col-sm-10
-                  button.btn.btn-default(type='submit') 提交
+              .form-group.text-center
+                button.btn.btn-default(type='submit') 提交
         .panel.panel-default
           .panel-heading
             | 虚拟路径
@@ -43,16 +61,15 @@ block content
                   .form-group.item
                     .col-sm-2
                       select.form-control(name='provider', value=(i.path.match(/^.*(?=\:\/\/)/) || [''])[0],placeholder='类型',required)
-                        option(value='gd', selected=/^gd\:\/\//.test(i.path) ? 'selected' : null) GoogleDrive
-                        option(value='od', selected=/^od\:\/\//.test(i.path) ? 'selected' : null) OneDrive
+                        each provider in providers
+                          option(value=provider.code, selected=i.path.indexOf(provider.code+'://')>=0 ? 'selected' : null) #{provider.name}
                     .col-sm-2
                       input.form-control(type='text', name='name', value=i.name,placeholder='名称',required)
                     .col-sm-7
                       input.form-control(type='text', name='path', value=i.path.replace(/^.*\:\/\//,''),placeholder='GoogleDrive/OneDrive 分享的文件夹ID',required)
                     .col-sm-1
                       button.btn.btn-default.remove-path(type='button') -
-              .form-group
-                .col-sm-offset-2.col-sm-10
+              .form-group.text-center
                   button.btn.btn-default(type='submit') 提交
             
       - else

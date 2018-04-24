@@ -11,7 +11,7 @@ module.exports = {
     opts.url = url
     opts.method = 'HEAD'
     opts.headers = base.extend(opts.headers || {} , headers)
-    // opts.proxy = 'http://127.0.0.1:1087'
+    opts.proxy = 'http://127.0.0.1:1087'
     return new Promise(function (resolve, reject) {
       request(opts, function(error, response, body){
           resolve(response)
@@ -30,12 +30,13 @@ module.exports = {
         'CLIENT-IP':rndip,
         'HTTP_X_FORWARDED_FOR':rndip
       })
+
+      base.extend(opts.headers , headers)
     }else{
       opts.headers = base.extend(opts.headers || {} , headers)
     }
     opts.url = url
-    // opts.proxy = 'http://127.0.0.1:1087'
-    
+    opts.proxy = 'http://127.0.0.1:1087'
 		return new Promise(function (resolve, reject) {
 			request(opts, function(error, response, body){
           if(error){

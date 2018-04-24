@@ -11,9 +11,17 @@ function cache(key , ...rest){
   }
 }
 
-cache.clear = () =>{
-  _cache = {}
-  db.set('hash' , {}).write()
+cache.clear = (key) =>{
+  if(key){
+    delete _cache[key]
+  }else{
+    _cache = {}
+  }
+  db.set('hash' , _cache).write()
+}
+
+cache.save = () =>{
+  db.set('hash' , _cache).write()
 }
 
 module.exports = cache

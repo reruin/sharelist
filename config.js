@@ -3,21 +3,42 @@ const os = require('os')
 const config_path = process.cwd() +'/cache/config.json'
 const port = process.env.PORT || 33001
 
-var data = {port}
+const providers = [
+  {name:'GoogleDrive',code:'gd'},
+  {name:'OneDrive',code:'od'},
+  {name:'Custom',code:'cu'},
+]
+
+//onedrive 链接有效期 10 分钟
+var data = {
+  port , 
+
+  enabled_proxy : 0 ,
+  //目录刷新时间 15分钟
+  cache_refresh_dir:15 * 60 * 1000,
+  //外链 10分钟
+  cache_refresh_file: 5 * 60 * 1000
+}
 
 try{
   var cfg =fs.readFileSync(config_path,'utf-8');  
   if(cfg){
-    data = JSON.parse(cfg)
+    cfg = JSON.parse(cfg)
+    for(var i in cfg){
+      data[i] = cfg[i]
+    }
   }
   console.log('Load config from file')
 }catch(e){
 
 }
 
+
 async function save(d){
-  if(d.token) data.token = d.token
-  if(d.path) data.path = d.path
+  console.log(d)
+  for(var i in d){
+    data[i] = d[i]
+  }
 
   let str = JSON.stringify( data )
 
@@ -38,5 +59,5 @@ function installed(){
 }
 
 module.exports = {
- data, save , installed , port
+ data, save , installed , port , providers
 }

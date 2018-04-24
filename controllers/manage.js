@@ -19,7 +19,7 @@ module.exports = {
       }
       
     }
-    await ctx.render('manage',{access  , message , config:config.data})
+    await ctx.render('manage',{access  , message , config:config.data , providers:config.providers})
   },
 
   async update(ctx){
@@ -66,8 +66,33 @@ module.exports = {
       cache.clear()
       message = '成功清除缓存'
     }
+    else if(act == 'cfg'){
+      let {enabled_proxy , cache_refresh_dir , cache_refresh_file} = ctx.request.body
+      let opts = {}
+      if(cache_refresh_dir){
+        cache_refresh_dir = parseInt(cache_refresh_dir)
+        if(!isNaN(cache_refresh_dir)){
+          opts.cache_refresh_dir = cache_refresh_dir * 1000
+        }
+      }
 
-    await ctx.render('manage',{ message , access : true , config:config.data})
+      if(cache_refresh_file){
+        cache_refresh_file = parseInt(cache_refresh_file)
+        if(!isNaN(cache_refresh_file)){
+          opts.cache_refresh_file = cache_refresh_file * 1000
+        }
+      }
+
+      if(enabled_proxy){
+        enabled_proxy = enabled_proxy == '1' ? 1 : 0
+        opts.enabled_proxy = enabled_proxy
+      }
+      await config.save( opts )
+      message = '保存成功'
+
+    }
+
+    await ctx.render('manage',{ message , access : true , config:config.data , providers:config.providers})
     
   }
 

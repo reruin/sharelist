@@ -4,18 +4,17 @@ block content
   
   header.detail
       a.home #{data.name}
-      a.download.ic.download(href=data.url)
+      a.download.ic.download(href=download_url)
   section.wrap
     .detail
       -if(data.type == 'image')
-        img(src=data.url)
+        img(src=download_url)
       -else if(data.type == 'video')
-        video(src=data.url,controls='controls',autoplay='autoplay')
+        iframe(src="javascript:'<style>video{width:100%;height:100%;background:#000;}body{margin:0;padding:0;}</style><video src=\""+download_url+"\" controls=\"controls\" autoplay=\"autoplay\"></video>'")
       -else if(data.type == 'audio')
-        audio(src=data.url,controls='controls',autoplay='autoplay')
+        audio(src=download_url,controls='controls',autoplay='autoplay')
       -else
         p 暂无法预览   
-  hr
   include footer
 
 

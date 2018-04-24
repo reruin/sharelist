@@ -73,23 +73,26 @@ function byte(v){
     return '-'
   }
 
-  if( v < 1024 ){
-    return v + ' B'
+  let lo = 0
+  
+  while(v >= 1024){
+    v /= 1024
+    lo++
   }
-  else if(v < 1024 * 1024){
-    return Math.round( v / 1024) + ' KB'
-  }
-  else if( v < 1024 * 1024 * 1024){
-    return Math.round( v / 1024 / 1024) + ' MB'
-  }
-  else if( v < 1024 * 1024 * 1024 * 1024){
-    return Math.round( v*10 / 1024 / 1024 / 1024) / 10 + ' GB'
-  }
-  else{
-    return Math.round( v*10/ 1024 / 1024 / 1024 / 1024)/10 + ' TB'
+
+  return Math.floor(v * 100) / 100 + ' ' + ['B','KB','MB','GB','TB'][lo]
+}
+
+function ln(v){
+  let provider = (v.match(/\.(od|gd|remote)$/) || ['',''])[1]
+  if( provider ){
+    let r = v.split('.')
+    let id = r[r.length-2]
+    let name = r.slice(0,-2).join('') || id
+    return { id , name , provider , type : 'folder'}
   }
 }
 
 module.exports = {
-  datetime , byte
+  datetime , byte , ln
 }

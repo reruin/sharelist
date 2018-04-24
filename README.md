@@ -2,6 +2,13 @@
 
 在线挂载 GoogleDrive、OneDrive 的简易工具 ， 只需提供分享文件夹ID。
 
+## 特性
+1. 文件夹ID挂载网盘
+2. 支持虚拟目录
+在网盘内以如下格式重命名文件夹
+格式：```显示名称.文件夹id.类型```
+类型支持 od(OneDrive) gd(GoogleDrive)
+
 ## 安装
 ### Shell script
 ````bash

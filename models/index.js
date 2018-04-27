@@ -11,7 +11,6 @@ const remote = require('./remote')
 
 class ShareList {
   constructor(root){
-    this.root = root
     this.providers = {gd , od , remote}
   }
 
@@ -85,8 +84,7 @@ class ShareList {
 
 
   mount(){
-    console.log(this.root)
-    let paths = this.root , key
+    let paths = config.data.path || [] , key
     let ods = paths.filter((i)=>(/^od\:\/\//.test(i.path)))
     if(ods && ods.length){
       cache('$onedrive.authid',ods[0].path.replace('od://',''))
@@ -117,4 +115,4 @@ class ShareList {
 }
 
 
-module.exports = new ShareList(config.data.path)
+module.exports = new ShareList()

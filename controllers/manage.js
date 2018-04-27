@@ -19,7 +19,12 @@ module.exports = {
       }
       
     }
-    await ctx.render('manage',{access  , message , config:config.data , providers:config.providers})
+
+    if(act == 'export'){
+      ctx.body = config.data
+    }else{
+      await ctx.render('manage',{access  , message , config:config.data , providers:config.providers})
+    }
   },
 
   async update(ctx){

@@ -9,6 +9,8 @@ block content
   section.wrap
     .menu
       - if(access)
+        .form-group
+          a.btn.btn-success(href='?a=export',target='_blank') 导出配置
 
         .panel.panel-default
           .panel-heading
@@ -38,6 +40,7 @@ block content
             form.form-horizontal(method='post')
                   input(type='hidden',name='a',value='clear_cache')
                   button.btn.btn-danger(href='?a=clear_cache') 清除缓存
+
         .panel.panel-default
           .panel-heading
             | 口令

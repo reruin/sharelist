@@ -52,7 +52,7 @@ module.exports = {
         if(config.data.enabled_proxy){
           console.log('proxy:',download_url)
           try{
-            let resp = await http.header(url)
+            let resp = await http.header(download_url)
             let headers = resp.headers
             // console.log(resp.headers)
             if(headers){

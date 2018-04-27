@@ -125,6 +125,7 @@ const nrop19 = {
   },
 
   async file(id , data){
+    data.proxy_header = true
     return data
   }
 }

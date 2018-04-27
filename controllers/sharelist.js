@@ -51,18 +51,21 @@ module.exports = {
       else{
         if(config.data.enabled_proxy){
           console.log('proxy:',download_url)
-          try{
-            let resp = await http.header(download_url)
-            let headers = resp.headers
-            // console.log(resp.headers)
-            if(headers){
-              for(let i in headers){
-                ctx.response.set(i, headers[i])
+          if(data.proxy_header){
+            try{
+              let resp = await http.header(download_url)
+              let headers = resp.headers
+              // console.log(resp.headers)
+              if(headers){
+                for(let i in headers){
+                  ctx.response.set(i, headers[i])
+                }
               }
-            }
-          }catch(e){
+            }catch(e){
 
+            }
           }
+          
           ctx.body = ctx.req.pipe(request(download_url))
         }else{
           ctx.redirect( download_url )

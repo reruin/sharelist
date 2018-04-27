@@ -40,7 +40,6 @@ class ShareList {
       if( parent ){
         let children = parent.children || []
         let index = base.search(children , 'name' ,  curname)
-        console.log()
         if(index != -1){
           hit = children[index]
           //只为目录做缓存
@@ -86,6 +85,7 @@ class ShareList {
 
 
   mount(){
+    console.log(this.root)
     let paths = this.root , key
     let ods = paths.filter((i)=>(/^od\:\/\//.test(i.path)))
     if(ods && ods.length){

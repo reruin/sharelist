@@ -14,6 +14,12 @@ module.exports = {
     if( data === false){
       ctx.status = 404
     }
+    else if(data === 401){
+      ctx.status = 401
+    }
+    else if(data.auth){
+      //需要验证
+    }
     else if(data.type == 'folder'){
       let resp = data.children.map((i)=>{
         let href = i.href || base.path(base_url+'/'+ (i.pathname|| i.name ))

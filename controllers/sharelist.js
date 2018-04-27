@@ -1,5 +1,6 @@
 const service = require('./../models/index')
 const base = require('../utils/base')
+const http = require('../utils/http')
 const request = require('request')
 const config =require('../config')
 const cache = {}
@@ -50,6 +51,18 @@ module.exports = {
       else{
         if(config.data.enabled_proxy){
           console.log('proxy:',download_url)
+          try{
+            let resp = await http.header(url)
+            let headers = resp.headers
+            // console.log(resp.headers)
+            if(headers){
+              for(let i in headers){
+                ctx.response.set(i, headers[i])
+              }
+            }
+          }catch(e){
+
+          }
           ctx.body = ctx.req.pipe(request(download_url))
         }else{
           ctx.redirect( download_url )

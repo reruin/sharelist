@@ -17,9 +17,12 @@ const nrop19 = {
       updated_at:Date.now(),
       children : [
         {id:'91/default',cat:'default',name:'默认',type:'folder',provider:'remote'},
-        {id:'91/hot',cat:'hot',name:'当前最热',type:'folder',provider:'remote'},
         {id:'91/rp',cat:'rp',name:'最近得分',type:'folder',provider:'remote'},
+        {id:'91/rp',cat:'rf',name:'最近加精',type:'folder',provider:'remote'},
+        {id:'91/hot',cat:'hot',name:'当前最热',type:'folder',provider:'remote'},
         {id:'91/top',cat:'top',name:'本月最热',type:'folder',provider:'remote'},
+        {id:'91/tf',cat:'tf',name:'本月收藏',type:'folder',provider:'remote'},
+        {id:'91/mf',cat:'mf',name:'收藏最多',type:'folder',provider:'remote'},
       ]
     }
 

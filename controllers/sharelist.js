@@ -42,7 +42,7 @@ module.exports = {
 
       if(preview){
         if(config.data.enabled_proxy){
-          download_url = ctx.origin + ctx.path
+          download_url = ctx.path
         }
         await ctx.render('detail',{
           data , download_url

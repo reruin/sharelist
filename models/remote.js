@@ -102,7 +102,7 @@ const nrop19 = {
       let viewkey = ids[2]
       let {body} = await http.get('http://www.91porn.com/view_video.php?viewkey='+viewkey.replace('@','') , {fake:true})
       let url = (body.match(/source\s*src\s*=\s*"([^"]+)/) || ['',''])[1]
-      let name =(body.match(/viewvideo-title">([^<]+)/) || ['',''])[1].replace(/[\r\n\s]/g,'') 
+      let name =(body.match(/viewvideo-title">([^<]+)/) || ['',''])[1].replace(/[\r\n]/g,'').replace(/(^[\s]*|[\s]*$)/g,'') 
       let resp = {
         id : '91/folder/' + viewkey,
         name : viewkey,

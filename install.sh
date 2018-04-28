@@ -26,8 +26,9 @@ then
   yum -y install nodejs >/dev/null 2>&1
 fi
 
-npm install yarn -g
-yarn add pm2 -g
+npm install
+npm install pm2 -g
+
 pm2 start bin/www
 pm2 save
 pm2 startup

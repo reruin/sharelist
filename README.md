@@ -10,16 +10,16 @@
 类型支持 od(OneDrive) gd(GoogleDrive)
 
 ## 安装
-### Shell script
+### Shell
 ````bash
-wget --no-check-certificate -qO- https://raw.githubusercontent.com/reruin/gdlist/master/install.sh | bash
+bash install.sh
 ````
 
 ### Docker support
 ````bash
-docker build -t yourname/gdlist .
+docker build -t yourname/sharelist .
 
-docker run -d -v /etc/gdlist:/app/config -p 33001:33001 --name="gdlist" yourname/gdlist
+docker run -d -v /etc/sharelist:/app/cache -p 33001:33001 --name="sharelist" yourname/sharelist
 ````
 
 OR

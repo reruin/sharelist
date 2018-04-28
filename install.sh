@@ -16,14 +16,14 @@ echo -e "\n|   ShareList is installing ... "
 # deps
 if [ -n "$(command -v apt-get)" ]
 then
-  apt-get -y install curl unzip >/dev/null 2>&1
+  apt-get install -y curl >/dev/null 2>&1
   curl -sL https://deb.nodesource.com/setup_8.x | sudo -E bash - >/dev/null 2>&1
   apt-get install -y nodejs >/dev/null 2>&1
 elif [ -n "$(command -v yum)" ]
 then
-  yum -y install curl unzip >/dev/null 2>&1
+  yum install -y curl >/dev/null 2>&1
   curl --silent --location https://rpm.nodesource.com/setup_8.x | sudo bash - >/dev/null 2>&1
-  yum -y install nodejs >/dev/null 2>&1
+  yum install -y nodejs >/dev/null 2>&1
 fi
 
 npm install

@@ -1,6 +1,6 @@
 version: "3"
 services:
-  gdlist:
+  sharelist:
     image: reruin/sharelist
     volumes:
       - $HOME/sharelist:/app/cache

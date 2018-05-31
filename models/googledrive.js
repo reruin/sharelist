@@ -29,11 +29,15 @@ const folder = async(id) => {
 
   let { body } = await http.get(host+'/drive/folders/'+id)
   let code = (body.match(/window\['_DRIVE_ivd'\]\s*=\s*'([^']+)'/) || ['',''])[1]
-  let data = code.replace(/\\x22/g,'"').replace(/\\x5b/g,'[').replace(/\\x5d/g,']').replace(/\\(r|n)/g,'')
+  let data = code.replace(/\\x22/g,'"').replace(/\\x5b/g,'[').replace(/\\x5d/g,']').replace(/\\(r|n)/g,'').replace(/\\x27/g,"'").replace(/\\\\u/g,'\\u').toString(16)
   if(data){
-    data = JSON.parse(data)
-    if(data.length){
-      data = data[0]
+    try{
+      data = JSON.parse(data)
+      if(data.length){
+        data = data[0]
+      }
+    }catch(e){
+      data = []
     }
   }
   let children = data ? data.map((i)=>{

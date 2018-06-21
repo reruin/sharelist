@@ -93,6 +93,16 @@ function ln(v){
   }
 }
 
+
+function encode(v){
+  return v.replace(/\//g,'%2F').replace(/\\/g,'%5C')
+}
+
+function decode(v){
+  return v.replace(/%2F/g,'/').replace(/%5C/g,'\\')
+}
+
+
 module.exports = {
-  datetime , byte , ln
+  datetime , byte , ln , encode , decode
 }

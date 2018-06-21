@@ -1,6 +1,7 @@
 const service = require('./../models/index')
 const base = require('../utils/base')
 const http = require('../utils/http')
+const encode = require('../utils/format').encode
 const request = require('request')
 const config =require('../config')
 const cache = {}
@@ -23,7 +24,8 @@ module.exports = {
     }
     else if(data.type == 'folder'){
       let resp = data.children.map((i)=>{
-        let href = i.href || base.path(base_url+'/'+ (i.pathname|| i.name ))
+        let href = i.href || base.path(base_url+'/'+ encode(i.pathname|| i.name ))
+
         if(['audio','video','image'].indexOf(i.type) >= 0){
           href += (href.indexOf('?')>=0 ? '&' : '?') + 'preview'
         }

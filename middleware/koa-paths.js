@@ -1,3 +1,5 @@
+const decode = require('../utils/format').decode
+
 module.exports = async (ctx , next)=>{
   let url = ctx.request.path.substring(1)
   if(url){
@@ -5,7 +7,7 @@ module.exports = async (ctx , next)=>{
     let paths = []
     for(let i = 0 ; i< raw.length ; i++){
       if( i == 0 || /[^!]$/.test(raw[i-1]) ){
-        paths.push(raw[i].replace(/!$/,''))
+        paths.push(decode(raw[i].replace(/!$/,'')))
       }
     }
     // let paths = raw.filter((i)=>(!/^!/.test(i)))

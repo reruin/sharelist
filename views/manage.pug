@@ -76,10 +76,12 @@ block content
                   button.btn.btn-default(type='submit') 提交
             
       - else
-        .input-group
-          input.form-control#j_token(type='text',name='token', placeholder='输入口令')
-          span.input-group-btn
-            button.btn.btn-default#signin(type='button') 登录
+        div.auth
+          h3 请输入口令
+          div
+            .form-group
+              input.sl-input#j_token(type='text', name='token', placeholder='输入口令')
+            button.sl-button.btn-primary#signin(type="button") 登录
   script(src='https://cdn.bootcss.com/jquery/3.3.1/jquery.min.js')
   
   script.

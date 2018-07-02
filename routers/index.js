@@ -6,9 +6,13 @@ const manage = require('./manage')
 
 const install = require('./install')
 
-const mid_install = require('../middleware/koa-gdlist-install')
+const api = require('./api')
+
+const mid_install = require('../middleware/koa-sharelist-install')
 
 router.use('/manage',mid_install,manage.routes(), manage.allowedMethods())
+
+router.use('/api',mid_install,api.routes(), api.allowedMethods())
 
 router.use('/install',install.routes(), install.allowedMethods())
 

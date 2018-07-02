@@ -1,21 +1,13 @@
-const decode = require('../utils/format').decode
+const parse_path = require('../utils/base').parse_path
 
-module.exports = async (ctx , next)=>{
-  let url = ctx.request.path.substring(1)
-  if(url){
-    let raw = url.split('/')
-    let paths = []
-    for(let i = 0 ; i< raw.length ; i++){
-      if( i == 0 || /[^!]$/.test(raw[i-1]) ){
-        paths.push(decode(raw[i].replace(/!$/,'')))
-      }
-    }
-    // let paths = raw.filter((i)=>(!/^!/.test(i)))
-    ctx.paths = paths
-    ctx.paths_raw = raw
-  }else{
-    ctx.paths = []
-    ctx.paths_raw = []
+module.exports = async(ctx, next) => {
+  if (!ctx.session.access) {
+    ctx.session.access = new Set()
   }
+  let url = ctx.request.path.substring(1)
+  let [paths, paths_raw] = parse_path(url)
+  ctx.paths = paths
+  ctx.paths_raw = paths_raw
+
   await next()
 }

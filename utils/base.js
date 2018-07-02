@@ -1,8 +1,27 @@
+const decode = require('./format').decode
+
 function rnd(min , max){
   return Math.floor(min+Math.random()*(max-min));  
+}
 
+const parse_path = (url)=>{
+  if(url){
+    let raw = url.split('/')
+    let paths = []
+    for(let i = 0 ; i< raw.length ; i++){
+      if( i == 0 || /[^!]$/.test(raw[i-1]) ){
+        paths.push(decode(raw[i].replace(/!$/,'')))
+      }
+    }
+    // let paths = raw.filter((i)=>(!/^!/.test(i)))
+    return [paths , raw]
+  }else{
+    return [[] , []]
+
+  }
 }
 module.exports = {
+  parse_path , 
   extend(source , src){
     for(var i in src){
       source[i] = src[i]
@@ -61,7 +80,7 @@ module.exports = {
     else if(['mp3' , 'm4a' ,'wav' ,'wma', 'ape' , 'flac' , 'ogg'].indexOf(v)>=0){
       return 'audio'
     }
-    else if(['doc' , 'docx','ppt','pptx','xls','xlsx','pdf'].indexOf(v)>=0){
+    else if(['doc', 'docx','ppt','pptx','xls','xlsx','pdf','txt'].indexOf(v)>=0){
       return 'doc'
     }
     else if(['jpg','jpeg','png','gif','bmp','tiff'].indexOf(v) >= 0){

@@ -55,7 +55,7 @@ const folder = async(id) => {
       updated_at:format.datetime(i[10]),
       size:format.byte(i[13]),
       ext:i[44],
-      type : i[13] ? base.mime_type(i[44]) : 'folder',
+      type : i[3].indexOf('.folder')>=0 ? 'folder' : base.mime_type(i[44]),
       provider:'gd'
     } , format.ln(i[2]))
   }) : []

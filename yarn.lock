@@ -514,7 +514,7 @@ decode-uri-component@^0.2.0:
   version "0.2.0"
   resolved "https://registry.yarnpkg.com/decode-uri-component/-/decode-uri-component-0.2.0.tgz#eb3913333458775cb84cd1a1fae062106bb87545"
 
-deep-equal@~1.0.1:
+deep-equal@^1.0.1, deep-equal@~1.0.1:
   version "1.0.1"
   resolved "https://registry.yarnpkg.com/deep-equal/-/deep-equal-1.0.1.tgz#f5d260292b660e084eff4cdbc9f08ad3247448b5"
 
@@ -1220,6 +1220,14 @@ koa-send@^3.1.0, koa-send@^3.2.0:
     mz "^2.3.1"
     resolve-path "^1.3.1"
 
+koa-session-minimal@^3.0.4:
+  version "3.0.4"
+  resolved "http://registry.npm.taobao.org/koa-session-minimal/download/koa-session-minimal-3.0.4.tgz#d6a15beeed77d5d3e26a421dbb98a61f63a8afcd"
+  dependencies:
+    co "^4.6.0"
+    deep-equal "^1.0.1"
+    uid-safe "^2.1.2"
+
 koa-static@^3.0.0:
   version "3.0.0"
   resolved "https://registry.yarnpkg.com/koa-static/-/koa-static-3.0.0.tgz#40442233d2c0b35c225e450199c10bf8a539e416"
@@ -1830,6 +1838,10 @@ qs@~6.4.0:
   version "6.4.0"
   resolved "https://registry.yarnpkg.com/qs/-/qs-6.4.0.tgz#13e26d28ad6b0ffaa91312cd3bf708ed351e7233"
 
+random-bytes@~1.0.0:
+  version "1.0.0"
+  resolved "http://registry.npm.taobao.org/random-bytes/download/random-bytes-1.0.0.tgz#4f68a1dc0ae58bd3fb95848c30324db75d64360b"
+
 raw-body@~2.1.2:
   version "2.1.7"
   resolved "https://registry.yarnpkg.com/raw-body/-/raw-body-2.1.7.tgz#adfeace2e4fb3098058014d08c072dcc59758774"
@@ -2300,6 +2312,12 @@ uglify-to-browserify@~1.0.0:
 uid-number@^0.0.6:
   version "0.0.6"
   resolved "https://registry.yarnpkg.com/uid-number/-/uid-number-0.0.6.tgz#0ea10e8035e8eb5b8e4449f06da1c730663baa81"
+
+uid-safe@^2.1.2:
+  version "2.1.5"
+  resolved "http://registry.npm.taobao.org/uid-safe/download/uid-safe-2.1.5.tgz#2b3d5c7240e8fc2e58f8aa269e5ee49c0857bd3a"
+  dependencies:
+    random-bytes "~1.0.0"
 
 union-value@^1.0.0:
   version "1.0.0"

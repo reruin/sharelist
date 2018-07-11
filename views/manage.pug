@@ -27,6 +27,13 @@ block content
                     option(value='0', selected=config.enabled_proxy==0 ? 'selected' : null) 关闭
               .form-group
                 .col-sm-3
+                  label 中转视频预览允许拖拽（实验性功能）
+                .col-sm-3
+                  select.form-control(name='enabled_proxy_header',value=config.enabled_proxy_header,required)
+                    option(value='1', selected=config.enabled_proxy_header==1 ? 'selected' : null) 启用
+                    option(value='0', selected=config.enabled_proxy_header==0 ? 'selected' : null) 关闭
+              .form-group
+                .col-sm-3
                   label 目录缓存时长(秒)
                 .col-sm-3
                   input.form-control(type='text', name='cache_refresh_dir' , value=config.cache_refresh_dir / 1000,required)

@@ -2,6 +2,7 @@ const request = require('request')
 const base = require('./base')
 
 const headers = {
+    'Accept-Encoding': 'identity;q=1, *;q=0',
     'Accept-Language':'zh-CN,zh;q=0.8',
     'User-Agent':'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_12_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/64.0.3282.167 Safari/537.36'
 }
@@ -19,6 +20,41 @@ module.exports = {
     })
   },
 
+  header2(url , opts){
+    opts = opts || {}
+    opts.url = url
+    opts.headers = base.extend(opts.headers || {} , headers)
+    // opts.proxy = 'http://127.0.0.1:1087'
+    return new Promise(function (resolve, reject) {
+      let req = request(opts).on('response',(resp)=>{
+        let headers = {}
+        if(resp){
+          headers = resp.headers || {}
+        }
+
+        let n = {}
+        for(var i in headers){
+          if(!['connection'].includes(i)){
+            n[i] = headers[i]
+          }
+        }
+
+        if( ! ('content-length' in n ) ){
+          let range = n['content-range']
+          if(range){
+            let m = range.split('/')[1]
+            if(!isNaN(parseInt(m))){
+              n['content-length'] = parseInt(m)
+            }
+          }
+        }
+
+        resolve(n)
+
+        req.abort()
+      })
+    })
+  },
 
 	get(url , opts ){
     opts = opts || {}

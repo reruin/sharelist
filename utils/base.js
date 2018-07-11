@@ -1,8 +1,6 @@
 const decode = require('./format').decode
 
-function rnd(min , max){
-  return Math.floor(min+Math.random()*(max-min));  
-}
+const rnd = (min , max) => Math.floor(min+Math.random()*(max-min))
 
 const parse_path = (url)=>{
   if(url){
@@ -20,8 +18,20 @@ const parse_path = (url)=>{
 
   }
 }
+
+const checkPasswd = (data)=>{
+  let passwd = false
+  if(data.children){
+    let hit = data.children.find(i=>(i.ext == 'passwd'))
+    if(hit){
+      passwd = hit.name.replace(/\.passwd$/,'').substring(1)
+    }
+  }
+  return passwd
+}
+
 module.exports = {
-  parse_path , 
+  parse_path , checkPasswd , 
   extend(source , src){
     for(var i in src){
       source[i] = src[i]

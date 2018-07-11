@@ -72,7 +72,7 @@ module.exports = {
       message = '成功清除缓存'
     }
     else if(act == 'cfg'){
-      let {enabled_proxy , cache_refresh_dir , cache_refresh_file} = ctx.request.body
+      let {enabled_proxy , enabled_proxy_header , cache_refresh_dir , cache_refresh_file} = ctx.request.body
       let opts = {}
       if(cache_refresh_dir){
         cache_refresh_dir = parseInt(cache_refresh_dir)
@@ -91,6 +91,11 @@ module.exports = {
       if(enabled_proxy){
         enabled_proxy = enabled_proxy == '1' ? 1 : 0
         opts.enabled_proxy = enabled_proxy
+      }
+
+      if(enabled_proxy_header){
+        enabled_proxy_header = enabled_proxy_header == '1' ? 1 : 0
+        opts.enabled_proxy_header = enabled_proxy_header
       }
       await config.save( opts )
       message = '保存成功'

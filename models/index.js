@@ -8,6 +8,20 @@ const gd = require('./googledrive')
 const od = require('./onedrive')
 const remote = require('./remote')
 
+const access_check = (d)=>{
+  console.log( d )
+  return d
+
+  if( base.checkPasswd(d) ){
+    return {
+      auth : true , 
+      ...d
+    }    
+  }else{
+    return d
+  }
+}
+
 
 class ShareList {
   constructor(root){
@@ -22,7 +36,7 @@ class ShareList {
     if(cache(pl)){
       if(cache(cache(pl))){
         console.log(`from path(${pl})' -> res`)
-        return cache(cache(pl))
+        return access_check( cache(cache(pl)) )
       }else{
         cache.clear(pl)
       }
@@ -37,16 +51,22 @@ class ShareList {
       let curname = decodeURIComponent(paths[paths.length - 1])
       //父目录必然是 folder
       if( parent ){
-        let children = parent.children || []
-        let index = base.search(children , 'name' ,  curname)
-        if(index != -1){
-          hit = children[index]
-          //只为目录做缓存
-          if(hit.type == 'folder')
-            cache(pl , hit.provider+'_'+hit.id)
-        }else{
-          return false
-        }
+        // console.log('parent:'+parent.id + ' , '+parent.auth)
+        // if( parent.auth ) {
+        //   hit = {auth:true , ...parent}
+        // }else{
+          let children = parent.children || []
+          let index = base.search(children , 'name' ,  curname)
+          if(index != -1){
+            hit = children[index]
+            //只为目录做缓存
+            if(hit.type == 'folder')
+              cache(pl , hit.provider+'_'+hit.id)
+          }else{
+            return false
+          }
+        // }
+        
       }
       //无法完成匹配
       else{
@@ -66,12 +86,15 @@ class ShareList {
       // folder /a/b/c
       if( hit.type == 'folder' ){
         resp = await provider.folder(hit.id , {query , paths_raw})
+        let passwd = base.checkPasswd(resp)
+        resp.auth = passwd !== false
+        
         //存在 id 变化 ，例如 OneDrive 的shareid <-> resid
         //重新缓存 path -> resid
         if(hit.id != resp.id){
           cache(pl , hit.provider+'_'+resp.id)
         }
-        return resp
+
       }
       // file  /a/b/c.jpg
       else{

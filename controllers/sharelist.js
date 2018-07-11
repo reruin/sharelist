@@ -11,17 +11,6 @@ const auth = ()=>{
 
 }
 
-const checkAuth = (data)=>{
-  let passwd = false
-  if(data.children){
-    let hit = data.children.find(i=>(i.ext == 'passwd'))
-    if(hit){
-      passwd = hit.name.replace(/\.passwd$/,'').substring(1)
-    }
-  }
-  return passwd
-}
-
 module.exports = {
   async index(ctx){
     let data = await service.path(ctx.paths , ctx.query , ctx.paths_raw)
@@ -35,10 +24,15 @@ module.exports = {
       ctx.status = 401
     }
     else if(data.auth){
-      //需要验证
+      // //需要验证
+      // await ctx.render('auth',{
+      //   parent , 
+      //   id:data.id , 
+      //   name:decodeURIComponent(decode(ctx.paths[ctx.paths.length-1]))
+      // })
     }
     else if(data.type == 'folder'){
-      let passwd = checkAuth(data)
+      let passwd = base.checkPasswd(data)
       if( passwd !== false && !ctx.session.access.has( data.id )){
         await ctx.render('auth',{parent , id:data.id , name:decodeURIComponent(decode(ctx.paths[ctx.paths.length-1]))})
         
@@ -64,7 +58,8 @@ module.exports = {
       let preview = ctx.request.querystring.indexOf('preview') >= 0
       let download_url = data.url
 
-
+      let proxy_header_support = (data.type == 'video' || data.type == 'audio')
+      console.log( proxy_header_support )
       if(preview){
         if(config.data.enabled_proxy){
           download_url = ctx.path
@@ -76,22 +71,23 @@ module.exports = {
       else{
         if(config.data.enabled_proxy){
           console.log('proxy:',download_url)
-          if(data.proxy_header){
+          if( (data.proxy_header || config.data.enabled_proxy_header ) && proxy_header_support){
+
             try{
-              let resp = await http.header(download_url)
-              let headers = resp.headers
-              // console.log(resp.headers)
+              let headers = await http.header2(download_url,{headers:{'Range': 'bytes=0-'}})
+              // console.log(headers)
               if(headers){
                 for(let i in headers){
                   ctx.response.set(i, headers[i])
                 }
               }
             }catch(e){
-
+              console.log(e)
             }
           }
           
-          ctx.body = ctx.req.pipe(request(download_url))
+         ctx.body = ctx.req.pipe(request({url :download_url}))
+
         }else{
           ctx.redirect( download_url )
         }
@@ -119,7 +115,7 @@ module.exports = {
     let [paths , paths_raw] = parse_path(path.substring(1))
 
     let data = await service.path(paths , ctx.query , paths_raw)
-    let hit = checkAuth(data)
+    let hit = base.checkPasswd(data)
     let result = { status : 0 , message:''}
 
     //需要验证

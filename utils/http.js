@@ -1,6 +1,6 @@
 const request = require('request')
 const base = require('./base')
-
+const debug = false
 const headers = {
     'Accept-Encoding': 'identity;q=1, *;q=0',
     'Accept-Language':'zh-CN,zh;q=0.8',
@@ -12,7 +12,7 @@ module.exports = {
     opts.url = url
     opts.method = 'HEAD'
     opts.headers = base.extend(opts.headers || {} , headers)
-    // opts.proxy = 'http://127.0.0.1:1087'
+    if(debug) opts.proxy = 'http://127.0.0.1:1087'
     return new Promise(function (resolve, reject) {
       request(opts, function(error, response, body){
           resolve(response)
@@ -24,7 +24,7 @@ module.exports = {
     opts = opts || {}
     opts.url = url
     opts.headers = base.extend(opts.headers || {} , headers)
-    // opts.proxy = 'http://127.0.0.1:1087'
+    if(debug) opts.proxy = 'http://127.0.0.1:1087'
     return new Promise(function (resolve, reject) {
       let req = request(opts).on('response',(resp)=>{
         let headers = {}
@@ -72,7 +72,7 @@ module.exports = {
       opts.headers = base.extend(opts.headers || {} , headers)
     }
     opts.url = url
-    // opts.proxy = 'http://127.0.0.1:1087'
+    if(debug) opts.proxy = 'http://127.0.0.1:1087'
 		return new Promise(function (resolve, reject) {
 			request(opts, function(error, response, body){
           if(error){

@@ -1,10 +1,11 @@
 
-const http = require('../utils/http')
-const base = require('../utils/base')
-const cache = require('../utils/cache')
-const config = require('../config')
-const format = require('../utils/format')
+const http = require('../../utils/http')
+const base = require('../../utils/base')
+const cache = require('../../utils/cache')
+const config = require('../../config')
+const format = require('../../utils/format')
 const qs = require('querystring')
+const adapter = require('../adapter')
 
 var _authkey , _appid , _rootcid , _cookie
 
@@ -113,7 +114,7 @@ const folder = async(id , _) => {
     children = r.folder ? r.folder.children.map((i)=>{
       let ext = i.extension ? i.extension.replace(/\./g,'') : ''
 
-      return base.extend({
+      return adapter.folder({
         id:i.id,
         name: i.name + (i.folder ? '' : i.extension),
         parent:i.parentId,
@@ -126,7 +127,7 @@ const folder = async(id , _) => {
         provider:'od',
         url: i.folder ? '' : i.urls.download,
         url_updated:Date.now()
-      } , format.ln(i.name + (i.folder ? '' : i.extension)))
+      })
     }) : []
 
     resp.updated_at = Date.now()

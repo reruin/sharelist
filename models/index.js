@@ -4,12 +4,12 @@ const base = require('../utils/base')
 const cache = require('../utils/cache')
 const config = require('../config')
 const format = require('../utils/format')
-const gd = require('./googledrive')
-const od = require('./onedrive')
-const remote = require('./remote')
+const gd = require('./drive/googledrive')
+const od = require('./drive/onedrive')
+const xd = require('./drive/xdrive')
+const remote = require('./drive/remote')
 
 const access_check = (d)=>{
-  console.log( d )
   return d
 
   if( base.checkPasswd(d) ){
@@ -25,7 +25,7 @@ const access_check = (d)=>{
 
 class ShareList {
   constructor(root){
-    this.providers = {gd , od , remote}
+    this.providers = {gd , od , xd , remote}
   }
 
   async path(paths , query , paths_raw){
@@ -59,6 +59,7 @@ class ShareList {
           let index = base.search(children , 'name' ,  curname)
           if(index != -1){
             hit = children[index]
+            console.log('hit',hit)
             //只为目录做缓存
             if(hit.type == 'folder')
               cache(pl , hit.provider+'_'+hit.id)
@@ -106,6 +107,12 @@ class ShareList {
     return resp
   }
 
+
+  async file(id , provider){
+    if(this.providers[provider]){
+      return await this.providers[provider](id)
+    }
+  }
 
   mount(){
     let paths = config.data.path || [] , key

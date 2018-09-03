@@ -84,7 +84,7 @@ function byte(v){
 }
 
 function ln(v){
-  let provider = (v.match(/\.(od|gd|remote)$/) || ['',''])[1]
+  let provider = (v.match(/\.(od|gd|remote|xd)$/) || ['',''])[1]
   if( provider ){
     let r = v.split('.')
     let id = r[r.length-2]

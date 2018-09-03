@@ -23,7 +23,8 @@
     "koa-views": "^5.2.1",
     "less-middleware": "^2.2.1",
     "lowdb": "^1.0.0",
-    "pug": "^2.0.0-rc.1"
+    "pug": "^2.0.0-rc.1",
+    "yaml": "^1.0.0-rc.8"
   },
   "devDependencies": {
     "pm2": "^2.10.1"

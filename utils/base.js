@@ -2,6 +2,14 @@ const decode = require('./format').decode
 
 const rnd = (min , max) => Math.floor(min+Math.random()*(max-min))
 
+const isType = (type) => (obj) => ( Object.prototype.toString.call(obj) === `[object ${type}]`)
+
+const isArray = isType('Array')
+
+const isObject = isType('Object')
+
+const isString = isType('String')
+
 const parse_path = (url)=>{
   if(url){
     let raw = url.split('/')
@@ -38,7 +46,7 @@ function isFolder(v){
 }
 
 module.exports = {
-  parse_path , checkPasswd , isFolder , 
+  parse_path , checkPasswd , isFolder , isArray , isObject, 
   extend(source , src){
     for(var i in src){
       source[i] = src[i]

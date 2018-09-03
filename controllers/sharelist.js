@@ -17,7 +17,6 @@ module.exports = {
     let base_url = ctx.path == '/' ? '' : ctx.path
     let parent = ctx.paths.length ? ('/' + ctx.paths.slice(0,-1).join('/')) : ''
 
-    console.log( )
     //data is readonly
     if( data === false){
       ctx.status = 404

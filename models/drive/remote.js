@@ -1,9 +1,9 @@
 
-const http = require('../utils/http')
-const base = require('../utils/base')
-const cache = require('../utils/cache')
-const config = require('../config')
-const format = require('../utils/format')
+const http = require('../../utils/http')
+const base = require('../../utils/base')
+const cache = require('../../utils/cache')
+const config = require('../../config')
+const format = require('../../utils/format')
 
 const nrop19 = {
   async folder(id , opts){
@@ -63,7 +63,7 @@ const nrop19 = {
           id : parent_id +'/'+$1, 
           parent:parent_id,
           name : $3,
-          pathname:'../'+$1+'/'+$3+'.mp4',
+          pathname:'../../'+$1+'/'+$3+'.mp4',
           provider:'remote',
           updated_at:'-',
           size:'-',

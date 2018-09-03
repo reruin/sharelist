@@ -1,10 +1,11 @@
 
-const http = require('../utils/http')
-const base = require('../utils/base')
-const cache = require('../utils/cache')
-const config = require('../config')
+const http = require('../../utils/http')
+const base = require('../../utils/base')
+const cache = require('../../utils/cache')
+const config = require('../../config')
 const host = 'https://drive.google.com'
-const format = require('../utils/format')
+const format = require('../../utils/format')
+const adapter = require('../adapter')
 
 const last_hash = {}
 
@@ -46,18 +47,17 @@ const folder = async(id) => {
 
   let children = data ? data.map((i)=>{
     // console.log(i[3],i[44],i[13])
-    return base.extend({
+    return adapter.folder({
       id:i[0],
       name:i[2],
+      ext:i[44],provider:'gd',
       parent:i[1][0],
       mime:i[3],
       created_at:format.datetime(i[9]),
       updated_at:format.datetime(i[10]),
       size:format.byte(i[13]),
-      ext:i[44],
       type : ( i[3].indexOf('.folder')>=0  || base.isFolder(i[44]) ) ? 'folder' : base.mime_type(i[44]),
-      provider:'gd'
-    } , format.ln(i[2]))
+    })
   }) : []
 
 
@@ -72,7 +72,7 @@ const folder = async(id) => {
 /**
  * 获取文件实际路径
  */
-const file = async(id , data) =>{
+const file = async(id , data = {}) =>{
   if(
     data && 
     data.url_updated && 

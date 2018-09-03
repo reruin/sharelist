@@ -11,31 +11,39 @@ block content
     h3 #{name}
     div
       .form-group
-        input.sl-input(id="j_passwd",type='text', name='passwd', placeholder='请输入访问密码')
+        input.sl-input(id="j_passwd",type='password', name='passwd', placeholder='请输入访问密码')
       button.sl-button.btn-primary(type="button") 确定
   script(src='https://cdn.bootcss.com/jquery/3.3.1/jquery.min.js')
   
   script.
-    $(function(){
-      $('button').on('click' , function(){
-        let passwd = $('#j_passwd').val() , path = location.pathname
-        $('button').addClass('loading')
-        $.ajax({
-          url:'/api/access', dataType:'json', method:'POST',
-          data:{ path ,passwd },
-          success:function(resp){
-            $('button').removeClass('loading')
-            if(resp.status == 0){
-              location.reload()
-            }else{
-              alert(resp.message)
-            }
-          },
-          error:function(resp){
-            $('button').removeClass('loading')
-
+    function checkAuth(){
+      let passwd = $('#j_passwd').val() , path = location.pathname
+      $('button').addClass('loading')
+      $.ajax({
+        url:'/api/access', dataType:'json', method:'POST',
+        data:{ path ,passwd },
+        success:function(resp){
+          $('button').removeClass('loading')
+          if(resp.status == 0){
+            location.reload()
+          }else{
+            alert(resp.message)
           }
-        })
+        },
+        error:function(resp){
+          $('button').removeClass('loading')
+
+        }
+      })
+    }
+    $(function(){
+      $('#j_passwd').on('keypress' , function(e){
+        if(e.keyCode == "13"){
+          checkAuth()
+        }
+      })
+      $('button').on('click' , function(){
+        checkAuth()
       })
 
       var item

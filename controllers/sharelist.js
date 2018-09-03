@@ -7,8 +7,8 @@ const config =require('../config')
 const cache = {}
 const parse_path = require('../utils/base').parse_path
 
-const auth = ()=>{
-
+const auth = (data , ctx)=>{
+  
 }
 
 module.exports = {
@@ -16,6 +16,8 @@ module.exports = {
     let data = await service.path(ctx.paths , ctx.query , ctx.paths_raw)
     let base_url = ctx.path == '/' ? '' : ctx.path
     let parent = ctx.paths.length ? ('/' + ctx.paths.slice(0,-1).join('/')) : ''
+
+    console.log( )
     //data is readonly
     if( data === false){
       ctx.status = 404
@@ -23,16 +25,10 @@ module.exports = {
     else if(data === 401){
       ctx.status = 401
     }
-    else if(data.auth){
-      // //需要验证
-      // await ctx.render('auth',{
-      //   parent , 
-      //   id:data.id , 
-      //   name:decodeURIComponent(decode(ctx.paths[ctx.paths.length-1]))
-      // })
-    }
+
     else if(data.type == 'folder'){
       let passwd = base.checkPasswd(data)
+
       if( passwd !== false && !ctx.session.access.has( data.id )){
         await ctx.render('auth',{parent , id:data.id , name:decodeURIComponent(decode(ctx.paths[ctx.paths.length-1]))})
         
@@ -118,6 +114,7 @@ module.exports = {
     let hit = base.checkPasswd(data)
     let result = { status : 0 , message:''}
 
+    console.log( hit , 'hit')
     //需要验证
     if( hit !== false && hit){
       if( hit == passwd ){

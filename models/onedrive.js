@@ -122,7 +122,7 @@ const folder = async(id , _) => {
         updated_at:i.displayModifiedDate.replace(/\//g,'-'),
         size:i.displaySize,
         ext: ext,
-        type : ( i.folder || format.isFolder(ext) )? 'folder' : base.mime_type(ext),
+        type : ( i.folder || base.isFolder(ext) )? 'folder' : base.mime_type(ext),
         provider:'od',
         url: i.folder ? '' : i.urls.download,
         url_updated:Date.now()

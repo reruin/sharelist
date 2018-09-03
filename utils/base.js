@@ -24,14 +24,21 @@ const checkPasswd = (data)=>{
   if(data.children){
     let hit = data.children.find(i=>(i.ext == 'passwd'))
     if(hit){
-      passwd = hit.name.replace(/\.passwd$/,'').substring(1)
+      passwd = hit.name.replace('.passwd','').split('.').slice(-1)
     }
   }
   return passwd
 }
 
+
+function isFolder(v){
+  if(v === 'xd'){
+    return true
+  }
+}
+
 module.exports = {
-  parse_path , checkPasswd , 
+  parse_path , checkPasswd , isFolder , 
   extend(source , src){
     for(var i in src){
       source[i] = src[i]

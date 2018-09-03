@@ -102,6 +102,7 @@ class ShareList {
       }
     }
 
+    console.log('path return ' , resp)
     return resp
   }
 

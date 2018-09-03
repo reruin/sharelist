@@ -102,12 +102,7 @@ function decode(v){
   return v.replace(/%2F/g,'/').replace(/%5C/g,'\\')
 }
 
-function isFolder(v){
-  if(v === 'xd'){
-    return true
-  }
-}
 
 module.exports = {
-  datetime , byte , ln , encode , decode , isFolder
+  datetime , byte , ln , encode , decode 
 }

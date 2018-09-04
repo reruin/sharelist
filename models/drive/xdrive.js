@@ -4,11 +4,11 @@
 
 
 const yaml = require('yaml').default
-const http = require('../../utils/http')
+
 const base = require('../../utils/base')
 const cache = require('../../utils/cache')
 const config = require('../../config')
-const host = 'https://drive.google.com'
+
 const format = require('../../utils/format')
 const source = require('../source')
 const adapter = require('../adapter')
@@ -28,7 +28,6 @@ const createId = (d , rootId)=>{
         i.ext = i.name.split('.').pop()
         i.type = base.mime_type(i.ext)
       }
-
 
       adapter.folder(i)
 
@@ -55,24 +54,28 @@ const mount = async(id)=>{
 
   let data = await source(...id.split('@'))
 
-  data = await http.get(data.url)
+  console.log('yarml' , data)
+  if(data){
+    let json = yaml.parse( data )
 
-  let json = yaml.parse( data.body )
+    json  = createId(json , id + ':')
 
-  json  = createId(json , id + ':')
+    resp.children = json
+    resp.updated_at = Date.now()
 
-  resp.children = json
-  resp.updated_at = Date.now()
+    cache(resid,resp)
+    return resp
+  }else{
+    return undefined
+  }
 
-  cache(resid,resp)
 
-  return resp
 }
 
 const findById = (id)=>{
   let rootId = id.split(':')[0]
   let disk = cache(`xd_${rootId}`)
-  let path = id.replace(/^[^\/]+\//,'').split('/')
+  let path = id.split(':/')[1].split('/')
 
   for(let i=0; i<path.length && disk; i++){
     disk = disk.children
@@ -83,7 +86,6 @@ const findById = (id)=>{
 }
 
 const folder = async(id) => {
-  console.log('id=====>',id)
   let resp
   //xdrive目录内
   if(/@[a-wA-W]+:\//.test(id)){

@@ -99,17 +99,26 @@ module.exports = {
   },
 
   mime_type(v){
-    if(['mp4' , 'mpeg' , 'wmv' , 'webm' , 'avi' , 'rmvb' , 'mov' , 'mkv','f4v','flv'].indexOf(v) >= 0){
+    if(['mp4' , 'mpeg' , 'wmv' , 'webm' , 'avi' , 'rmvb' , 'mov' , 'mkv','f4v','flv'].includes(v)){
       return 'video'
     }
-    else if(['mp3' , 'm4a' ,'wav' ,'wma', 'ape' , 'flac' , 'ogg'].indexOf(v)>=0){
+    else if(['mp3' , 'm4a' ,'wav' ,'wma', 'ape' , 'flac' , 'ogg'].includes(v)){
       return 'audio'
     }
-    else if(['doc', 'docx','ppt','pptx','xls','xlsx','pdf','txt'].indexOf(v)>=0){
+    else if(['doc','docx','wps'].includes(v)){
+      return 'word'
+    }
+    else if(['pdf'].includes(v)){
+      return 'pdf'
+    }
+    else if(['doc', 'docx','ppt','pptx','xls','xlsx','pdf','txt','yaml','ini','cfg'].includes(v)){
       return 'doc'
     }
-    else if(['jpg','jpeg','png','gif','bmp','tiff'].indexOf(v) >= 0){
+    else if(['jpg','jpeg','png','gif','bmp','tiff','wmf','tif'].includes(v)){
       return 'image'
+    }
+    else if(['zip','rar','7z','tar','gz','gz2'].includes(v)){
+      return 'archive'
     }
     else{
       return 'other'

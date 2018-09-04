@@ -3,12 +3,69 @@ const base = require('../utils/base')
 const http = require('../utils/http')
 const {encode , decode} = require('../utils/format')
 const request = require('request')
-const config =require('../config')
+const config = require('../config')
+const sendFile = require('../utils/sendfile')
 const cache = {}
 const parse_path = require('../utils/base').parse_path
+const fs = require('fs')
 
+const proxy_header_supports = ['video' , 'audio']
 const auth = (data , ctx)=>{
   
+}
+
+
+const output = async (ctx , data)=>{
+
+  let preview = ctx.request.querystring.indexOf('preview') >= 0
+  let download_url = data.url
+
+  let enabled_proxy = config.data.enabled_proxy
+  if(preview){
+    if(enabled_proxy){
+      download_url = ctx.path
+    }
+
+    if(data.fs){
+      download_url = ctx.path
+    }
+
+    await ctx.render('detail',{
+      data , download_url
+    })
+  }
+  // download
+  else{
+    if(data.fs){
+      await sendFile(ctx, data.url)
+    }else{
+      if(enabled_proxy){
+
+        let proxy_header_support = proxy_header_supports.includes(data.type)
+
+        if( (data.proxy_header || config.data.enabled_proxy_header ) && proxy_header_support){
+
+          try{
+            let headers = await http.header2(download_url,{headers:{'Range': 'bytes=0-'}})
+            // console.log(headers)
+            if(headers){
+              for(let i in headers){
+                ctx.response.set(i, headers[i])
+              }
+            }
+          }catch(e){
+            console.log(e)
+          }
+        }
+        
+        ctx.body = ctx.req.pipe(request({url :download_url}))
+
+      }else{
+        ctx.redirect( download_url )
+      }
+    }
+
+  }
 }
 
 module.exports = {
@@ -40,7 +97,7 @@ module.exports = {
             if(['audio','video','image'].indexOf(i.type) >= 0){
               href += (href.indexOf('?')>=0 ? '&' : '?') + 'preview'
             }
-            resp.push( { href , type : i.type , name:i.name})
+            resp.push( { href , type : i.type , size: i.size , updated_at:i.updated_at , name:i.name})
           }
         })
 
@@ -50,44 +107,8 @@ module.exports = {
       }
       
     }else{
-      let preview = ctx.request.querystring.indexOf('preview') >= 0
-      let download_url = data.url
 
-      let proxy_header_support = (data.type == 'video' || data.type == 'audio')
-      console.log( proxy_header_support )
-      if(preview){
-        if(config.data.enabled_proxy){
-          download_url = ctx.path
-        }
-        await ctx.render('detail',{
-          data , download_url
-        })
-      }
-      else{
-        if(config.data.enabled_proxy){
-          console.log('proxy:',download_url)
-          if( (data.proxy_header || config.data.enabled_proxy_header ) && proxy_header_support){
-
-            try{
-              let headers = await http.header2(download_url,{headers:{'Range': 'bytes=0-'}})
-              // console.log(headers)
-              if(headers){
-                for(let i in headers){
-                  ctx.response.set(i, headers[i])
-                }
-              }
-            }catch(e){
-              console.log(e)
-            }
-          }
-          
-         ctx.body = ctx.req.pipe(request({url :download_url}))
-
-        }else{
-          ctx.redirect( download_url )
-        }
-      }
-      
+      await output(ctx , data)
     }
     
   },

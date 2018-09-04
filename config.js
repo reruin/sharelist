@@ -6,7 +6,8 @@ const port = process.env.PORT || 33001
 const providers = [
   {name:'GoogleDrive',code:'gd'},
   {name:'OneDrive',code:'od'},
-  {name:'Custom',code:'cu'},
+  {name:'虚拟目录',code:'xd'},
+  {name:'本地目录',code:'ld'},
 ]
 
 //onedrive 链接有效期 10 分钟
@@ -23,7 +24,7 @@ var data = {
 }
 
 try{
-  var cfg =fs.readFileSync(config_path,'utf-8');  
+  var cfg = fs.readFileSync(config_path,'utf-8');  
   if(cfg){
     cfg = JSON.parse(cfg)
     for(var i in cfg){

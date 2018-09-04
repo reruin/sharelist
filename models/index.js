@@ -7,6 +7,7 @@ const format = require('../utils/format')
 const gd = require('./drive/googledrive')
 const od = require('./drive/onedrive')
 const xd = require('./drive/xdrive')
+const ld = require('./drive/localdrive')
 const remote = require('./drive/remote')
 
 const access_check = (d)=>{
@@ -25,7 +26,7 @@ const access_check = (d)=>{
 
 class ShareList {
   constructor(root){
-    this.providers = {gd , od , xd , remote}
+    this.providers = {gd , od , xd , ld , remote}
   }
 
   async path(paths , query , paths_raw){
@@ -59,7 +60,6 @@ class ShareList {
           let index = base.search(children , 'name' ,  curname)
           if(index != -1){
             hit = children[index]
-            console.log('hit',hit)
             //只为目录做缓存
             if(hit.type == 'folder')
               cache(pl , hit.provider+'_'+hit.id)
@@ -103,7 +103,7 @@ class ShareList {
       }
     }
 
-    console.log('path return ' , resp)
+    // console.log('path return ' , resp)
     return resp
   }
 
@@ -122,7 +122,7 @@ class ShareList {
     }
 
     // 如果只有一个目录 则直接列出
-    if(paths.lengths == 1){
+    if(paths.length == 1){
       paths = paths[0].path
       return { 
         id: paths.replace(/^.*\:\/\//,'') , 

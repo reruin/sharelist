@@ -17,8 +17,6 @@ const folder = (d) => {
 
     d.provider = provider
     d.type = 'folder'
-
-    console.log('========>',d)
   }
   return d
 }

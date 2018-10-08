@@ -15,7 +15,7 @@ module.exports = {
       if( token == config.data.token ){
         access = true
       }else{
-        message = '密码错误'
+        message = 'Invalid Password'
       }
       
     }
@@ -52,24 +52,34 @@ module.exports = {
 
       if( path ){
         await config.save( { path } )
-        message = '保存成功'
+        message = 'Success'
       }else{
-        message = '请填写完整'
+        message = 'Invalid Arguments'
       }
     }
     else if( act == 'token'){
       let newtoken  = ctx.request.body.token
       if(newtoken){
         await config.save( { token:newtoken } )
-        message = '口令修改成功'
+        message = 'Success'
         ctx.redirect('/manage')
         return
       }else{
-        message = '请填写新口令'
+        message = 'Invalid password'
       }
-    }else if(act == 'clear_cache'){
+    }
+    else if( act == 'title'){
+      let title  = ctx.request.body.title
+      if(title){
+        await config.save( { title:title } )
+        message = 'Success'
+      }else{
+        message = ''
+      }
+    }
+    else if(act == 'clear_cache'){
       cache.clear()
-      message = '成功清除缓存'
+      message = 'Success'
     }
     else if(act == 'cfg'){
       let {enabled_proxy , enabled_proxy_header , cache_refresh_dir , cache_refresh_file} = ctx.request.body
@@ -98,7 +108,7 @@ module.exports = {
         opts.enabled_proxy_header = enabled_proxy_header
       }
       await config.save( opts )
-      message = '保存成功'
+      message = 'Success'
 
     }
 

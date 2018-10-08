@@ -6,8 +6,8 @@ const port = process.env.PORT || 33001
 const providers = [
   {name:'GoogleDrive',code:'gd'},
   {name:'OneDrive',code:'od'},
-  {name:'虚拟目录',code:'xd'},
-  {name:'本地目录',code:'ld'},
+  {name:'VirtualFile',code:'xd'},
+  {name:'LocalFileSystem',code:'ld'},
 ]
 
 //onedrive 链接有效期 10 分钟
@@ -23,22 +23,8 @@ var data = {
   cache_refresh_file: 5 * 60 * 1000
 }
 
-try{
-  var cfg = fs.readFileSync(config_path,'utf-8');  
-  if(cfg){
-    cfg = JSON.parse(cfg)
-    for(var i in cfg){
-      data[i] = cfg[i]
-    }
-  }
-  console.log('Load config from file')
-}catch(e){
+const save = async (d) => {
 
-}
-
-
-async function save(d){
-  console.log(d)
   for(var i in d){
     data[i] = d[i]
   }
@@ -57,10 +43,25 @@ async function save(d){
   })
 }
 
-function installed(){
-  return data.token && data.path
+const installed = () => data.token && data.path
+
+const getTitle = () => data.title || 'ShareList'
+
+
+try{
+  let cfg = fs.readFileSync(config_path,'utf-8');  
+  if(cfg){
+    cfg = JSON.parse(cfg)
+    for(var i in cfg){
+      data[i] = cfg[i]
+    }
+  }
+  console.log('Load config from file')
+}catch(e){
+
 }
 
+
 module.exports = {
- data, save , installed , port , providers
+ data, save , installed , port , providers , getTitle
 }

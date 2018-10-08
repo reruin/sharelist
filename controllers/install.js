@@ -15,8 +15,8 @@ module.exports = {
   }
   ,
   async save(ctx){
-    let { token , name , path , provider} =  ctx.request.body
-    let cfg = {token}
+    let { token , name , path , provider , title = 'ShareList'} =  ctx.request.body
+    let cfg = {token , title}
     if(Array.isArray(name)){
       cfg.path = name.map((i ,index)=>{
         return { name:i , path:provider[index]+'://'+path[index]}
@@ -30,7 +30,7 @@ module.exports = {
       ctx.redirect('/')
     }else{
       result.status = -1
-      result.message = '请填写完整'
+      result.message = 'error'
       await ctx.render('install',result)
     }
   }

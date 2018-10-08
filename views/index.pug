@@ -6,13 +6,13 @@ block content
     .wrap
       -if(parent)
         a.back(href=parent)
-      a.home(href='/') ShareList
+      a.home(href='/')= _title_()
   section.wrap
     .list-header
       .row
-        .col-md-7.col-sm-6.col-xs-10 File
-        .col-md-2.col-sm-2.col-xs-2.text-right Size
-        .col-md-3.col-sm-4.hidden-xs.text-right Last Modified
+        .col-md-7.col-sm-6.col-xs-10= __('filename')
+        .col-md-2.col-sm-2.col-xs-2.text-right= __('size')
+        .col-md-3.col-sm-4.hidden-xs.text-right= __('last_modified')
     ul.list
       each i in data
         li

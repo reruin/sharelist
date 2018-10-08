@@ -14,7 +14,7 @@ block content
       -else if(data.type == 'audio')
         audio(src=download_url,controls='controls',autoplay='autoplay')
       -else
-        p 暂无法预览   
+        p= __('unable_to_preview')   
   include footer
 
 

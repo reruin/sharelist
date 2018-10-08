@@ -31,7 +31,7 @@ const l2w = (p)=>{
 
 const realpath = (p)=> (isWinOS ? l2w(p) : p)
 
-const normalize = (p) => (p+'/').replace(/\/{2,}/g,'/')
+const normalize = (p) => p.replace(/\/{2,}/g,'/').replace(/\/+$/,'')
 
 const extname = (p) => path.extname(p).substring(1)
 

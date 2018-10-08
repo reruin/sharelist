@@ -5,18 +5,25 @@ block content
   
   header
     .wrap
-      a.home(href='/') GDList
+      a.home(href='/') ShareList
   section.wrap
     .page-header
-      h4.text-center 初始化
+      h4.text-center= __('install')
       form.form-horizontal(action='',method='post')
         .panel.panel-default
             .panel-heading
-              | 口令
+              | =__('token')
             .panel-body
               .form-group
                 .col-sm-12
-                  input.form-control(type='text', name='token' , placeholder='新口令',required)
+                  input.form-control(type='text', name='token' , placeholder=__('new_token'),required)
+        .panel.panel-default
+            .panel-heading
+              | =__('site_title')
+            .panel-body
+              .form-group
+                .col-sm-12
+                  input.form-control(type='text', name='title', value="ShareList" , placeholder=__('site_title'),required)
         .panel.panel-default
           .panel-heading
             | 虚拟路径
@@ -25,18 +32,18 @@ block content
             .group-path
               .form-group.item
                 .col-sm-2
-                  select.form-control(name='provider',placeholder='类型',required)
+                  select.form-control(name='provider',placeholder=__('type'),required)
                     option(value='gd') GoogleDrive
                     option(value='od') OneDrive
                 .col-sm-2
-                  input.form-control(type='text', name='name',placeholder='名称',required)
+                  input.form-control(type='text', name='name',placeholder=__('name'),required)
                 .col-sm-7
-                  input.form-control(type='text', name='path',placeholder='GoogleDrive 分享的文件夹ID',required)
+                  input.form-control(type='text', name='path',placeholder=__('input_path_placeholder'),required)
                 .col-sm-1
                   button.btn.btn-default.remove-path(type='button') -
         .form-group
           .col-sm-offset-2.col-sm-10
-            button.btn.btn-default(type='submit') 提交
+            button.btn.btn-default(type='submit')= __('submit')
   script(src='https://cdn.bootcss.com/jquery/3.3.1/jquery.min.js')
   script.
     $(function(){

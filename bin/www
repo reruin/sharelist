@@ -100,6 +100,6 @@ function onError(error) {
 
 function onListening() {
   console.log(new Date().toISOString())
-  console.log('App is running on http://'+getIpv4()+':'+config.port+'/')
+  console.log('App is running at http://'+getIpv4()+':'+config.port+'/')
 
 }

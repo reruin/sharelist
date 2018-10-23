@@ -1,83 +1,86 @@
-const Koa = require('koa')
-const views = require('koa-views')
-const json = require('koa-json')
-const onerror = require('koa-onerror')
-const bodyparser = require('koa-bodyparser')
-const logger = require('koa-logger')
-const koaStatic = require('koa-static')
-const locales = require('koa-locales')
-const i18n = require('koa-i18n')
+#!/usr/bin/env node
 
-const session = require('koa-session-minimal')
+/**
+ * Module dependencies.
+ */
 
-const less = require('./middleware/koa-less')
-const addr = require('./middleware/koa-addr')
-const paths = require('./middleware/koa-paths')
-const koaXML = require('./middleware/koa-xml')
+var app = require('./app/index')
+var http = require('http');
+var os = require('os')
+var config = require('./app/config')
+var fs = require('fs')
+if(!fs.existsSync('./cache')){
+  fs.mkdirSync('./cache');
+}
 
-const routers = require('./routers/index')
-const cors = require('@koa/cors')
-const config = require('./config')
+/**
+ * Get port from environment and store in Express.
+ */
 
-// const proxy = require('./utils/proxy')
+var port = normalizePort(config.port || 33001);
 
-const app = new Koa()
-
-onerror(app)
-
-locales(app, {
-  dirs: [__dirname + '/locales'],
-  defaultLocale: 'zh-CN'
-})
-
-app.use(session({
-  key: 'USER_SID'
-}))
-
-app.use(cors())
-
-app.use(bodyparser({
-  enableTypes:['json', 'form', 'text' , 'xml']
-}))
-
-app.use(koaXML())
-
-app.use(json())
-
-app.use(addr)
-
-app.use(paths)
-
-// 配置控制台日志中间件
-app.use(logger())
-
-//less 中间件
-app.use(less(__dirname + '/public'))
-
-// 配置静态资源加载中间件
-app.use(koaStatic(__dirname + '/public'))
-
-app.use(async (ctx , next) => {
-  ctx.state.__ = ctx.__.bind(ctx)
-  ctx.state._title_ = config.getTitle.bind(ctx)
-  await next()
-})
-
-// 配置服务端模板渲染引擎中间件
-app.use(views(__dirname + '/views', {
-  extension: 'pug'
-}))
-
-// 初始化路由中间件
-app.use(routers.routes()).use(routers.allowedMethods())
+var server = http.createServer(app.callback());
 
 
-app.use(async (ctx) => {
-  switch (ctx.status) {
-    case 404:
-      await ctx.render('404');
-      break;
+server.listen(port);
+server.on('error', onError);
+server.on('listening', onListening);
+
+
+function normalizePort(val) {
+  var port = parseInt(val, 10);
+
+  if (isNaN(port)) {
+    // named pipe
+    return val;
   }
-})
 
-module.exports = app
+  if (port >= 0) {
+    // port number
+    return port;
+  }
+
+  return false;
+}
+
+function getIpv4() {
+  var ifaces = os.networkInterfaces();
+  for (var dev in ifaces) {
+      for (var i in ifaces[dev]) {
+          var details = ifaces[dev][i];
+          if (/^\d+\./.test(details.address)) {
+              return details.address;
+          }
+      }
+  }
+}
+
+function onError(error) {
+  if (error.syscall !== 'listen') {
+    throw error;
+  }
+
+  var bind = typeof port === 'string'
+    ? 'Pipe ' + port
+    : 'Port ' + port;
+
+  // handle specific listen errors with friendly messages
+  switch (error.code) {
+    case 'EACCES':
+      console.error(bind + ' requires elevated privileges');
+      process.exit(1);
+      break;
+    case 'EADDRINUSE':
+      console.error(bind + ' is already in use');
+      process.exit(1);
+      break;
+    default:
+      throw error;
+  }
+}
+
+
+function onListening() {
+  console.log(new Date().toISOString())
+  console.log('App is running at http://'+getIpv4()+':'+config.port+'/')
+}

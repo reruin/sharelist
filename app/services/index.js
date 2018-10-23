@@ -1,14 +1,9 @@
-
 const http = require('../utils/http')
 const base = require('../utils/base')
 const cache = require('../utils/cache')
 const config = require('../config')
 const format = require('../utils/format')
-const gd = require('./drive/googledrive')
-const od = require('./drive/onedrive')
-const xd = require('./drive/xdrive')
-const ld = require('./drive/localdrive')
-const remote = require('./drive/remote')
+const {updateFile , updateFolder, getDriver , updateLnk } = require('./plugin')
 
 const access_check = (d)=>{
   return d
@@ -23,24 +18,30 @@ const access_check = (d)=>{
   }
 }
 
+const diff = (a , b) => {
+  let ret = []
+  b.forEach( (v , i) => {
+    if(v != a[i]){
+      ret.push( v )
+    }
+  })
+  return ret
+}
 
 class ShareList {
   constructor(root){
-    this.providers = {gd , od , xd , ld , remote}
+ 
+    //{gd , od , xd , ld , remote}
   }
 
-  async path(paths , query , paths_raw){
+  async path(paths , query , full_paths){
     let pl = paths.join('/') , hit , resp , miss
 
-    //1. 获取到对象
-    /// path -> resid 缓存
-    if(cache(pl)){
-      if(cache(cache(pl))){
-        console.log(`from path(${pl})' -> res`)
-        return access_check( cache(cache(pl)) )
-      }else{
-        cache.clear(pl)
-      }
+    //1. path -> target , 需要处理缓存时长
+    const content = cache.get(pl , true)
+    if(content){
+      console.log(`Get Cahce For Path(${pl})`)
+      return access_check( content )
     }
 
     if(pl == ''){
@@ -48,11 +49,10 @@ class ShareList {
     }
 
     else{
-      let parent = await this.path( paths.slice(0,-1) , query , paths_raw)
+      let parent = await this.path( paths.slice(0,-1) , query , full_paths)
       let curname = decodeURIComponent(paths[paths.length - 1])
       //父目录必然是 folder
       if( parent ){
-        // console.log('parent:'+parent.id + ' , '+parent.auth)
         // if( parent.auth ) {
         //   hit = {auth:true , ...parent}
         // }else{
@@ -62,7 +62,7 @@ class ShareList {
             hit = children[index]
             //只为目录做缓存
             if(hit.type == 'folder')
-              cache(pl , hit.provider+'_'+hit.id)
+              cache(pl , hit.provider+':'+hit.id)
           }else{
             return false
           }
@@ -80,26 +80,44 @@ class ShareList {
       return hit
     }
 
-    let provider = this.providers[hit.provider]
+    let provider = getDriver(hit.provider)
     
 
     if(provider){
+      
+      //处理快捷方式
+      if( hit.lnk ){
+        let originId = hit.provider+':'+hit.id
+        await updateLnk( hit )
+        //更新 driver
+        provider = getDriver(hit.provider)
+
+        //缓存 快捷方式 的实际链接
+        cache(originId , hit.provider+':'+hit.id)
+      }
+
       // folder /a/b/c
       if( hit.type == 'folder' ){
-        resp = await provider.folder(hit.id , {query , paths_raw})
-        let passwd = base.checkPasswd(resp)
-        resp.auth = passwd !== false
+
+        resp = await provider.folder(hit.id , {query , paths:diff(paths , full_paths), content:hit.content})
+
+        if(resp) updateFolder(resp)
+
+        //let passwd = base.checkPasswd(resp)
+        //resp.auth = passwd !== false
         
-        //存在 id 变化 ，例如 OneDrive 的shareid <-> resid
+        //存在 id 变化 ，例如 OneDrive 的shareid <-> resid, ln 的链接
         //重新缓存 path -> resid
         if(hit.id != resp.id){
-          cache(pl , hit.provider+'_'+resp.id)
+          cache(pl , hit.provider+':'+resp.id)
         }
 
       }
       // file  /a/b/c.jpg
       else{
+
         resp = await provider.file(hit.id , hit)
+        updateFile(resp)
       }
     }
 
@@ -109,31 +127,29 @@ class ShareList {
 
 
   async file(id , provider){
-    if(this.providers[provider]){
-      return await this.providers[provider](id)
+    let provider = getDriver(provider)
+    if(provider){
+      return await provider.file(id)
     }
   }
 
   mount(){
     let paths = config.data.path || [] , key
-    let ods = paths.filter((i)=>(/^od\:\/\//.test(i.path)))
-    if(ods && ods.length){
-      cache('$onedrive.authid',ods[0].path.replace('od://',''))
-    }
+    let ods = paths.some((i)=>(/^od\:/.test(i.path)))
 
     // 如果只有一个目录 则直接列出
     if(paths.length == 1){
       paths = paths[0].path
       return { 
-        id: paths.replace(/^.*\:\/\//,'') , 
-        provider : (paths.match(/^.*(?=\:\/\/)/) || [''])[0], 
+        id: paths.replace(/^.*\:/,'') , 
+        provider : (paths.match(/^.*(?=\:)/) || [''])[0], 
         type:'folder'
       }
     }else{
       //根路径不判断缓存，防止添加路径路径时丢失
       let disk = paths.map((i,index)=>({
-        id : i.path.replace(/^.*\:\/\//,''),
-        provider:(i.path.match(/^.*(?=\:\/\/)/) || [''])[0],
+        id : i.path.replace(/^.*\:/,''),
+        provider:(i.path.match(/^.*(?=\:)/) || [''])[0],
         name : i.name,
         size : '-',
         updated_at : '-',

@@ -45,6 +45,8 @@ const send = async(ctx , path , {maxage , immutable} = {maxage:0 , immutable:fal
     }
   }
 
+  let filename = path.split(/[\/\\]/).pop()
+  ctx.response.set('Content-Disposition',`attachment;filename=${filename}`)
   ctx.body = fs.createReadStream(path , readOpts)
 
   return path

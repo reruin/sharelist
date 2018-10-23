@@ -1,5 +1,7 @@
 const db = require('./../utils/db/lowdb')
 
+const { isString , isArray, isObject } = require('../utils/base')
+
 var _cache = db.get('hash').value()
 
 function cache(key , ...rest){
@@ -9,6 +11,14 @@ function cache(key , ...rest){
   }else{
     return _cache[key]
   }
+}
+
+cache.get = (key , deep = false) => {
+  let ret = _cache[key]
+  while(isString(ret) && _cache[ret] && deep){
+    ret = _cache[ret]
+  }
+  return (isArray(ret) || isObject(ret)) ? ret : undefined
 }
 
 cache.clear = (key) =>{

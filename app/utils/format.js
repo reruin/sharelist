@@ -1,12 +1,6 @@
-function isDate(v){
-  return Object.prototype.toString.call(v) === "[object Date]";
-}
+const { isString , isDate } = require('./base')
 
-function isString(v) {
-  return "string" === typeof v;
-}
-
-function datetime(date, expr) {
+const datetime = (date, expr) => {
   expr = expr || 'yyyy-MM-dd'
   var a = new Date()
   if(isDate(date)){
@@ -68,7 +62,7 @@ function datetime(date, expr) {
   });
 }
 
-function byte(v){
+const byte = (v) => {
   if(!v){
     return '-'
   }
@@ -83,7 +77,7 @@ function byte(v){
   return Math.floor(v * 100) / 100 + ' ' + ['B','KB','MB','GB','TB'][lo]
 }
 
-function ln(v){
+const ln = (v) => {
   let provider = (v.match(/\.(od|gd|remote|xd)$/) || ['',''])[1]
   if( provider ){
     let r = v.split('.')
@@ -94,15 +88,6 @@ function ln(v){
 }
 
 
-function encode(v){
-  return v.replace(/\//g,'%2F').replace(/\\/g,'%5C')
-}
-
-function decode(v){
-  return v.replace(/%2F/g,'/').replace(/%5C/g,'\\')
-}
-
-
 module.exports = {
-  datetime , byte , ln , encode , decode 
+  datetime , byte , ln
 }

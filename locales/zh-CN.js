@@ -23,8 +23,8 @@ module.exports = {
   "input_token":"输入口令",
   "enable_proxy":"启用下载中转（包括预览）",
   "dragable_for_proxy_video":"中转视频预览允许拖拽（实验性功能）",
-  "folder_cache_time":"目录缓存时长(秒)",
-  "file_cache_time":"链接缓存时长(秒)",
+  "folder_max_age":"目录缓存时长(秒)",
+  "file_max_age":"链接缓存时长(秒)",
   "virtual_path":"虚拟路径",
   "general":"常规"
 }

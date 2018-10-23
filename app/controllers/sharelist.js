@@ -1,13 +1,12 @@
-const service = require('./../models/index')
-const base = require('../utils/base')
-const http = require('../utils/http')
-const {encode , decode} = require('../utils/format')
+const fs = require('fs')
 const request = require('request')
+
+const service = require('../services/index')
+const http = require('../utils/http')
 const config = require('../config')
 const sendFile = require('../utils/sendfile')
 const cache = {}
-const parse_path = require('../utils/base').parse_path
-const fs = require('fs')
+const { parsePath ,checkPasswd, path , encode , decode} = require('../utils/base')
 
 const proxy_header_supports = ['video' , 'audio']
 const auth = (data , ctx)=>{
@@ -18,15 +17,14 @@ const auth = (data , ctx)=>{
 const output = async (ctx , data)=>{
 
   let preview = ctx.request.querystring.indexOf('preview') >= 0
-  let download_url = data.url
 
   let enabled_proxy = config.data.enabled_proxy
-  if(preview){
-    if(enabled_proxy){
-      download_url = ctx.path
-    }
+  let download_url = data.url
 
-    if(data.fs){
+  if(preview){
+
+    //代理 或者 文件系统
+    if(enabled_proxy || data.protocol === 'file'){
       download_url = ctx.path
     }
 
@@ -36,7 +34,7 @@ const output = async (ctx , data)=>{
   }
   // download
   else{
-    if(data.fs){
+    if(data.protocol === 'file'){
       await sendFile(ctx, data.url)
     }else{
       if(enabled_proxy){
@@ -70,7 +68,7 @@ const output = async (ctx , data)=>{
 
 module.exports = {
   async index(ctx){
-    let data = await service.path(ctx.paths , ctx.query , ctx.paths_raw)
+    let data = await service.path(ctx.paths , ctx.query , ctx.paths)
     let base_url = ctx.path == '/' ? '' : ctx.path
     let parent = ctx.paths.length ? ('/' + ctx.paths.slice(0,-1).join('/')) : ''
 
@@ -83,7 +81,7 @@ module.exports = {
     }
 
     else if(data.type == 'folder'){
-      let passwd = base.checkPasswd(data)
+      let passwd = checkPasswd(data)
 
       if( passwd !== false && !ctx.session.access.has( data.id )){
         await ctx.render('auth',{parent , id:data.id , name:decodeURIComponent(decode(ctx.paths[ctx.paths.length-1]))})
@@ -92,7 +90,7 @@ module.exports = {
         let resp = []
         data.children.forEach((i)=>{
           if(i.ext != 'passwd'){
-            let href = i.href || base.path(base_url+'/'+ encode(i.pathname|| i.name ))
+            let href = path(base_url + '/' + (i.url || encode(i.name)))
 
             if(['audio','video','image'].indexOf(i.type) >= 0){
               href += (href.indexOf('?')>=0 ? '&' : '?') + 'preview'
@@ -107,7 +105,6 @@ module.exports = {
       }
       
     }else{
-
       await output(ctx , data)
     }
     
@@ -128,10 +125,10 @@ module.exports = {
 
   async auth(ctx){
     let { path , passwd } = ctx.request.body
-    let [paths , paths_raw] = parse_path(path.substring(1))
+    let [paths , paths_raw] = parsePath(path.substring(1))
 
     let data = await service.path(paths , ctx.query , paths_raw)
-    let hit = base.checkPasswd(data)
+    let hit = checkPasswd(data)
     let result = { status : 0 , message:''}
 
     console.log( hit , 'hit')

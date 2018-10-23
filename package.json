@@ -5,9 +5,9 @@
   "repository": "https://github.com/reruin/sharelist",
   "license": "Apache-2.0",
   "scripts": {
-    "start": "set NODE_ENV=dev && node bin/www",
-    "dev": "./node_modules/.bin/nodemon bin/www",
-    "prd": "pm2 start bin/www --env prod",
+    "start": "set NODE_ENV=dev && node app.js",
+    "dev": "./node_modules/.bin/nodemon app.js",
+    "prd": "pm2 start app.js --env prod",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "dependencies": {

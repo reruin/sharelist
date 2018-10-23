@@ -10,16 +10,16 @@ const providers = [
   {name:'LocalFileSystem',code:'ld'},
 ]
 
-
+//onedrive 链接有效期 10 分钟
 var data = {
   port , 
 
   enabled_proxy : 0 ,
 
   enabled_proxy_header: 0 ,
-
+  //目录刷新时间 15分钟
   cache_refresh_dir:15 * 60 * 1000,
-
+  //外链 10分钟
   cache_refresh_file: 5 * 60 * 1000
 }
 

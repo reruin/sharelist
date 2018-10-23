@@ -41,8 +41,10 @@
       name: SQL SERVER 2017 EXPRESS.exe
       url: https://download.microsoft.com/download/5/E/9/5E9B18CC-8FD5-467E-B5BF-BADE39C51F73/SQLServer2017-SSEI-Expr.exe
 -
-  name: 嵌套GoodleDrive虚拟目录.0B0vQvfdCBUFjdnRpVnZsWmlFanM.gd
+  name: 嵌套GoodleDrive虚拟目录@0B0vQvfdCBUFjdnRpVnZsWmlFanM.gd
 -
-  name: 嵌套windows本地D盘./d/.ld
+  name: 嵌套windows本地D盘.ld
+  content: /d/a.b
 -
-  name: 嵌套linux root目录./root/.ld
+  name: 嵌套linux root目录.ld
+  content: /root

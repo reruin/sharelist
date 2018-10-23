@@ -58,23 +58,27 @@ module.exports = {
 
 	get(url , opts ){
     opts = opts || {}
-    if(opts.fake){
-      delete opts.fake
+    let params = { ...opts }
+    if(params.fake){
+      delete params.fake
       let rndip = base.ip()
-      opts.headers = base.extend(opts.headers || {}, {
+      params.headers = base.extend(params.headers || {}, {
         'PHPSESSID':'nrop',
         'CLIENT-IP':rndip,
         'HTTP_X_FORWARDED_FOR':rndip
       })
 
-      base.extend(opts.headers , headers)
+      base.extend(params.headers , headers)
     }else{
-      opts.headers = base.extend(opts.headers || {} , headers)
+      params.headers = base.extend(params.headers || {} , headers)
     }
-    opts.url = url
-    if(debug) opts.proxy = 'http://127.0.0.1:1087'
+
+    params.url = url
+    if(debug) params.proxy = 'http://127.0.0.1:1087'
+    
+    console.log('get ',url,params.proxy)
 		return new Promise(function (resolve, reject) {
-			request(opts, function(error, response, body){
+			request(params, function(error, response, body){
           if(error){
             console.log(error)
             reject(error)
@@ -106,7 +110,7 @@ module.exports = {
 		      if (!error && response.statusCode == 200) {
 		        resolve(body)
 		      }else{
-	            reject(error || response.statusCode);
+	           reject(error || response.statusCode);
 		      }
 		    })
 		})

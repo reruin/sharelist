@@ -18,6 +18,8 @@
 提供对GoogleDrive的访问。协议名 gd，id为 分享文件夹ID
 ### OneDrive 
 提供对OneDrive的访问。协议名 od，id为 分享文件夹ID 
+### OneDrive For Business
+提供对OneDrive Business的访问。协议名 odb，id为 分享的url 
 ### HTTP(S) 
 提供对HTTP链接的访问。协议名 http，id为 uri 
 ### LocalFileSystem

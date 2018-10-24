@@ -6,9 +6,8 @@ const http = require('../utils/http')
 const config = require('../config')
 const sendFile = require('../utils/sendfile')
 const cache = {}
-const { parsePath ,checkPasswd, path , encode , decode} = require('../utils/base')
+const { parsePath ,checkPasswd, path , encode , decode , enablePreview, enableRange} = require('../utils/base')
 
-const proxy_header_supports = ['video' , 'audio']
 const auth = (data , ctx)=>{
   
 }
@@ -16,35 +15,36 @@ const auth = (data , ctx)=>{
 
 const output = async (ctx , data)=>{
 
-  let preview = ctx.request.querystring.indexOf('preview') >= 0
+  const isPreview = ctx.request.querystring.indexOf('preview') >= 0
 
-  let enabled_proxy = config.data.enabled_proxy
-  let download_url = data.url
+  const isProxy = config.data.enabled_proxy || data.proxy
 
-  if(preview){
+  let url = data.url
+   
 
+  if(isPreview){
     //代理 或者 文件系统
-    if(enabled_proxy || data.protocol === 'file'){
-      download_url = ctx.path
-    }
-
     await ctx.render('detail',{
-      data , download_url
+      data , url : isProxy ? ctx.path : url
     })
   }
   // download
   else{
     if(data.protocol === 'file'){
-      await sendFile(ctx, data.url)
-    }else{
-      if(enabled_proxy){
+      await sendFile(ctx, url)
+    }
+    else{
+      if(isProxy){
 
-        let proxy_header_support = proxy_header_supports.includes(data.type)
+        let headers = data.headers || {}
+
+        let proxy_header_support = enableRange(data.type)
 
         if( (data.proxy_header || config.data.enabled_proxy_header ) && proxy_header_support){
 
           try{
-            let headers = await http.header2(download_url,{headers:{'Range': 'bytes=0-'}})
+            let th = { ...headers , 'Range': 'bytes=0-'}
+            let headers = await http.header2(url,{headers:th})
             // console.log(headers)
             if(headers){
               for(let i in headers){
@@ -56,10 +56,10 @@ const output = async (ctx , data)=>{
           }
         }
         
-        ctx.body = ctx.req.pipe(request({url :download_url}))
+        ctx.body = ctx.req.pipe(request({url , headers}))
 
       }else{
-        ctx.redirect( download_url )
+        ctx.redirect( url )
       }
     }
 
@@ -81,6 +81,8 @@ module.exports = {
     }
 
     else if(data.type == 'folder'){
+      // console.log( 'out put ' , data)
+
       let passwd = checkPasswd(data)
 
       if( passwd !== false && !ctx.session.access.has( data.id )){
@@ -92,7 +94,7 @@ module.exports = {
           if(i.ext != 'passwd'){
             let href = path(base_url + '/' + (i.url || encode(i.name)))
 
-            if(['audio','video','image'].indexOf(i.type) >= 0){
+            if(enablePreview(i.type)){
               href += (href.indexOf('?')>=0 ? '&' : '?') + 'preview'
             }
             resp.push( { href , type : i.type , size: i.size , updated_at:i.updated_at , name:i.name})

@@ -93,7 +93,8 @@ module.exports = (format) => {
       ext: extname(id),
       url: realpath(id),
       provider:defaultProvider,
-      protocol:'file'
+      protocol:'file',
+      proxy:true
     }
   }
 

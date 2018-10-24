@@ -121,10 +121,14 @@ const base64_encode = (v) => new Buffer(v).toString('base64').replace(/\//g,'_')
 
 const base64_decode = (v) => new Buffer(v.replace(/_/g,'/'), 'base64').toString()
 
+const enablePreview = (v) => ['audio','video','image'].includes(v)
+
+const enableRange = (v) => ['audio','video'].includes(v)
+
 module.exports = {
   parsePath , MIMEType, checkPasswd , 
 
-  isArray , isObject, isString, isDate, isEmail,
+  isArray , isObject, isString, isDate, isEmail, enablePreview, enableRange ,
 
   hash, extend, ip, path , search,
 

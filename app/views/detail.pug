@@ -4,15 +4,15 @@ block content
   
   header.detail
       a.home #{data.name}
-      a.download.ic.download(href=download_url)
+      a.download.ic.download(href=url)
   section.wrap
     .detail
       -if(data.type == 'image')
-        img(src=download_url)
+        img(src=url)
       -else if(data.type == 'video')
-        iframe(src="javascript:'<style>video{width:100%;height:100%;background:#000;}body{margin:0;padding:0;}</style><video src=\""+download_url+"\" controls=\"controls\" autoplay=\"autoplay\"></video>'")
+        iframe(src="javascript:'<style>video{width:100%;height:100%;background:#000;}body{margin:0;padding:0;}</style><video src=\""+url+"\" controls=\"controls\" autoplay=\"autoplay\"></video>'")
       -else if(data.type == 'audio')
-        audio(src=download_url,controls='controls',autoplay='autoplay')
+        audio(src=url,controls='controls',autoplay='autoplay')
       -else
         p= __('unable_to_preview')   
   include footer

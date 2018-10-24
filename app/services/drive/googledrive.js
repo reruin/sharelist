@@ -13,7 +13,7 @@ const defaultProvider = 'gd'
 
 const host = 'https://drive.google.com'
 
-module.exports = (helper , cache , config , getSource) => {
+module.exports = (helper , cache , config) => {
 
   const request = helper.request
 

@@ -76,7 +76,6 @@ module.exports = {
     params.url = url
     if(debug) params.proxy = 'http://127.0.0.1:1087'
     
-    console.log('get ',url,params.proxy)
 		return new Promise(function (resolve, reject) {
 			request(params, function(error, response, body){
           if(error){

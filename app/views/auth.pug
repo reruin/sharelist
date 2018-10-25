@@ -11,8 +11,8 @@ block content
     h3 #{name}
     div
       .form-group
-        input.sl-input(id="j_passwd",type='password', name='passwd', placeholder=__('auth_placeholder'))
-      button.sl-button.btn-primary(type="button") =__('ok')
+        input.sl-input(id='j_passwd',type='password', name='passwd', placeholder=__('auth_placeholder'))
+      button.sl-button.btn-primary(type='button')= __('ok')
   script(src='https://cdn.bootcss.com/jquery/3.3.1/jquery.min.js')
   
   script.
@@ -38,7 +38,7 @@ block content
     }
     $(function(){
       $('#j_passwd').on('keypress' , function(e){
-        if(e.keyCode == "13"){
+        if(e.keyCode == '13'){
           checkAuth()
         }
       })

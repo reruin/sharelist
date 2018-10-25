@@ -11,23 +11,21 @@ block content
       h4.text-center= __('install')
       form.form-horizontal(action='',method='post')
         .panel.panel-default
-            .panel-heading
-              | =__('token')
-            .panel-body
-              .form-group
-                .col-sm-12
-                  input.form-control(type='text', name='token' , placeholder=__('new_token'),required)
+          .panel-heading= __('token')
+          .panel-body
+            .form-group
+              .col-sm-12
+                input.form-control(type='text', name='token' , placeholder=__('new_token'),required)
         .panel.panel-default
-            .panel-heading
-              | =__('site_title')
-            .panel-body
-              .form-group
-                .col-sm-12
-                  input.form-control(type='text', name='title', value="ShareList" , placeholder=__('site_title'),required)
+          .panel-heading= __('site_title')
+          .panel-body
+            .form-group
+              .col-sm-12
+                input.form-control(type='text', name='title', value='ShareList' , placeholder=__('site_title'),required)
         .panel.panel-default
           .panel-heading
-            | 虚拟路径
-            a.create-path 添加
+            span= __('virtual_path')
+            a.create-path= __('add')
           .panel-body
             .group-path
               .form-group.item

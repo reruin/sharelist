@@ -63,7 +63,7 @@ const datetime = (date, expr) => {
 }
 
 const byte = (v) => {
-  if(!v){
+  if(v === undefined || v === null || isNaN(v)){
     return '-'
   }
 

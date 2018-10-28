@@ -21,11 +21,13 @@
     "koa-logger": "^2.0.1",
     "koa-onerror": "^1.2.1",
     "koa-router": "^7.1.1",
+    "koa-send": "^5.0.0",
     "koa-session-minimal": "^3.0.4",
     "koa-static": "^3.0.0",
     "koa-views": "^5.2.1",
     "less-middleware": "^2.2.1",
     "lowdb": "^1.0.0",
+    "mime": "^2.3.1",
     "pug": "^2.0.0-rc.1",
     "xml2js": "^0.4.19",
     "yaml": "^1.0.0-rc.8"

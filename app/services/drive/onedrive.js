@@ -1,7 +1,6 @@
 /*
  * One Drive
- * id: One Drive File ID
- * support : live.com , 1drv.ms
+ * od:OneDriveID
  */
 
 const name = 'OneDrive'
@@ -153,7 +152,7 @@ module.exports = (helper, cache, config) => {
       r = (r.items || [r.item])[0]
       children = r.folder ? r.folder.children.map((i) => {
         let ext = i.extension ? i.extension.replace(/\./g, '') : ''
-
+        console.log( i )
         return {
           id: i.id,
           name: i.name + (i.folder ? '' : i.extension),
@@ -163,7 +162,7 @@ module.exports = (helper, cache, config) => {
           mime: i.mimeType,
           created_at: i.displayCreationDate.replace(/\//g, '-'),
           updated_at: i.displayModifiedDate.replace(/\//g, '-'),
-          size: i.displaySize,
+          size: parseInt(i.size),
           type: i.folder ? 'folder' : undefined,
 
           url: i.folder ? '' : i.urls.download,

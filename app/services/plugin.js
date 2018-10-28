@@ -16,14 +16,33 @@ const parse = (data) => {
 
 const driverMap = {}
 
+const parserMap = {}
+
+const getSource = async (id , driverName) => {
+  if(driverMap[driverName]){
+    let provider = getDriver(driverName)
+    let d = await provider.file(id)
+    console.log( d , id , driverName)
+    if(d.outputType === 'file'){
+      if(fs.existsSync( d.url )){
+        return fs.readFileSync(d.url, 'utf8')
+      }
+    }else{
+      let data = await http.get(data.url)
+      return data.body
+    }
+  }
+  return false
+}
+
 const helper = {
   isArray : isArray,
   isObject: isObject,
-  byte:format.byte,
   datetime:format.datetime,
   request:http, 
   querystring:querystring,
-  decode:decode
+  decode:decode,
+  source: getSource
 }
 
 const load = (options) => {
@@ -46,7 +65,7 @@ const load = (options) => {
       const name = names[j];
       const filepath = path.join(p, name);
 
-      const pluginName = name.split('.')[0]
+      const pluginName = name.split('.').slice(0,-1).join('.')
       let resource = {};
 
       if (name.endsWith('.js') ) {
@@ -56,8 +75,15 @@ const load = (options) => {
           assign(resources[pluginName], resource)
 
           if( resource.protocols ){
+            let couldMount = 'file' in resource
+            let couldFormat = 'format' in resource
             resource.protocols.forEach( protocol => {
-              driverMap[protocol] = pluginName
+              if(couldMount){
+                driverMap[protocol] = pluginName
+              }
+              if(couldFormat){
+                parserMap[protocol] = pluginName
+              }
             })
           }
         }
@@ -71,36 +97,34 @@ const load = (options) => {
 
 const getDriver = (ext) => {
   let name = driverMap[ext]
+
   return resources[name]
 }
 
-const getSource = async (id , ext) => {
-  if(driverMap[ext]){
-    let provider = getDriver(ext)
-    let d =  await provider.file(id)
-    if(d.protocol === 'file'){
-      if(fs.existsSync( d.url )){
-        return fs.readFileSync(d.url, 'utf8')
-      }
-    }else{
-      let data = await http.get(data.url)
-      return data.body
-    }
+const getFormater = (ext) => {
+  let name = parserMap[ext]
+  return name ? resources[name].format : null
+}
+
+
+
+//更新文件详情数据
+const updateFile = async (file) => {
+  if(file.type != 'folder'){
+    file.type = MIMEType(file.ext)
   }
 
-  return false
-}
+  file.displaySize = format.byte(file.size)
 
-const updateFile = (v) => {
-  if(v.type != 'folder'){
-    v.type = MIMEType(v.ext)
+  
+  let formater = getFormater(file.ext)
+  if( formater ){
+    await formater(file)
   }
+  return file
 }
 
-const isInlineLnk = (name) => {
-  return /\.[^\.]+?\.[^\.]+?$/.test(name)
-}
-
+// 用于更新目录数据
 const updateFolder = (folder) => {
   let parentType = folder.provider
   folder.children.forEach( d => {
@@ -121,10 +145,10 @@ const updateFolder = (folder) => {
       if( type == 'ln' ){
         let ext  = tmp[tmp.length-2]
 
-        //虚拟磁盘 name.type
-        let isVD = len>2 && ext == 'd'
+        //目录快捷方式 name.d.ln
+        let isDir = len > 2 && ext == 'd'
 
-        if(isVD){
+        if(isDir){
           d.name = tmp.slice(0,-2).join('.')
           d.type = 'folder'
         }else{
@@ -143,14 +167,14 @@ const updateFolder = (folder) => {
         d.type = 'folder'
         d.lnk = true
         d.size = null
-        if( getDriver(type).virtual === true ){
-          d.virtual = true
-        }
       }
     }
 
-    updateFile(d)
+    if(d.type != 'folder'){
+      d.type = MIMEType(d.ext)
+    }
 
+    d.displaySize = format.byte(d.size)
   })
   
   folder.children.sort((a,b)=>{
@@ -158,12 +182,9 @@ const updateFolder = (folder) => {
   })
 }
 
-const getDriverTypeFromId = (id) => {
-
-}
 
 /*
- * 处理快捷方式
+ * 调用解析器处理
  */
 const updateLnk = async (d) => {
   //获取快捷方式的指向内容

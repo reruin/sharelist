@@ -43,8 +43,8 @@
 -
   name: 嵌套GoodleDrive虚拟目录@0B0vQvfdCBUFjdnRpVnZsWmlFanM.gd
 -
-  name: 嵌套windows本地D盘.ld
-  content: /d/a.b
+  name: 嵌套windows本地D盘.d.ln
+  content: ld:/d/a.b
 -
-  name: 嵌套linux root目录.ld
-  content: /root
+  name: 嵌套linux root目录.d.ln
+  content: ld:/root

@@ -21,5 +21,9 @@ router.use('/webdav',webdav.routes(), webdav.allowedMethods())
 router.use('/install',install.routes(), install.allowedMethods())
 
 router.use(mid_install, page.routes(), page.allowedMethods())
-
+/*
+router.use('/',(ctx) => {
+  console.log('method',ctx.method.toLowerCase())
+})
+*/
 module.exports = router

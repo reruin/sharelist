@@ -1,6 +1,6 @@
 /*
- * http 文件
- * id: file(folder) path
+ * http
+ * http(s)
  */
 
 const name = 'HTTPFile'

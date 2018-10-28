@@ -1,0 +1,26 @@
+/*
+ * url 后缀解析插件
+ * 用于:url后缀的文件直接跳转实际页面
+ */
+
+const name = 'urlParse'
+
+const version = '1.0'
+
+const protocols = ['url']
+
+const url = require("url")
+
+module.exports = (helper , cache , config ) => {
+
+  const source = helper.source
+
+  const format = async (data)=>{
+    let content = await source(data.id , data.provider)
+    let url = content.match(/(?<=URL=)[^\r\n\t]+/)[0]
+    data.url = url
+    data.outputType = 'redirect'
+  }
+
+  return { name , version , protocols , format }
+}

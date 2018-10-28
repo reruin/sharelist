@@ -3,7 +3,7 @@ const base = require('../utils/base')
 const cache = require('../utils/cache')
 const config = require('../config')
 const format = require('../utils/format')
-const {updateFile , updateFolder, getDriver , updateLnk } = require('./plugin')
+const {updateFile , updateFolder, getDriver , updateLnk , } = require('./plugin')
 
 const access_check = (d)=>{
   return d
@@ -86,6 +86,7 @@ class ShareList {
     if(provider){
       
       //处理快捷方式
+
       if( hit.lnk ){
         let originId = hit.provider+':'+hit.id
         await updateLnk( hit )
@@ -115,9 +116,8 @@ class ShareList {
       }
       // file  /a/b/c.jpg
       else{
-
         resp = await provider.file(hit.id , hit)
-        updateFile(resp)
+        await updateFile(resp)
       }
     }
 
@@ -125,13 +125,6 @@ class ShareList {
     return resp
   }
 
-
-  async file(id , provider){
-    let provider = getDriver(provider)
-    if(provider){
-      return await provider.file(id)
-    }
-  }
 
   mount(){
     let paths = config.data.path || [] , key

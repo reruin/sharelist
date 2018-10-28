@@ -1,11 +1,9 @@
 
 const router = require('koa-router')()
-const webdav = require('../utils/webDAV')
+const webdav = require('../controllers/webdav')
 
 
 const routers = router
-  .all(':path(.*)' , (ctx , next) => {
-    webdav.serveRequest(ctx , next)
-  })
+  .all(':path(.*)' , webdav)
  
 module.exports = routers

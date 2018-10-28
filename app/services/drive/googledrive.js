@@ -1,6 +1,6 @@
 /*
  * Google Drive
- * id: Google Drive ID
+ * gd:GoogleDriveID
  */
 
 const name = 'GoogleDrive'
@@ -61,7 +61,7 @@ module.exports = (helper , cache , config) => {
         mime:i[3],
         created_at:helper.datetime(i[9]),
         updated_at:helper.datetime(i[10]),
-        size:helper.byte(i[13]),
+        size:parseInt(i[13]),
         type : i[3].indexOf('.folder')>=0  ? 'folder' : undefined,
       }
     }) : []

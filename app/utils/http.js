@@ -1,6 +1,6 @@
 const request = require('request')
 const base = require('./base')
-const debug = false //process.env.NODE_ENV == 'dev'
+const debug = true //process.env.NODE_ENV == 'dev'
 const headers = {
     'Accept-Encoding': 'identity;q=1, *;q=0',
     'Accept-Language':'zh-CN,zh;q=0.8',
@@ -56,6 +56,10 @@ module.exports = {
     })
   },
 
+  stream( opts ){
+    if(debug) opts.proxy = 'http://127.0.0.1:1087'
+    return request(opts) 
+  },
 	get(url , opts ){
     opts = opts || {}
     let params = { ...opts }

@@ -1,6 +1,6 @@
 /*
  * xdrive 是 sharelist 内置的使用yaml描述的网盘系统 , 没有缓存
- * id: rootId(yaml文件所在路径) + yaml文件名 + ':' + 排序
+ * xd: rootId(yaml文件所在路径) + yaml文件名 + ':' + 排序
  */
 
 const name = 'ShareListDrive'
@@ -20,7 +20,7 @@ module.exports = (helper , cache , config , getSource) => {
   const createId = (d , rootId)=>{
     d.forEach((i , index)=>{
       if(helper.isObject(i)){
-        i.id = rootId + '/'+ i.name
+        i.id = rootId + '/'+ i.name.replace(/\.d\.ln$/,'').replace(/\.ln$/,'')
         i.provider = defaultProvider
         if(i.children) {
           i.type = 'folder'
@@ -72,9 +72,18 @@ module.exports = (helper , cache , config , getSource) => {
     let disk = cache(`${defaultProvider}:${rootId}`)
     let path = id.split(':/')[1].split('/')
 
+    console.log( rootId , disk , path)
     for(let i=0; i<path.length && disk; i++){
       disk = disk.children
-      disk = disk.find(j => j.name == path[i]) //[ parseInt(path[i]) ]
+      disk = disk.find(j => {
+        return `${j.name}` == path[i]
+
+        if( j.type == 'folder' ){
+          return `${j.name}.${j.ext}` == path[i]
+        }else{
+          return `${j.name}` == path[i]
+        }
+      }) //[ parseInt(path[i]) ]
     }
 
     return disk

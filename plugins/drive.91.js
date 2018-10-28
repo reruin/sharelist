@@ -113,7 +113,7 @@ module.exports = (helper , cache , config , getSource) => {
       type : 'folder',
       provider:defaultProvider,
       updated_at:Date.now(),
-      children : [{id : `/f/${id}`, name , type:'video', provider:defaultProvider}]
+      children : [{id : `/f/${id}`, name:name + '.mp4' , ext:'mp4' , mime:'video/mp4', type:'video', provider:defaultProvider}]
     }
     return p
   }
@@ -130,6 +130,7 @@ module.exports = (helper , cache , config , getSource) => {
       name:name+'.mp4',
       type:'video',
       ext:'mp4',
+      mime:'video/mp4',
       provider:defaultProvider,
       url:url
     }
@@ -144,7 +145,7 @@ module.exports = (helper , cache , config , getSource) => {
     body.replace(/viewkey=([0-9a-z]+)[^<]+?\s*<img\s+src="([^"]+?)"[\w\W]+?title="([^"]+?)"/g , ($0 , $1, $2, $3)=>{
       children.push({
         id : `/f/${$1}`, 
-        name : $3,
+        name : $3+'.mp4',
         provider:defaultProvider,
         updated_at:'-',
         size:'-',
@@ -156,7 +157,7 @@ module.exports = (helper , cache , config , getSource) => {
 
     children.push({
       id : `/${cate}/${page+1}`,
-      name : '-->',
+      name : `第${page+1}页`,
       url:`../${name}-${page+1}`,
       provider:defaultProvider,
       type:'folder'
@@ -165,7 +166,7 @@ module.exports = (helper , cache , config , getSource) => {
     if(page>1){
       children.push({
         id : `/${cate}/${page-1}`,
-        name : '<--',
+        name : `第${page-1}页`,
         url:`../${name}-${page-1}`,
         provider:defaultProvider,
         type:'folder'

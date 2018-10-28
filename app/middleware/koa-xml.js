@@ -24,6 +24,7 @@ module.exports = ({methods , ...rest} = {}) => {
       ctx.is('xml') &&
       ( methods.length == 0 || methods.includes(ctx.method) )
     ) {
+      console.log('hit xml *****************')
       let xml = await parser(ctx.req)
       let json = await xml2js( xml , rest)
       ctx.request.body = { xml  , json}

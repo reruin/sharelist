@@ -13,6 +13,7 @@ const auth = (data , ctx)=>{
 }
 
 
+
 const output = async (ctx , data)=>{
 
   const isPreview = ctx.request.querystring.indexOf('preview') >= 0
@@ -28,11 +29,16 @@ const output = async (ctx , data)=>{
       data , url : isProxy ? ctx.path : url
     })
   }
-  // download
+  //三种方式 , file  | redirect | url
   else{
-    if(data.protocol === 'file'){
+    if(data.outputType === 'file'){
       await sendFile(ctx, url)
     }
+    
+    else if( data.outputType == 'redirect'){
+      ctx.redirect( url )
+    }
+    
     else{
       if(isProxy){
 
@@ -68,6 +74,8 @@ const output = async (ctx , data)=>{
 
 module.exports = {
   async index(ctx){
+    console.log('---> method sharelist:',ctx.method)
+
     let data = await service.path(ctx.paths , ctx.query , ctx.paths)
     let base_url = ctx.path == '/' ? '' : ctx.path
     let parent = ctx.paths.length ? ('/' + ctx.paths.slice(0,-1).join('/')) : ''
@@ -97,7 +105,7 @@ module.exports = {
             if(enablePreview(i.type)){
               href += (href.indexOf('?')>=0 ? '&' : '?') + 'preview'
             }
-            resp.push( { href , type : i.type , size: i.size , updated_at:i.updated_at , name:i.name})
+            resp.push( { href , type : i.type , size: i.displaySize , updated_at:i.updated_at , name:i.name})
           }
         })
 
@@ -112,15 +120,31 @@ module.exports = {
     
   },
 
-  async api(ctx){
-    let token = ctx.params.token
-    if(token == config.data.token){
-      let data = await service.path(ctx.paths.slice(1))
-      let base_url = ctx.url == '/' ? '' : ctx.url
-      let parent = ctx.paths.length ? ('/' + ctx.paths.slice(0,-1).join('/')) : ''
-      ctx.body = data
+  async api(path , paths , query){
+    let data = await service.path(paths , query , paths)
+    let base_url = path == '/' ? '' : path
+    let parent = paths.length ? ('/' + paths.slice(0,-1).join('/')) : ''
+
+    //data is readonly
+    if( data === false){
+      return { status : 404 }
+    }
+    else if(data === 401){
+      return { status : 404 }
+    }
+
+    else if(data.type == 'folder'){
+
+      let passwd = checkPasswd(data)
+
+      if( passwd !== false && !ctx.session.access.has( data.id )){
+        await ctx.render('auth',{parent , id:data.id , name:decodeURIComponent(decode(ctx.paths[ctx.paths.length-1]))})
+        
+      }else{
+        return data
+      }
     }else{
-      ctx.body = []
+      return data
     }
     
   },

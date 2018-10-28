@@ -77,15 +77,17 @@ app.use(views(__dirname + '/views', {
 // 初始化路由中间件
 app.use(routers.routes()).use(routers.allowedMethods())
 
-
+process.on('uncaughtException', function (err) {
+  console.error(err.stack);
+  console.log("Node NOT Exiting...");
+});
 app.use(async (ctx) => {
+  console.log(ctx.error)
   switch (ctx.status) {
     case 404:
       await ctx.render('404');
       break;
   }
 })
-
-
 
 module.exports = app

@@ -1,6 +1,6 @@
 /*
  * 提供对本地文件系统的支持
- * id: 完整路径
+ * file:linux风格路径
  */
 
 
@@ -8,9 +8,9 @@ const name = 'LocalFileSystem'
 
 const version = '1.0'
 
-const protocols = ['ld']
+const protocols = ['ld' , 'file']
 
-const defaultProvider = 'ld'
+const defaultProvider = 'file'
 
 const path = require('path')
 const fs = require('fs')
@@ -65,9 +65,10 @@ module.exports = (format) => {
         }
 
         if(stat){
-          obj.size = format.byte(stat.size)
+          obj.size = stat.size
           obj.created_at = format.datetime(stat.ctime)
           obj.updated_at = format.datetime(stat.mtime)
+          obj.mime = ''
           if(stat.isDirectory()){
             obj.type = 'folder'
           }
@@ -93,7 +94,7 @@ module.exports = (format) => {
       ext: extname(id),
       url: realpath(id),
       provider:defaultProvider,
-      protocol:'file',
+      outputType:'file',
       proxy:true
     }
   }

@@ -99,7 +99,7 @@ module.exports = (helper , cache , config) => {
         provider:defaultProvider,
         created_at:'-',
         updated_at:i.Modified,
-        size:helper.byte(i.FileSizeDisplay),
+        size:i.FileSizeDisplay,
         type : i.FSObjType == '1'  ? 'folder' : undefined,
       }
     }) : []

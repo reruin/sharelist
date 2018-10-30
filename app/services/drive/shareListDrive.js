@@ -9,7 +9,7 @@ const version = '1.0'
 
 const protocols = ['xd','sld']
 
-const defaultProvider = 'xd'
+const defaultProtocol = 'xd'
 
 const yaml = require('yaml').default
 
@@ -21,10 +21,10 @@ module.exports = (helper , cache , config , getSource) => {
     d.forEach((i , index)=>{
       if(helper.isObject(i)){
         i.id = rootId + '/'+ i.name.replace(/\.d\.ln$/,'').replace(/\.ln$/,'')
-        i.provider = defaultProvider
+        i.protocol = defaultProtocol
         if(i.children) {
           i.type = 'folder'
-          i.provider = defaultProvider
+          i.protocol = defaultProtocol
           createId(i.children , i.id)
         }else{
           i.ext = i.name.split('.').pop()
@@ -38,8 +38,8 @@ module.exports = (helper , cache , config , getSource) => {
   }
 
   const mount = async(rootId , data)=>{
-    let resid = `${defaultProvider}:${rootId}`
-    let resp = { id : rootId , type:'folder' , provider:defaultProvider }
+    let resid = `${defaultProtocol}:${rootId}`
+    let resp = { id : rootId , type:'folder' , protocol:defaultProtocol }
 
     // if(cache(resid)) {
     //   resp = cache(resid)
@@ -69,10 +69,10 @@ module.exports = (helper , cache , config , getSource) => {
 
   const findById = (id)=>{
     let rootId = id.split(':').slice(0,-1).join(':')
-    let disk = cache(`${defaultProvider}:${rootId}`)
+    let disk = cache(`${defaultProtocol}:${rootId}`)
     let path = id.split(':/')[1].split('/')
 
-    console.log( rootId , disk , path)
+
     for(let i=0; i<path.length && disk; i++){
       disk = disk.children
       disk = disk.find(j => {

@@ -20,8 +20,8 @@ const parserMap = {}
 
 const getSource = async (id , driverName) => {
   if(driverMap[driverName]){
-    let provider = getDriver(driverName)
-    let d = await provider.file(id)
+    let vendor = getDriver(driverName)
+    let d = await vendor.file(id)
     console.log( d , id , driverName)
     if(d.outputType === 'file'){
       if(fs.existsSync( d.url )){
@@ -126,7 +126,7 @@ const updateFile = async (file) => {
 
 // 用于更新目录数据
 const updateFolder = (folder) => {
-  let parentType = folder.provider
+  let parentType = folder.protocol
   folder.children.forEach( d => {
     let name = d.name
 
@@ -188,14 +188,14 @@ const updateFolder = (folder) => {
  */
 const updateLnk = async (d) => {
   //获取快捷方式的指向内容
-  const content = await getSource(d.id , d.provider)
+  const content = await getSource(d.id , d.protocol)
   //分析内容实体
   const meta = parseLnk(content)
   //从id中猜测协议
 
   //包含协议时
   if(meta){
-    d.provider = meta.protocol
+    d.protocol = meta.protocol
     d.id = meta.id
   }
   //不包含协议
@@ -205,7 +205,7 @@ const updateLnk = async (d) => {
 
     console.log('try protocol',protocol)
     if(driverMap[protocol]){
-      d.provider = protocol
+      d.protocol = protocol
       d.content = content
     }
   }

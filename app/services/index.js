@@ -58,11 +58,12 @@ class ShareList {
         // }else{
           let children = parent.children || []
           let index = base.search(children , 'name' ,  curname)
+          console.log('hit ' , index , curname)
           if(index != -1){
             hit = children[index]
             //只为目录做缓存
             if(hit.type == 'folder')
-              cache(pl , hit.provider+':'+hit.id)
+              cache(pl , hit.protocol+':'+hit.id)
           }else{
             return false
           }
@@ -76,47 +77,46 @@ class ShareList {
     }
 
     //2. 根据对象属性 做下一步操作
-    if(hit.provider == 'root'){
+    if(hit.protocol == 'root'){
       return hit
     }
 
-    let provider = getDriver(hit.provider)
+    let vendor = getDriver(hit.protocol)
     
 
-    if(provider){
+    if(vendor){
       
       //处理快捷方式
 
       if( hit.lnk ){
-        let originId = hit.provider+':'+hit.id
+        let originId = hit.protocol+':'+hit.id
         await updateLnk( hit )
         //更新 driver
-        provider = getDriver(hit.provider)
+        vendor = getDriver(hit.protocol)
 
         //缓存 快捷方式 的实际链接
-        cache(originId , hit.provider+':'+hit.id)
+        cache(originId , hit.protocol+':'+hit.id)
       }
 
       // folder /a/b/c
       if( hit.type == 'folder' ){
 
-        resp = await provider.folder(hit.id , {query , paths:diff(paths , full_paths), content:hit.content})
+        resp = await vendor.folder(hit.id , {query , paths:diff(paths , full_paths), content:hit.content})
 
         if(resp) updateFolder(resp)
-
         //let passwd = base.checkPasswd(resp)
         //resp.auth = passwd !== false
         
         //存在 id 变化 ，例如 OneDrive 的shareid <-> resid, ln 的链接
         //重新缓存 path -> resid
         if(hit.id != resp.id){
-          cache(pl , hit.provider+':'+resp.id)
+          cache(pl , hit.protocol+':'+resp.id)
         }
 
       }
       // file  /a/b/c.jpg
       else{
-        resp = await provider.file(hit.id , hit)
+        resp = await vendor.file(hit.id , hit)
         await updateFile(resp)
       }
     }
@@ -135,21 +135,21 @@ class ShareList {
       paths = paths[0].path
       return { 
         id: paths.replace(/^.*\:/,'') , 
-        provider : (paths.match(/^.*(?=\:)/) || [''])[0], 
+        protocol : (paths.match(/^.*(?=\:)/) || [''])[0], 
         type:'folder'
       }
     }else{
       //根路径不判断缓存，防止添加路径路径时丢失
       let disk = paths.map((i,index)=>({
         id : i.path.replace(/^.*\:/,''),
-        provider:(i.path.match(/^.*(?=\:)/) || [''])[0],
+        protocol:(i.path.match(/^.*(?=\:)/) || [''])[0],
         name : i.name,
         size : '-',
         updated_at : '-',
         type : 'folder'
       }))
       
-      return {id:'$root' , provider:'root', type:'folder' , children : disk}
+      return {id:'$root' , protocol:'root', type:'folder' , children : disk}
     }
   }
 }

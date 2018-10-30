@@ -13,7 +13,6 @@ const session = require('koa-session-minimal')
 const less = require('./middleware/koa-less')
 const addr = require('./middleware/koa-addr')
 const paths = require('./middleware/koa-paths')
-const koaXML = require('./middleware/koa-xml')
 
 const routers = require('./routers/index')
 const cors = require('@koa/cors')
@@ -46,8 +45,6 @@ app.use(bodyparser({
   enableTypes:['json', 'form', 'text' , 'xml']
 }))
 
-app.use(koaXML())
-
 app.use(json())
 
 app.use(addr)
@@ -77,10 +74,6 @@ app.use(views(__dirname + '/views', {
 // 初始化路由中间件
 app.use(routers.routes()).use(routers.allowedMethods())
 
-process.on('uncaughtException', function (err) {
-  console.error(err.stack);
-  console.log("Node NOT Exiting...");
-});
 app.use(async (ctx) => {
   console.log(ctx.error)
   switch (ctx.status) {
@@ -88,6 +81,13 @@ app.use(async (ctx) => {
       await ctx.render('404');
       break;
   }
+})
+
+app.use(async (ctx , next) => {
+  await next()
+
+  console.log(ctx.response)
+
 })
 
 module.exports = app

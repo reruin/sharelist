@@ -77,17 +77,6 @@ const byte = (v) => {
   return Math.floor(v * 100) / 100 + ' ' + ['B','KB','MB','GB','TB'][lo]
 }
 
-const ln = (v) => {
-  let provider = (v.match(/\.(od|gd|remote|xd)$/) || ['',''])[1]
-  if( provider ){
-    let r = v.split('.')
-    let id = r[r.length-2]
-    let name = r.slice(0,-2).join('') || id
-    return { id , name , provider , type : 'folder'}
-  }
-}
-
-
 module.exports = {
-  datetime , byte , ln
+  datetime , byte
 }

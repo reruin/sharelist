@@ -1,25 +1,24 @@
 /*
- * http
+ * https
  */
 
-const name = 'HTTPFile'
+const name = 'HTTPSFile'
 
 const version = '1.0'
 
-const protocols = ['http']
+const protocols = ['https']
 
 const url = require("url")
 
 module.exports = (format) => {
 
   const file = (id)=>{
-    console.log('file id',id)
     return {
       id,
       name:id.split('/').pop(),
       ext: id.split('.').pop(),
-      url: `http:${id}`,
-      protocol:'http',
+      url: `https:${id}`,
+      protocol:'https'
     }
   }
 

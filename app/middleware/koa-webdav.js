@@ -9,7 +9,7 @@ const parser = (req, options) => {
   })
 }
 
-const xml2js = ( xml , options ) => {
+const xml2js = ( xml , options = {}) => {
   return new Promise((resolve , reject) => {
     parseXML(xml, options, (err, res) => {
       if (err) throw err
@@ -17,17 +17,19 @@ const xml2js = ( xml , options ) => {
     })
   })
 }
-module.exports = ({methods , ...rest} = {}) => {
-  methods = methods || []
+
+module.exports = () => {
+  const methods = ['pptions','head','trace','get','put','post','delete','mkcol','propfind','proppatch','copy','move','lock','unlock']
+
   return async(ctx, next) => {
+    console.log( ctx.request )
     if (
       ctx.is('xml') &&
-      ( methods.length == 0 || methods.includes(ctx.method) )
+      ( methods.length == 0 || methods.includes(ctx.method.toLowerCase()) )
     ) {
-      console.log('--> webdav')
       let xml = await parser(ctx.req)
-      let json = await xml2js( xml , rest)
-      ctx.request.body = { xml  , json}
+      let json = await xml2js( xml )
+      ctx.webdav = json
     }
     await next()
   }

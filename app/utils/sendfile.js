@@ -49,7 +49,6 @@ const sendFile = async(ctx , path , {maxage , immutable} = {maxage:0 , immutable
 
   if (range){
     let [start , end] = getRange(ctx.header.range , fileSize)
-    console.log( 'range',[start , end]  )
     ctx.set('Content-Range', 'bytes ' + `${start}-${end}/${fileSize}`)
     ctx.status = 206
 
@@ -66,50 +65,10 @@ const sendFile = async(ctx , path , {maxage , immutable} = {maxage:0 , immutable
   ctx.body = fs.createReadStream(path , readOpts)
 }
 
-const sendHTTPFile = async (ctx , url , opts) => {
+const sendHTTPFile = async (ctx , url , headers) => {
 
-  /*
-  let proxy_header_support = enableRange(data.type)
+  ctx.body = ctx.req.pipe(http.stream({url , headers})).pipe(ctx.res)
 
-  if( (data.proxy_header || config.data.enabled_proxy_header ) && proxy_header_support){
-
-    try{
-      let th = { ...headers , 'Range': 'bytes=0-'}
-      let headers = await http.header2(url,{headers:th})
-      // console.log(headers)
-      if(headers){
-        for(let i in headers){
-          ctx.response.set(i, headers[i])
-        }
-      }
-    }catch(e){
-      console.log(e)
-    }
-  }
-  */
-  
-  try{
-    let th = { ...opts , 'Range': 'bytes=0-'}
-    let headers = await http.header2(url,{headers:th})
-    // console.log(headers)
-
-    if(headers){
-      for(let i in headers){
-        // if(allows.includes(i)){
-          ctx.set(i, headers[i])
-        // }
-      }
-    }
-  }catch(e){
-    console.log(e)
-  }
-  
-  ctx.set('Accept-Ranges', 'bytes')
-  ctx.set('Content-type',mime.getType(url))
-
-
-  //ctx.body = ctx.req.pipe(http.stream({url , headers:opts}))
-
-  ctx.body = ctx.req.pipe(request({url , headers:opts}))
 }
+
 module.exports = { sendFile , sendHTTPFile }

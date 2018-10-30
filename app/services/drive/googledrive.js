@@ -9,7 +9,7 @@ const version = '1.0'
 
 const protocols = ['gd','googledrive']
 
-const defaultProvider = 'gd'
+const defaultProtocol = 'gd'
 
 const host = 'https://drive.google.com'
 
@@ -19,8 +19,8 @@ module.exports = (helper , cache , config) => {
 
   // gd folder => files
   const folder = async(id) => {
-    let resid = `${defaultProvider}:${id}`
-    let resp = {id , type:'folder' , provider:defaultProvider}
+    let resid = `${defaultProtocol}:${id}`
+    let resp = {id , type:'folder' , protocol:defaultProtocol}
     if(cache(resid)) {
       resp = cache(resid)
       if(
@@ -56,7 +56,7 @@ module.exports = (helper , cache , config) => {
         id:i[0],
         name:i[2],
         ext:i[44],
-        provider:defaultProvider,
+        protocol:defaultProtocol,
         parent:i[1][0],
         mime:i[3],
         created_at:helper.datetime(i[9]),

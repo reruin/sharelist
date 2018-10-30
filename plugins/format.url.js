@@ -16,7 +16,7 @@ module.exports = (helper , cache , config ) => {
   const source = helper.source
 
   const format = async (data)=>{
-    let content = await source(data.id , data.provider)
+    let content = await source(data.id , data.protocol)
     let url = content.match(/(?<=URL=)[^\r\n\t]+/)[0]
     data.url = url
     data.outputType = 'redirect'

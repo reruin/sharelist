@@ -9,7 +9,7 @@ const version = '1.0'
 
 const protocols = ['odb']
 
-const defaultProvider = 'odb'
+const defaultProtocol = 'odb'
 
 
 module.exports = (helper , cache , config) => {
@@ -44,13 +44,13 @@ module.exports = (helper , cache , config) => {
 
   // folder => files
   const folder = async(id) => {
-    const resid = `${defaultProvider}:${id}`
+    const resid = `${defaultProtocol}:${id}`
 
     const baseUrl = id.split('/').slice(0,3).join('/')
 
     let [rootId , path] = parse(id)
 
-    let resp = {id , type:'folder' , provider:defaultProvider}
+    let resp = {id , type:'folder' , protocol:defaultProtocol}
     
     let url = baseUrl + path
 
@@ -96,7 +96,7 @@ module.exports = (helper , cache , config) => {
         id:rootId+'@'+i.FileRef,
         name:i.FileLeafRef,
         ext:i['.fileType'],
-        provider:defaultProvider,
+        protocol:defaultProtocol,
         created_at:'-',
         updated_at:i.Modified,
         size:i.FileSizeDisplay,
@@ -129,7 +129,7 @@ module.exports = (helper , cache , config) => {
       url : url ,
       name : data.name,
       ext: data.ext,
-      provider:defaultProvider,
+      protocol:defaultProtocol,
       proxy:true,
       headers:{'Cookie':cookie}
     }

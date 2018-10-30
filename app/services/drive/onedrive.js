@@ -9,7 +9,7 @@ const version = '1.0'
 
 const protocols = ['od', 'onedrive']
 
-const defaultProvider = 'od'
+const defaultProtocol = 'od'
 
 module.exports = (helper, cache, config) => {
 
@@ -87,7 +87,7 @@ module.exports = (helper, cache, config) => {
     }
 
     let resid = 'od:' + id
-    let resp = { id, type: 'folder', provider: defaultProvider, children: [] }
+    let resp = { id, type: 'folder', protocol: defaultProtocol, children: [] }
 
     if (cache(resid) && !nocache) {
       resp = cache(resid)
@@ -157,7 +157,7 @@ module.exports = (helper, cache, config) => {
           id: i.id,
           name: i.name + (i.folder ? '' : i.extension),
           ext: ext,
-          provider: defaultProvider,
+          protocol: defaultProtocol,
           parent: i.parentId,
           mime: i.mimeType,
           created_at: i.displayCreationDate.replace(/\//g, '-'),

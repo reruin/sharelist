@@ -16,11 +16,13 @@ router.use('/manage',mid_install,manage.routes(), manage.allowedMethods())
 
 router.use('/api',mid_install,api.routes(), api.allowedMethods())
 
-router.use('/webdav',webdav.routes(), webdav.allowedMethods())
 
 router.use('/install',install.routes(), install.allowedMethods())
 
 router.use(mid_install, page.routes(), page.allowedMethods())
+
+router.use(webdav.routes(), webdav.allowedMethods())
+
 /*
 router.use('/',(ctx) => {
   console.log('method',ctx.method.toLowerCase())

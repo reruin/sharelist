@@ -25,7 +25,6 @@ const parsePath = (url)=>{
     return [paths , raw]
   }else{
     return [[] , []]
-
   }
 }
 
@@ -94,7 +93,7 @@ const search = (ret , key , value) => {
   return -1
 }
 
-const path = (path) => {
+const pathNormalize = (path) => {
   // see https://github.com/seajs/seajs/blob/master/src/util-path.js
   let DOUBLE_DOT_RE = /\/[^\/]+\/\.\.\//,
       basepath = ''
@@ -125,12 +124,14 @@ const enablePreview = (v) => ['audio','video','image'].includes(v)
 
 const enableRange = (v) => ['audio','video'].includes(v)
 
+const isRelativePath = (v) => !/^http/.test(v)
+
 module.exports = {
   parsePath , MIMEType, checkPasswd , 
 
-  isArray , isObject, isString, isDate, isEmail, enablePreview, enableRange ,
+  isArray , isObject, isString, isDate, isEmail, isRelativePath , enablePreview, enableRange , 
 
-  hash, extend, ip, path , search,
+  hash, extend, ip, pathNormalize , search,
 
   encode , decode , base64_encode, base64_decode,
 

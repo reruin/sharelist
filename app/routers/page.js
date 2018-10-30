@@ -7,5 +7,4 @@ const sharelist = require('../controllers/sharelist')
 
 const routers = router
   .get('/:path(.*)', sharelist.index)
- 
 module.exports = routers

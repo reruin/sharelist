@@ -10,7 +10,7 @@ const version = '1.0'
 
 const protocols = ['ld' , 'file']
 
-const defaultProvider = 'file'
+const defaultProtocol = 'file'
 
 const path = require('path')
 const fs = require('fs')
@@ -44,7 +44,7 @@ module.exports = (format) => {
   // }
 
   const folder = async(id) => {
-    let dir = normalize(id) , resp = { id : dir , type:'folder', provider:defaultProvider}
+    let dir = normalize(id) , resp = { id : dir , type:'folder', protocol:defaultProtocol}
     let realdir = realpath(dir)
 
     if( fs.existsSync(realdir) ){
@@ -60,7 +60,7 @@ module.exports = (format) => {
         let obj = {
           id:path , 
           name:filename,
-          provider:defaultProvider,
+          protocol:defaultProtocol,
           type:'other'
         }
 
@@ -93,7 +93,7 @@ module.exports = (format) => {
       name: path.basename(id),
       ext: extname(id),
       url: realpath(id),
-      provider:defaultProvider,
+      protocol:defaultProtocol,
       outputType:'file',
       proxy:true
     }

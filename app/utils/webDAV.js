@@ -1,8 +1,5 @@
-const request = require('request')
-
-const { sendFile , sendHTTPFile} = require('./sendfile')
-
 const http = require('./http')
+const { sendFile , sendHTTPFile} = require('./sendfile')
 
 const slashify = (p) => (p[p.length-1] != '/' ? `${p}/` : p)
 
@@ -39,14 +36,36 @@ const propsParse = (data) => {
   for(let prop in props){
     ret[prop.split(':')[1]] = props[prop][0]
   }
-  console.log('req:',ret)
+  // console.log('req:',ret)
   return ret
 }
 
+const respCreate = (data , options) => {
+  let { props , path } = options
+  let body = `<?xml version="1.0" encoding="utf-8"?>`
+      body +=`<D:multistatus xmlns:D="DAV:">`
+  console.log( data )
+  
+  data.forEach( file => {
+    let href = path + file.href //path +'/' + encodeURIComponent(file.name)
+    let res = propsCreate(file , props)
+    body += `
+      <D:response>
+        <D:href>${href}</D:href>
+        <D:propstat>
+          <D:status>HTTP/1.1 200 OK</D:status>
+          <D:prop xmlns:R="http://ns.example.com/boxschema/">${res}</D:prop>
+        </D:propstat>
+      </D:response>`
+  })
+
+  body +=`</D:multistatus>`
+
+  return body
+}
 
 class WebDAV {
-  constructor(ctx , files){
-    this._http_status = null
+  constructor(ctx){
     this.path = null
     this.ctx = ctx
     this.davPoweredBy = null
@@ -54,10 +73,6 @@ class WebDAV {
 
     this.allows = ['GET','PUT','HEAD','OPTIONS','PROPFIND']
 
-    this.files = files
-  }
-  _urlencode(v){
-    return decodeURIComponent(v)
   }
 
   _get_auth(){
@@ -67,12 +82,6 @@ class WebDAV {
     return pairs
   }
 
-  /**
-   * check authentication if check is implemented
-   * 
-   * @param  void
-   * @return bool  true if authentication succeded or not necessary
-   */
   _check_auth() {
     const ctx = this.ctx
     let auth_type = ctx.get("AUTH_TYPE") || null
@@ -91,43 +100,14 @@ class WebDAV {
     this.ctx = ctx
     this.data = data
 
-    // default uri is the complete request uri
-    let uri = ctx.protocol + "://" + ctx.hostname + ctx.pathname
-    let path_info = ctx.params.path
-    // just in case the path came in empty ...
-    if (path_info == '') {
-      path_info = "/"
-    }
-
-    this.base_uri = this.uri = uri
-    // this.uri      = $uri + $path_info;
-
-    // set path
-    this.path = decodeURIComponent(path_info)
-
-    if (!this.path) {
-        if (ctx.method == "GET") {
-            // redirect clients that try to GET a collection
-            // WebDAV clients should never try this while
-            // regular HTTP clients might ...
-            this.setHeader("Location: "+$this.base_uri+"/")
-            return
-        } else {
-            // if a WebDAV client didn't give a path we just assume '/'
-            this.path = "/"
-        }
-    } 
-    
-    //magic_quotes_gpc
-    // this.path = this.stripslashes(this.path)
-    
+    this.path = this.ctx.protocol + '://' + this.ctx.host //+ this.ctx.path
 
     this.setHeader("X-Dav-Powered-By" , this.davPoweredBy || 'ShareList')
     
+    let method  = this.ctx.method.toLowerCase()
 
-    // check authentication except options
-
-    if ( !(ctx.method == 'OPTIONS' && this.path == "/") 
+    /*
+    if ( !(method == 'options' && this.ctx.path == "/") 
          && (this._check_auth())) {
         // RFC2518 says we must use Digest instead of Basic
         // but Microsoft Clients do not support Digest
@@ -137,42 +117,28 @@ class WebDAV {
 
         // Windows seems to require this being the last header sent
         // (changed according to PECL bug #3138)
-        this.http_status('401 Unauthorized')
+        this.setStatus('401 Unauthorized')
 
         return
-    }
+    }*/
   
     
-    // detect requested method names
-    let method  = this.ctx.method.toLowerCase()
 
-    let wrapperFn = "http_"+method;
+    const wrapperFn = "http_"+method;
     
-    // activate HEAD emulation by GET if no HEAD method found
-    if (method == "head" && !this.head) {
-      method = "get"
-    }
-
     if (
       this[wrapperFn] 
-      /* && (method == "options" || this.allows.includes(method))*/
     ) {
       await this[wrapperFn]()
     } 
-    else { // method not found/implemented
-        if (this.ctx.method == "LOCK") {
-          this.http_status("412 Precondition failed")
-        } 
-        else {
-          this.http_status("405 Method not allowed")
-          this.setHeader("Allow", this.allows.join(', '));  // tell client what's allowed
-        }
+    else {
+      this.setStatus("405 Method not allowed")
+      this.setHeader("Allow", this.allows.join(', '))
     }
   }
 
 
   checkAuth(type, username, password){ }
-
 
   setHeader(k , v){
     this.ctx.set(k , v)
@@ -183,134 +149,105 @@ class WebDAV {
     this.ctx.body = body
   }
 
-  setStatus(code){
-    this.ctx.status = parseInt(code)
-  }
-
-  http_status(status) {
-    // simplified success case
+  setStatus(status) {
     if (status === true) {
       status = "200 OK"
     }
     let statusCode = status.split(' ')[0]
-    this._http_status = status
-    this.setStatus(statusCode)
-    // this.setHeader('X-WebDAV-Status',status)
+    this.ctx.status = parseInt(statusCode)
+    this.setHeader('X-WebDAV-Status',status)
   }
 
-  http_options(){
-    // Microsoft clients default to the Frontpage protocol 
-    // unless we tell them to use WebDAV
+  async http_options(){
+    // For Microsoft clients
     this.setHeader("MS-Author-Via: DAV")
 
-    // get allowed methods
     const allows = this.allows
 
-    // dav header
-    // assume we are always dav class 1 compliant
     let dav = [1]
 
     if (allow.includes('LOCK')) {
-      // dav class 2 requires that locking is supported 
       dav.push(2)
     }
 
-    // tell clients what we found
-    this.http_status("200 OK");
+    this.setStatus("200 OK");
     this.setHeader("DAV: " + dav.join(', '))
     this.setHeader("Allow: " + allows.join(', '))
     this.setHeader("Content-length: 0");
   }
 
   /**
-   * PROPFIND method handler
+   * PROPFIND method
    *
    * @param  void
    * @return void
    */
   async http_propfind() {
-    const ctx = this.ctx
+    const { ctx  , data } = this
 
     let options = {
       path : this.path
     }
 
-    // search depth from header (default is "infinity)
+    // search depth (default is "infinity)
+    //
     if (ctx.get('HTTP_DEPTH')) {
       options["depth"] = ctx.get('HTTP_DEPTH')
     } else {
       options["depth"] = "infinity"
     }       
 
-    let props = propsParse( ctx.request.body.json )
+    let props = propsParse( ctx.webdav )
     
     options['props'] = props
 
- 
-    // 输出 
-    
-    let path = this.path
-
-    let body = `<?xml version="1.0" encoding="utf-8"?>`
-        body +=`<D:multistatus xmlns:D="DAV:">`
 
     const files = this.data.children
 
     if (files.length == 0) {
-      this.http_status("404 Not Found");
-      return;
+      this.setStatus("404 Not Found")
+    }else{
+      this.setStatus("207 Multi-Status")
+      this.setBody(  respCreate(files , options) )
     }
-    
-    files.forEach( file => {
-      let href = this.ctx.origin + this.ctx.path +'/' + encodeURIComponent(file.name)
-      let res = propsCreate(file , props)
-      body += `
-        <D:response>
-          <D:href>${href}</D:href>
-          <D:propstat>
-            <D:status>HTTP/1.1 200 OK</D:status>
-            <D:prop xmlns:R="http://ns.example.com/boxschema/">${res}</D:prop>
-          </D:propstat>
-        </D:response>`
-    })
 
-    body +=`</D:multistatus>`
-    this.http_status("207 Multi-Status")
-    this.setBody( body )
   }
 
 
   /**
-   * COPY method handler
+   * GET method
    *
    * @param  void
    * @return void
    */
   async http_get() {
     let data = this.data
-
     let url = data.url
-    
     if(data.outputType === 'file'){
       sendFile(this.ctx, url)
     }
     else{
-      let headers = data.headers || {}
-      await sendHTTPFile(this.ctx , url ,headers)
-
+      await sendHTTPFile(this.ctx , url , data.headers || {})
     }
-
   }
 
-  /**
-   * HEAD method handler
-   *
-   * @param  void
-   * @return void
-   */
-  http_head() {
-    
-  }
+  /*
+  http_head() {}
+
+  http_copy() {}
+
+  http_move() {}
+
+  http_mkcol() {}
+
+  http_delete() {}
+
+  http_proppatch() {}
+
+  http_post() {}
+
+  http_put() {}
+  */
 }
 
 module.exports = new WebDAV()

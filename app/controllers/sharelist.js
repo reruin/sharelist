@@ -4,9 +4,9 @@ const request = require('request')
 const service = require('../services/index')
 const http = require('../utils/http')
 const config = require('../config')
-const sendFile = require('../utils/sendfile')
+const { sendFile , sendHTTPFile } = require('../utils/sendfile')
 const cache = {}
-const { parsePath ,checkPasswd, path , encode , decode , enablePreview, enableRange} = require('../utils/base')
+const { parsePath ,checkPasswd, pathNormalize , encode , decode , enablePreview, enableRange , isRelativePath} = require('../utils/base')
 
 const auth = (data , ctx)=>{
   
@@ -22,7 +22,6 @@ const output = async (ctx , data)=>{
 
   let url = data.url
    
-
   if(isPreview){
     //代理 或者 文件系统
     await ctx.render('detail',{
@@ -41,40 +40,16 @@ const output = async (ctx , data)=>{
     
     else{
       if(isProxy){
-
-        let headers = data.headers || {}
-
-        let proxy_header_support = enableRange(data.type)
-
-        if( (data.proxy_header || config.data.enabled_proxy_header ) && proxy_header_support){
-
-          try{
-            let th = { ...headers , 'Range': 'bytes=0-'}
-            let headers = await http.header2(url,{headers:th})
-            // console.log(headers)
-            if(headers){
-              for(let i in headers){
-                ctx.response.set(i, headers[i])
-              }
-            }
-          }catch(e){
-            console.log(e)
-          }
-        }
-        
-        ctx.body = ctx.req.pipe(request({url , headers}))
-
+        await sendHTTPFile(ctx , url , data.headers || {})
       }else{
         ctx.redirect( url )
       }
     }
-
   }
 }
 
 module.exports = {
   async index(ctx){
-    console.log('---> method sharelist:',ctx.method)
 
     let data = await service.path(ctx.paths , ctx.query , ctx.paths)
     let base_url = ctx.path == '/' ? '' : ctx.path
@@ -89,7 +64,6 @@ module.exports = {
     }
 
     else if(data.type == 'folder'){
-      // console.log( 'out put ' , data)
 
       let passwd = checkPasswd(data)
 
@@ -100,7 +74,12 @@ module.exports = {
         let resp = []
         data.children.forEach((i)=>{
           if(i.ext != 'passwd'){
-            let href = path(base_url + '/' + (i.url || encode(i.name)))
+            let href = ''
+            if( i.url && isRelativePath(i.url) ){
+              href = pathNormalize(base_url + '/' + i.url)
+            }else{
+              href = pathNormalize(base_url + '/' + encode(i.name))
+            }
 
             if(enablePreview(i.type)){
               href += (href.indexOf('?')>=0 ? '&' : '?') + 'preview'
@@ -122,7 +101,7 @@ module.exports = {
 
   async api(path , paths , query){
     let data = await service.path(paths , query , paths)
-    let base_url = path == '/' ? '' : path
+    let base_url = path 
     let parent = paths.length ? ('/' + paths.slice(0,-1).join('/')) : ''
 
     //data is readonly
@@ -138,10 +117,21 @@ module.exports = {
       let passwd = checkPasswd(data)
 
       if( passwd !== false && !ctx.session.access.has( data.id )){
-        await ctx.render('auth',{parent , id:data.id , name:decodeURIComponent(decode(ctx.paths[ctx.paths.length-1]))})
+        //await ctx.render('auth',{parent , id:data.id , name:decodeURIComponent(decode(ctx.paths[ctx.paths.length-1]))})
         
       }else{
-        return data
+        let ret = { ...data }
+        ret.children = data.children.map(i => {
+          let obj = { ...i }
+          if( i.url && isRelativePath(i.url) ){
+            obj.href = pathNormalize(base_url + '/' + i.url)
+          }else{
+            obj.href = pathNormalize(base_url + '/' + encode(i.name))
+          }
+          return obj
+        }) 
+        
+        return ret
       }
     }else{
       return data

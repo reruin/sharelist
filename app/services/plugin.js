@@ -127,7 +127,7 @@ const updateFile = async (file) => {
 // 用于更新目录数据
 const updateFolder = (folder) => {
   let parentType = folder.protocol
-  folder.children.forEach( d => {
+  folder.children.forEach( (d , index) => {
     let name = d.name
 
     // let type = (name.match(/(?<=\.)([^\.]+)$/) || [0])[0]
@@ -175,11 +175,13 @@ const updateFolder = (folder) => {
     }
 
     d.displaySize = format.byte(d.size)
+    d.$ = index
   })
   
   folder.children.sort((a,b)=>{
-    return a.type == 'folder' && b.type != 'folder' ? -1 : a.type != 'folder' && b.type == 'folder' ? 1 : a.name > b.name
+    return a.type == 'folder' && b.type != 'folder' ? -1 : a.type != 'folder' && b.type == 'folder' ? 1 : (a.$ - b.$)
   })
+
 }
 
 

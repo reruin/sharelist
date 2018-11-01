@@ -19,7 +19,7 @@ const xml2js = ( xml , options = {}) => {
 }
 
 module.exports = () => {
-  const methods = ['pptions','head','trace','get','put','post','delete','mkcol','propfind','proppatch','copy','move','lock','unlock']
+  const methods = ['options','head','trace','get','put','post','delete','mkcol','propfind','proppatch','copy','move','lock','unlock']
 
   return async(ctx, next) => {
     console.log( ctx.request )

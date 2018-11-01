@@ -79,13 +79,13 @@ block content
                 each i in config.path
                   .form-group.item
                     .col-sm-2
-                      select.form-control(name='provider', value=(i.path.match(/^.*(?=\:\/\/)/) || [''])[0],placeholder=__('type'),required)
-                        each provider in providers
-                          option(value=provider.code, selected=i.path.indexOf(provider.code+'://')>=0 ? 'selected' : null) #{provider.name}
+                      select.form-control(name='vendor', value=(i.path.match(/^.*(?=\:\/\/)/) || [''])[0],placeholder=__('type'),required)
+                        each vendor in vendors
+                          option(value=vendor.code, selected=i.path.indexOf(vendor.code+':')>=0 ? 'selected' : null) #{vendor.name}
                     .col-sm-2
                       input.form-control(type='text', name='name', value=i.name,placeholder=__('name'),required)
                     .col-sm-7
-                      input.form-control(type='text', name='path', value=i.path.replace(/^.*\:\/\//,''),placeholder=__('input_path_placeholder'),required)
+                      input.form-control(type='text', name='path', value=i.path.replace(/^.*\:/,''),placeholder=__('input_path_placeholder'),required)
                     .col-sm-1
                       button.btn.btn-default.remove-path(type='button') -
               .form-group.text-center

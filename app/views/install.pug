@@ -11,30 +11,28 @@ block content
       h4.text-center= __('install')
       form.form-horizontal(action='',method='post')
         .panel.panel-default
-            .panel-heading
-              | =__('token')
+            .panel-heading= __('token')
             .panel-body
               .form-group
                 .col-sm-12
                   input.form-control(type='text', name='token' , placeholder=__('new_token'),required)
         .panel.panel-default
-            .panel-heading
-              | =__('site_title')
+            .panel-heading= __('site_title')
             .panel-body
               .form-group
                 .col-sm-12
                   input.form-control(type='text', name='title', value="ShareList" , placeholder=__('site_title'),required)
         .panel.panel-default
           .panel-heading
-            | 虚拟路径
-            a.create-path 添加
+            span= __('virtual_path')
+            a.create-path(style='margin-left:10px;')= __('add')
           .panel-body
             .group-path
               .form-group.item
                 .col-sm-2
-                  select.form-control(name='provider',placeholder=__('type'),required)
-                    option(value='gd') GoogleDrive
-                    option(value='od') OneDrive
+                  select.form-control(name='vendor',placeholder=__('type'),required)
+                    each vendor in vendors
+                      option(value=vendor.protocol) #{vendor.name}
                 .col-sm-2
                   input.form-control(type='text', name='name',placeholder=__('name'),required)
                 .col-sm-7

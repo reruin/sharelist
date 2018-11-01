@@ -23,7 +23,7 @@ module.exports = {
     if(act == 'export'){
       ctx.body = config.data
     }else{
-      await ctx.render('manage',{access  , message , config:config.data , providers:config.providers})
+      await ctx.render('manage',{access  , message , config:config.data , vendors:config.getVendors()})
     }
   },
 
@@ -38,14 +38,14 @@ module.exports = {
     }
 
     if(act == 'path'){
-      let { name , path , provider  } = ctx.request.body
+      let { name , path , vendor  } = ctx.request.body
       
       if(Array.isArray(name)){
         path = name.map((i ,index)=>{
-          return { name:i , path:provider[index]+'://'+path[index]}
+          return { name:i , path:vendor[index]+':'+path[index]}
         })
       }else{
-        path = [{name , path:provider+'://'+path}]
+        path = [{name , path:vendor+':'+path}]
       }
 
       let result = { status : 0 , message : ''}
@@ -112,7 +112,7 @@ module.exports = {
 
     }
 
-    await ctx.render('manage',{ message , access : true , config:config.data , providers:config.providers})
+    await ctx.render('manage',{ message , access : true , config:config.data , vendors:config.getVendors()})
     
   }
 

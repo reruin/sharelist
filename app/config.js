@@ -2,6 +2,7 @@ const fs = require('fs')
 const os = require('os')
 const config_path = process.cwd() +'/cache/config.json'
 const port = process.env.PORT || 33001
+const plugin = require('./services/plugin')
 
 const providers = [
   {name:'GoogleDrive',code:'gd'},
@@ -62,6 +63,11 @@ try{
 }
 
 
+const getVendors = () => {
+  return plugin.getVendors()
+}
+
+
 module.exports = {
- data, save , installed , port , providers , getTitle
+ data, save , installed , port , providers , getTitle , getVendors
 }

@@ -10,19 +10,19 @@ module.exports = {
       ctx.redirect('/')
     }
     else{
-      await ctx.render('install')
+      await ctx.render('install' , {vendors:config.getVendors()})
     }
   }
   ,
   async save(ctx){
-    let { token , name , path , provider , title = 'ShareList'} =  ctx.request.body
+    let { token , name , path , vendor , title = 'ShareList'} =  ctx.request.body
     let cfg = {token , title}
     if(Array.isArray(name)){
       cfg.path = name.map((i ,index)=>{
-        return { name:i , path:provider[index]+'://'+path[index]}
+        return { name:i , path:vendor[index]+':'+path[index]}
       })
     }else{
-      cfg.path = [{name , path:provider+'://'+path}]
+      cfg.path = [{name , path:vendor+':'+path}]
     }
     let result = { status : 0 , message : ''}
     if( token && path ){

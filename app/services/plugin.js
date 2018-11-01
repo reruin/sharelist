@@ -224,7 +224,17 @@ const parseLnk = (content) => {
     return false
   }
 }
+
+const getVendors = () => {
+  let vendors = []
+  for(let i in resources){
+    if(resources[i].name && resources[i].folder && resources[i].file)
+      vendors.push({protocol:resources[i].protocols[0] , name:resources[i].name})
+  }
+  return vendors
+}
+
 //
 load({dirs:[__dirname + '/drive']})
 
-module.exports = { load , getDriver , getSource , updateFolder , updateFile , updateLnk }
+module.exports = { load , getDriver , getSource , updateFolder , updateFile , updateLnk , getVendors}

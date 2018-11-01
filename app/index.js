@@ -83,11 +83,4 @@ app.use(async (ctx) => {
   }
 })
 
-app.use(async (ctx , next) => {
-  await next()
-
-  console.log(ctx.response)
-
-})
-
 module.exports = app

@@ -4,7 +4,7 @@
  */
 
 
-const name = 'LocalFileSystem'
+const name = 'FileSystem'
 
 const version = '1.0'
 
@@ -18,7 +18,6 @@ const os = require('os')
 
 const isWinOS = os.platform() == 'win32'
 
-//零宽负回顾后发断言
 const l2w = (p) => p.replace(/^\/([^\/]+?)/,'$1:\\').replace(/\//g,'\\').replace(/(?<!\:)\\+$/,'').replace(/\\{2,}/g,'\\')
 
 const realpath = (p) => (isWinOS ? l2w(p) : p)
@@ -28,20 +27,6 @@ const normalize = (p) => p.replace(/\/{2,}/g,'/').replace(/\/+$/,'')
 const extname = (p) => path.extname(p).substring(1)
 
 module.exports = (format) => {
-
-  // const lpath = async(id) => {
-  //   let realdir = realpath(normalize(id))
-  //   if( fs.existsSync(realdir) ){
-  //     let stat = fs.statSync(realpath(path))
-  //     if( stat.isDirectory() ){
-  //       return folder(id)
-  //     }
-
-  //     if( stat.isFile() ){
-  //       return file(id)
-  //     }
-  //   }
-  // }
 
   const folder = async(id) => {
     let dir = normalize(id) , resp = { id : dir , type:'folder', protocol:defaultProtocol}
@@ -80,7 +65,6 @@ module.exports = (format) => {
         children.push(obj)
       })
 
-
       resp.children = children
       return resp
     }else{
@@ -98,10 +82,6 @@ module.exports = (format) => {
       outputType:'file',
       proxy:true
     }
-  }
-
-  const source = async(id) => {
-
   }
 
   return { name , version , protocols , folder , file }

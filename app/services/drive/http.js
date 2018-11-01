@@ -13,7 +13,6 @@ const url = require("url")
 module.exports = (format) => {
 
   const file = (id)=>{
-    console.log('file id',id)
     return {
       id,
       name:id.split('/').pop(),
@@ -25,5 +24,5 @@ module.exports = (format) => {
 
   const folder = file
 
-  return { name , version , protocols , folder , file }
+  return { name , version , protocols , folder , file , mountable : false }
 }

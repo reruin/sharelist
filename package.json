@@ -1,13 +1,13 @@
 {
   "name": "sharelist",
   "version": "0.1.0",
-  "bin": "bin/www",
+  "bin": "app.js",
   "repository": "https://github.com/reruin/sharelist",
   "license": "Apache-2.0",
   "scripts": {
     "start": "set NODE_ENV=dev && node app.js",
     "dev": "./node_modules/.bin/nodemon app.js",
-    "prd": "pm2 start app.js --env prod",
+    "prd": "pm2 start app.js --name sharelist --env prod",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "dependencies": {
@@ -21,7 +21,6 @@
     "koa-logger": "^2.0.1",
     "koa-onerror": "^1.2.1",
     "koa-router": "^7.1.1",
-    "koa-send": "^5.0.0",
     "koa-session-minimal": "^3.0.4",
     "koa-static": "^3.0.0",
     "koa-views": "^5.2.1",

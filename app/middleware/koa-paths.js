@@ -29,13 +29,16 @@ module.exports = async(ctx, next) => {
   let { path , method } = ctx
   let isWebDAV = path.startsWith('/webdav')
   let url = path.replace(/^\/webdav/ , '').substring(1).replace(/\/$/,'')
+
   let [paths, paths_raw] = parsePath(url)
   ctx.paths = paths
   ctx.paths_raw = paths_raw
-  if (
-      ctx.is('xml') && isWebDAV &&
+  console.log('webdav:',isWebDAV )
+  if( 
+      ( isWebDAV || ctx.is('xml') )  
+      &&
       ( webdavMethods.length == 0 || webdavMethods.includes(method.toLowerCase()) )
-  ) {
+    ){
     let xml = await parser(ctx.req)
     let json = await xml2js( xml )
     ctx.webdav = json

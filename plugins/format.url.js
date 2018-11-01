@@ -20,6 +20,7 @@ module.exports = (helper , cache , config ) => {
     let url = content.match(/(?<=URL=)[^\r\n\t]+/)[0]
     data.url = url
     data.outputType = 'redirect'
+    return data
   }
 
   return { name , version , protocols , format }

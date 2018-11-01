@@ -58,7 +58,7 @@ class ShareList {
         // }else{
           let children = parent.children || []
           let index = base.search(children , 'name' ,  curname)
-          console.log('hit ' , index , curname)
+          //console.log('hit ' , index , curname)
           if(index != -1){
             hit = children[index]
             //只为目录做缓存

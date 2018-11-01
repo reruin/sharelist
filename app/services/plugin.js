@@ -10,10 +10,6 @@ const config = require('../config')
 
 const assign = (...rest) => Object.assign(...rest)
 
-const parse = (data) => {
-  return data
-}
-
 const driverMap = {}
 
 const parserMap = {}
@@ -22,7 +18,7 @@ const getSource = async (id , driverName) => {
   if(driverMap[driverName]){
     let vendor = getDriver(driverName)
     let d = await vendor.file(id)
-    console.log( d , id , driverName)
+
     if(d.outputType === 'file'){
       if(fs.existsSync( d.url )){
         return fs.readFileSync(d.url, 'utf8')
@@ -205,7 +201,6 @@ const updateLnk = async (d) => {
     //从 id 猜测协议
     let protocol = d.id.split('.').pop()
 
-    console.log('try protocol',protocol)
     if(driverMap[protocol]){
       d.protocol = protocol
       d.content = content
@@ -228,7 +223,7 @@ const parseLnk = (content) => {
 const getVendors = () => {
   let vendors = []
   for(let i in resources){
-    if(resources[i].name && resources[i].folder && resources[i].file)
+    if(resources[i].mountable !== false && resources[i].name && resources[i].folder && resources[i].file)
       vendors.push({protocol:resources[i].protocols[0] , name:resources[i].name})
   }
   return vendors

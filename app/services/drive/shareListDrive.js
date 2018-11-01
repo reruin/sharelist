@@ -102,5 +102,5 @@ module.exports = (helper , cache , config , getSource) => {
     return data
   }
 
-  return { name , version, protocols, folder , file , virtual : true}
+  return { name , version, protocols, folder , file }
 }

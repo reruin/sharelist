@@ -147,7 +147,7 @@ module.exports = {
     let hit = checkPasswd(data)
     let result = { status : 0 , message:''}
 
-    console.log( hit , 'hit')
+    // console.log( hit , 'hit')
     //需要验证
     if( hit !== false && hit){
       if( hit == passwd ){

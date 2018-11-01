@@ -1,5 +1,5 @@
-const http = require('./http')
-const { sendFile , sendHTTPFile} = require('./sendfile')
+const http = require('../utils/http')
+const { sendFile , sendHTTPFile} = require('../utils/sendfile')
 
 const slashify = (p) => (p[p.length-1] != '/' ? `${p}/` : p)
 
@@ -44,8 +44,7 @@ const respCreate = (data , options) => {
   let { props , path } = options
   let body = `<?xml version="1.0" encoding="utf-8"?>`
       body +=`<D:multistatus xmlns:D="DAV:">`
-  console.log( data )
-  
+ 
   data.forEach( file => {
     let href = path + file.href //path +'/' + encodeURIComponent(file.name)
     let res = propsCreate(file , props)
@@ -60,7 +59,7 @@ const respCreate = (data , options) => {
   })
 
   body +=`</D:multistatus>`
-
+  // console.log(body)
   return body
 }
 

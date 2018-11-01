@@ -17,12 +17,15 @@ const base64decode = v => Buffer.from(v, 'base64').toString('binary')
 const base64encode = v => Buffer.from(v).toString('base64')
 
 // 返回 { name , protocols, folder , file }
+const cache = {}
 
-module.exports = (helper , cache , config , getSource) => {
+module.exports = (helper , _cache , config , getSource) => {
   
   const request = helper.request
 
   const pageSize = 100
+
+  const min = (a , b) => (a < b ? a : b)
 
   const cats = [
     {id:'/default',cat:'default',name:'默认'},
@@ -86,9 +89,7 @@ module.exports = (helper , cache , config , getSource) => {
   }
 
   const getCate = (value) => {
-    let [cateName , page] = value.split('-')
-    if(!page) page = 1
-    let cate = getCateByName(cateName)
+    let cate = getCateByName(value)
     //console.log( 'get cdate' , { id: cate + '/' + page ,  name:value})
     return getMock( { id: '/' + cate ,  name:value})
   }
@@ -98,21 +99,24 @@ module.exports = (helper , cache , config , getSource) => {
     let { body } = await request.get(`${host}/v.php?page=1&category=${cate}`)
     let pageCount = parseInt(body.match(/(?<=page=\d+\">)[\d]+/g).pop() || 0)
 
+    cache[`${cate}_page`] = pageCount
+
+    console.log( pageCount )
     start = parseInt(start || 1)
+    end = Math.ceil( pageCount / 100 )
 
-    let end = Math.ceil( pageCount / 100 )
-
+    console.log( start , end)
     //每100页 做一次分页
 
     return {
       id:'-1',
-      name:name,
+      name:'name',
       type:'folder',
       protocol:defaultProtocol,
       children:new Array(end).fill(1).map((i , index) => {
         return {
           id : `/${cate}/${start}`, 
-          name : `第${start + pageSize*(index)}-${start + pageSize*(index+1) - 1}页`,
+          name : `第${start + pageSize*(index)}-${ min((start + pageSize*(index+1) - 1) , pageCount)}页`,
           protocol:defaultProtocol,
           updated_at:'-',
           size:'-',
@@ -121,6 +125,31 @@ module.exports = (helper , cache , config , getSource) => {
       })
     }
 
+  }
+
+  const getRangePage = (id , start) => {
+    let [,cate,rangeStart] = id.split('/')
+    
+    rangeStart = parseInt( rangeStart || 1)
+    let rangeEnd = cache[`${cate}_page`]
+    let range = min( rangeEnd - rangeStart + 1 , pageSize)
+
+    return {
+      id:'-1',
+      name:'-1',
+      type:'folder',
+      protocol:defaultProtocol,
+      children:new Array(range).fill(1).map((i , index) => {
+        return {
+          id : `/${cate}/${rangeStart}/${index}`, 
+          name : `第${rangeStart + index}页`,
+          protocol:defaultProtocol,
+          updated_at:'-',
+          size:'-',
+          type:'folder',
+        }
+      })
+    }
   }
 
   const getMock = (opts) => {
@@ -161,25 +190,6 @@ module.exports = (helper , cache , config , getSource) => {
       return ''
     })
 
-    let cateName = getNameByCate(cate)
-
-    children.push({
-      id : `/${cate}/${page+1}`,
-      name : `下一页`,
-      url:`../${cateName}-${page+1}`,
-      protocol:defaultProtocol,
-      type:'folder'
-    })
-
-    if(page>1){
-      children.push({
-        id : `/${cate}/${page-1}`,
-        name : `上一页`,
-        url:`../${cateName}-${page-1}`,
-        protocol:defaultProtocol,
-        type:'folder'
-      })
-    }
     return {
       id : '/'+cate+'/'+page,
       type : 'folder',
@@ -194,8 +204,9 @@ module.exports = (helper , cache , config , getSource) => {
    * id:
    * case 0: /
    * case 1: /cate
-   * case 2: /cate/page
-   * case 3  /cate/page/viewkey
+   * case 2: /cate/range
+   * case 3: /cate/range/page
+   * case 4  /cate/range/page/viewkey
    *
    * path
    * case a /cate
@@ -217,9 +228,6 @@ module.exports = (helper , cache , config , getSource) => {
     const len = paths.length
 
     const value = paths[0]
-    //let [cate , page , key] = 
-    //console.log(id , lv , paths)
-    // console.log('paths',paths , id)
 
     console.log('***' , lv,id , paths)
 
@@ -242,38 +250,35 @@ module.exports = (helper , cache , config , getSource) => {
         // return await getList( id + '/1' )
       }
       // case c , paths = [range]
-      else if(len == 1){
-        return await getRange( id + '/' + decodeURIComponent(helper.decode(value)).replace(/第(\d+)-(\d+)页/,'$0-$1') ,  value)
-      }
-      // case d , paths = [range, viewkey]
-      else if(len == 2){
-        return await getMock( id + '/' + value ,  value)
-      }
-      // case e , paths = [range, viewkey,vudeoname]
-
-      else if(len == 3){
-        return await getMock( id + '/' + value ,  value)
+      else{
+        return await getRange( id + '/' + decodeURIComponent(helper.decode(value)).replace(/第(\d+)-(\d+)页/,'$1') ,  value)
       }
     }
 
-    // case 2
+    // case 2 /cate/range
     else if( lv == 2 ){
+      // case b
+      if( len == 0){
+        return await getRangePage( id  , 0)
+      }
+      
+      else {
+        return await getRangePage( id  ,  decodeURIComponent(helper.decode(value)).replace(/第(\d+)页/,'$1'))
+      }
+    }
+    // case 2 /cate/range
+    else if( lv == 3 ){
       // case b
       if( len == 0){
         return await getList( id  )
       }
-      // case c
-      else if(len == 1){
-        return await getMock( {id : id + '/' + value,  name:value} )
-      }
       // case d
-      else if( len == 2){
+      else {
         return await getMock( {id : id + '/' + value,  name:value} )
       }
     }
-
     // case 3
-    else if( lv == 3 ){
+    else if( lv == 4 ){
       //不会存在此情况
       if( len == 0 ){
         

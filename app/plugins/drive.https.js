@@ -24,5 +24,5 @@ module.exports = (format) => {
 
   const folder = file
 
-  return { name , version , protocols , folder , file , mountable : false }
+  return { name , version , drive:{ protocols , folder , file , mountable : false} }
 }

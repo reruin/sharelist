@@ -27,13 +27,6 @@ block content
                     option(value='0', selected=config.enabled_proxy==0 ? 'selected' : null)= __('disable')
               .form-group
                 .col-sm-6
-                  label= __('dragable_for_proxy_video')
-                .col-sm-3
-                  select.form-control(name='enabled_proxy_header',value=config.enabled_proxy_header,required)
-                    option(value='1', selected=config.enabled_proxy_header==1 ? 'selected' : null)= __('enable')
-                    option(value='0', selected=config.enabled_proxy_header==0 ? 'selected' : null)= __('disable')
-              .form-group
-                .col-sm-6
                   label= __('folder_max_age')
                 .col-sm-3
                   input.form-control(type='text', name='cache_refresh_dir' , value=config.cache_refresh_dir / 1000,required)

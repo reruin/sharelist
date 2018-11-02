@@ -6,13 +6,9 @@ const http = require('../utils/http')
 const config = require('../config')
 const { sendFile , sendHTTPFile } = require('../utils/sendfile')
 const cache = {}
-const { parsePath ,checkPasswd, pathNormalize , encode , decode , enablePreview, enableRange , isRelativePath} = require('../utils/base')
+const { parsePath , pathNormalize , encode , decode , enablePreview, enableRange , isRelativePath} = require('../utils/base')
 
-const auth = (data , ctx)=>{
-  
-}
-
-
+const requireAuth = (data) => !!(data.children && data.children.find(i=>(i.name == '.passwd')))
 
 const output = async (ctx , data)=>{
 
@@ -65,10 +61,15 @@ module.exports = {
 
     else if(data.type == 'folder'){
 
-      let passwd = checkPasswd(data)
-
-      if( passwd !== false && !ctx.session.access.has( data.id )){
-        await ctx.render('auth',{parent , id:data.id , name:decodeURIComponent(decode(ctx.paths[ctx.paths.length-1]))})
+      let ra = requireAuth(data)
+      console.log('ra===>',ra)
+      if( ra !== false && !ctx.session.access.has( data.id )){
+        //验证界面
+        await ctx.render('auth',{
+          parent , 
+          id:data.protocol+':'+data.id , 
+          name:decodeURIComponent(decode(ctx.paths[ctx.paths.length-1]) || '')
+        })
         
       }else{
         let resp = []
@@ -84,13 +85,18 @@ module.exports = {
             if(enablePreview(i.type)){
               href += (href.indexOf('?')>=0 ? '&' : '?') + 'preview'
             }
-            resp.push( { href , type : i.type , size: i.displaySize , updated_at:i.updated_at , name:i.name})
+
+            if(i.hidden !== true)
+              resp.push( { href , type : i.type , size: i.displaySize , updated_at:i.updated_at , name:i.name})
           }
         })
 
-        await ctx.render('index',{
-          data:resp , base_url , parent
-        })
+        if( !ctx.webdav ){
+          await ctx.render('index',{
+            data:resp , base_url , parent
+          })
+        }
+
       }
       
     }else{
@@ -113,44 +119,40 @@ module.exports = {
     }
 
     else if(data.type == 'folder'){
+      let ret = { ...data }
+      ret.auth = requireAuth(data)
 
-      let passwd = checkPasswd(data)
-
-      if( passwd !== false && !ctx.session.access.has( data.id )){
-        //await ctx.render('auth',{parent , id:data.id , name:decodeURIComponent(decode(ctx.paths[ctx.paths.length-1]))})
-        
-      }else{
-        let ret = { ...data }
-        ret.children = data.children.map(i => {
-          let obj = { ...i }
-          if( i.url && isRelativePath(i.url) ){
-            obj.href = pathNormalize(base_url + '/' + i.url)
-          }else{
-            obj.href = pathNormalize(base_url + '/' + encode(i.name))
-          }
-          return obj
-        }) 
-        
-        return ret
-      }
-    }else{
-      return data
+      ret.children = data.children.map(i => {
+        let obj = { ...i }
+        if( i.url && isRelativePath(i.url) ){
+          obj.href = pathNormalize(base_url + '/' + i.url)
+        }else{
+          obj.href = pathNormalize(base_url + '/' + encode(i.name))
+        }
+        return obj
+      })
+      
+      return ret
+    }
+    else{
+      return { ...data }
     }
     
   },
 
   async auth(ctx){
-    let { path , passwd } = ctx.request.body
+    let { path , user , passwd } = ctx.request.body
     let [paths , paths_raw] = parsePath(path.substring(1))
 
     let data = await service.path(paths , ctx.query , paths_raw)
-    let hit = checkPasswd(data)
     let result = { status : 0 , message:''}
+    let ra = requireAuth(data)
 
     // console.log( hit , 'hit')
     //需要验证
-    if( hit !== false && hit){
-      if( hit == passwd ){
+    if( ra ){
+      let access = await service.auth(data , user , passwd )
+      if( access ){
         ctx.session.access.add( data.id )
       }else{
         result.status = 403

@@ -28,17 +28,6 @@ const parsePath = (url)=>{
   }
 }
 
-const checkPasswd = (data)=>{
-  let passwd = false
-  if(data.children){
-    let hit = data.children.find(i=>(i.ext == 'passwd'))
-    if(hit){
-      passwd = hit.name.replace('.passwd','').split('.').slice(-1)
-    }
-  }
-  return passwd
-}
-
 const MIMEType = (v) => {
   if(['mp4' , 'mpeg' , 'wmv' , 'webm' , 'avi' , 'rmvb' , 'mov' , 'mkv','f4v','flv'].includes(v)){
     return 'video'
@@ -113,7 +102,7 @@ const encode = (v) => {
 }
 
 const decode = (v) => {
-  return v.replace(/%2F/g,'/').replace(/%5C/g,'\\')
+  return v ? v.replace(/%2F/g,'/').replace(/%5C/g,'\\') : v
 }
 
 const base64_encode = (v) => new Buffer(v).toString('base64').replace(/\//g,'_')
@@ -127,7 +116,7 @@ const enableRange = (v) => ['audio','video'].includes(v)
 const isRelativePath = (v) => !/^http/.test(v)
 
 module.exports = {
-  parsePath , MIMEType, checkPasswd , 
+  parsePath , MIMEType,
 
   isArray , isObject, isString, isDate, isEmail, isRelativePath , enablePreview, enableRange , 
 

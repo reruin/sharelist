@@ -4,14 +4,7 @@ const config_path = process.cwd() +'/cache/config.json'
 const port = process.env.PORT || 33001
 const plugin = require('./services/plugin')
 
-const providers = [
-  {name:'GoogleDrive',code:'gd'},
-  {name:'OneDrive',code:'od'},
-  {name:'VirtualFile',code:'xd'},
-  {name:'LocalFileSystem',code:'ld'},
-]
 
-//onedrive 链接有效期 10 分钟
 var data = {
   port , 
 
@@ -69,5 +62,5 @@ const getVendors = () => {
 
 
 module.exports = {
- data, save , installed , port , providers , getTitle , getVendors
+ data, save , installed , port , getTitle , getVendors
 }

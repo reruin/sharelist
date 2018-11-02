@@ -25,7 +25,7 @@ const pluginLoad = require('./services/plugin').load
 const app = new Koa()
 
 pluginLoad({
-  dirs: [path.resolve('plugins')],
+  dirs: [__dirname + '/plugins',path.resolve('plugins')],
 })
 
 onerror(app)

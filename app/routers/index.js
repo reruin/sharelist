@@ -10,7 +10,7 @@ const api = require('./api')
 
 const webdav = require('./webdav')
 
-const mid_install = require('../middleware/koa-sharelist-install')
+const mid_install = require('../middleware/koa-install')
 
 router.use('/manage',mid_install,manage.routes(), manage.allowedMethods())
 
@@ -23,9 +23,5 @@ router.use(mid_install, page.routes(), page.allowedMethods())
 
 router.use(webdav.routes(), webdav.allowedMethods())
 
-/*
-router.use('/',(ctx) => {
-  console.log('method',ctx.method.toLowerCase())
-})
-*/
+
 module.exports = router

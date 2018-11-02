@@ -7,21 +7,19 @@ const name = 'urlParse'
 
 const version = '1.0'
 
-const protocols = ['url']
+module.exports = ({getSource}) => {
 
-const url = require("url")
-
-module.exports = (helper , cache , config ) => {
-
-  const source = helper.source
-
-  const format = async (data)=>{
-    let content = await source(data.id , data.protocol)
+  const process = async (data)=>{
+    let content = await getSource(data.id , data.protocol)
     let url = content.match(/(?<=URL=)[^\r\n\t]+/)[0]
     data.url = url
     data.outputType = 'redirect'
     return data
   }
 
-  return { name , version , protocols , format }
+  const format = {
+    'url': process
+  }
+
+  return { name , version ,  format }
 }

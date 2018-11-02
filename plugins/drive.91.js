@@ -19,10 +19,8 @@ const base64encode = v => Buffer.from(v).toString('base64')
 // 返回 { name , protocols, folder , file }
 const cache = {}
 
-module.exports = (helper , _cache , config , getSource) => {
+module.exports = ({request , decode , getSource}) => {
   
-  const request = helper.request
-
   const pageSize = 100
 
   const min = (a , b) => (a < b ? a : b)
@@ -238,7 +236,7 @@ module.exports = (helper , _cache , config , getSource) => {
       }
       // case b , c , d => mock
       else { 
-        return getCate(decodeURIComponent(helper.decode(value)))
+        return getCate(decodeURIComponent(decode(value)))
       }
     }
 
@@ -251,7 +249,7 @@ module.exports = (helper , _cache , config , getSource) => {
       }
       // case c , paths = [range]
       else{
-        return await getRange( id + '/' + decodeURIComponent(helper.decode(value)).replace(/第(\d+)-(\d+)页/,'$1') ,  value)
+        return await getRange( id + '/' + decodeURIComponent(decode(value)).replace(/第(\d+)-(\d+)页/,'$1') ,  value)
       }
     }
 
@@ -263,7 +261,7 @@ module.exports = (helper , _cache , config , getSource) => {
       }
       
       else {
-        return await getRangePage( id  ,  decodeURIComponent(helper.decode(value)).replace(/第(\d+)页/,'$1'))
+        return await getRangePage( id  ,  decodeURIComponent(decode(value)).replace(/第(\d+)页/,'$1'))
       }
     }
     // case 2 /cate/range
@@ -287,7 +285,7 @@ module.exports = (helper , _cache , config , getSource) => {
       else if( len == 1){
         return getMock( {
           id : id + '/f' ,  
-          name:decodeURIComponent(helper.decode(value)),
+          name:decodeURIComponent(decode(value)),
           ext:'mp4' ,
           mime:'video/mp4', 
           type:'video'
@@ -312,5 +310,5 @@ module.exports = (helper , _cache , config , getSource) => {
     }
   }
 
-  return { name , version, protocols, folder , file }
+  return { name , version, drive : { protocols, folder , file } }
 }

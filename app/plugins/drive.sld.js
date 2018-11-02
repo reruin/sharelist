@@ -7,39 +7,39 @@ const name = 'ShareListDrive'
 
 const version = '1.0'
 
-const protocols = ['xd','sld']
+const protocols = ['xd', 'sld']
 
 const defaultProtocol = 'xd'
 
 const yaml = require('yaml').default
 
 
-module.exports = (helper , cache , config , getSource) => {
+module.exports = (helper, cache, config, getSource) => {
 
   /* 递归生成 索引 id */
-  const createId = (d , rootId)=>{
-    d.forEach((i , index)=>{
-      if(helper.isObject(i)){
-        i.id = rootId + '/'+ i.name.replace(/\.d\.ln$/,'').replace(/\.ln$/,'')
+  const createId = (d, rootId) => {
+    d.forEach((i, index) => {
+      if (helper.isObject(i)) {
+        i.id = rootId + '/' + i.name.replace(/\.d\.ln$/, '').replace(/\.ln$/, '')
         i.protocol = defaultProtocol
-        if(i.children) {
+        if (i.children) {
           i.type = 'folder'
           i.protocol = defaultProtocol
-          createId(i.children , i.id)
-        }else{
+          createId(i.children, i.id)
+        } else {
           i.ext = i.name.split('.').pop()
         }
 
-      }else if(helper.isArray(i)){
-        createId(i , rootId)
+      } else if (helper.isArray(i)) {
+        createId(i, rootId)
       }
     })
     return d
   }
 
-  const mount = async(rootId , data)=>{
+  const mount = async (rootId, data) => {
     let resid = `${defaultProtocol}:${rootId}`
-    let resp = { id : rootId , type:'folder' , protocol:defaultProtocol }
+    let resp = { id: rootId, type: 'folder', protocol: defaultProtocol }
 
     // if(cache(resid)) {
     //   resp = cache(resid)
@@ -53,34 +53,34 @@ module.exports = (helper , cache , config , getSource) => {
     //   }
     // }
 
-    if(data){
-      let json = yaml.parse( data )
+    if (data) {
+      let json = yaml.parse(data)
 
-      json  = createId(json , rootId + ':')
+      json = createId(json, rootId + ':')
       resp.children = json
       resp.updated_at = Date.now()
 
-      cache(resid,resp)
+      cache(resid, resp)
       return resp
-    }else{
+    } else {
       return undefined
     }
   }
 
-  const findById = (id)=>{
-    let rootId = id.split(':').slice(0,-1).join(':')
+  const findById = (id) => {
+    let rootId = id.split(':').slice(0, -1).join(':')
     let disk = cache(`${defaultProtocol}:${rootId}`)
     let path = id.split(':/')[1].split('/')
 
 
-    for(let i=0; i<path.length && disk; i++){
+    for (let i = 0; i < path.length && disk; i++) {
       disk = disk.children
       disk = disk.find(j => {
         return `${j.name}` == path[i]
 
-        if( j.type == 'folder' ){
+        if (j.type == 'folder') {
           return `${j.name}.${j.ext}` == path[i]
-        }else{
+        } else {
           return `${j.name}` == path[i]
         }
       }) //[ parseInt(path[i]) ]
@@ -89,18 +89,18 @@ module.exports = (helper , cache , config , getSource) => {
     return disk
   }
 
-  const folder = async(id , data) => {
-    if( data.content ){
-      return mount(id , data.content)
-    }else{
+  const folder = async (id, data) => {
+    if (data.content) {
+      return mount(id, data.content)
+    } else {
       return findById(id)
     }
   }
 
-  const file = async(id)=>{
+  const file = async (id) => {
     let data = findById(id)
     return data
   }
 
-  return { name , version, protocols, folder , file }
+  return { name, version, drive: { protocols, folder, file } }
 }

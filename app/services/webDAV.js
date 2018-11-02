@@ -1,10 +1,11 @@
 const http = require('../utils/http')
 const { sendFile , sendHTTPFile} = require('../utils/sendfile')
 
+const { auth } = require('./index')
+
 const slashify = (p) => (p[p.length-1] != '/' ? `${p}/` : p)
 
 const propsCreate = (data , props) => {
-
   let out = ''
   for(let key in props){
     if(key == 'getlastmodified'){
@@ -44,22 +45,22 @@ const respCreate = (data , options) => {
   let { props , path } = options
   let body = `<?xml version="1.0" encoding="utf-8"?>`
       body +=`<D:multistatus xmlns:D="DAV:">`
- 
   data.forEach( file => {
-    let href = path + file.href //path +'/' + encodeURIComponent(file.name)
-    let res = propsCreate(file , props)
-    body += `
-      <D:response>
-        <D:href>${href}</D:href>
-        <D:propstat>
-          <D:status>HTTP/1.1 200 OK</D:status>
-          <D:prop xmlns:R="http://ns.example.com/boxschema/">${res}</D:prop>
-        </D:propstat>
-      </D:response>`
+    if( file.hidden !== true){
+      let href = path + encodeURIComponent(file.href) //path +'/' + encodeURIComponent(file.name)
+      let res = propsCreate(file , props)
+      body += `
+        <D:response>
+          <D:href>${href}</D:href>
+          <D:propstat>
+            <D:status>HTTP/1.1 200 OK</D:status>
+            <D:prop xmlns:R="http://ns.example.com/boxschema/">${res}</D:prop>
+          </D:propstat>
+        </D:response>`
+    }
   })
 
   body +=`</D:multistatus>`
-  // console.log(body)
   return body
 }
 
@@ -74,25 +75,19 @@ class WebDAV {
 
   }
 
-  _get_auth(){
+  getAuthority(){
     let authorization = this.ctx.get('authorization')
     let [ , value] = authorization.split(' ');
     let pairs = Buffer.from(value, "base64").toString("utf8").split(':')
     return pairs
   }
 
-  _check_auth() {
-    const ctx = this.ctx
-    let auth_type = ctx.get("AUTH_TYPE") || null
-    
-    if( auth_type ){
-      let [auth_user , auth_pw ] = this._get_auth()
-
+  checkAuth() {
+    if( this.ctx.get('authorization') ){
       return true
     }else{
       return false
     }
-    
   }
 
   async serveRequest(ctx , next , data){
@@ -120,8 +115,24 @@ class WebDAV {
 
         return
     }*/
-  
-    
+
+    // require auth
+    let reqRes = data.auth
+    if( reqRes ){
+      if( this.checkAuth() ){
+        let [user , passwd] = this.getAuthority()
+        console.log( data )
+        if( await auth(data , user , passwd) ){
+          reqRes = false
+        }
+      }
+    }
+
+    if( reqRes ){
+      this.setHeader('WWW-Authenticate' ,`Basic realm="${this.httpAuthRealm}"`)
+      this.setStatus('401 Unauthorized')
+      return
+    }
 
     const wrapperFn = "http_"+method;
     
@@ -135,9 +146,6 @@ class WebDAV {
       this.setHeader("Allow", this.allows.join(', '))
     }
   }
-
-
-  checkAuth(type, username, password){ }
 
   setHeader(k , v){
     this.ctx.set(k , v)
@@ -202,7 +210,7 @@ class WebDAV {
 
 
     const files = this.data.children
-
+    console.log(files)
     if (files.length == 0) {
       this.setStatus("404 Not Found")
     }else{

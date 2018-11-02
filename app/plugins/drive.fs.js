@@ -26,7 +26,7 @@ const normalize = (p) => p.replace(/\/{2,}/g,'/').replace(/\/+$/,'')
 
 const extname = (p) => path.extname(p).substring(1)
 
-module.exports = (format) => {
+module.exports = ({datetime}) => {
 
   const folder = async(id) => {
     let dir = normalize(id) , resp = { id : dir , type:'folder', protocol:defaultProtocol}
@@ -51,8 +51,8 @@ module.exports = (format) => {
 
         if(stat){
           obj.size = stat.size
-          obj.created_at = format.datetime(stat.ctime)
-          obj.updated_at = format.datetime(stat.mtime)
+          obj.created_at = datetime(stat.ctime)
+          obj.updated_at = datetime(stat.mtime)
           obj.mime = ''
           if(stat.isDirectory()){
             obj.type = 'folder'
@@ -84,5 +84,5 @@ module.exports = (format) => {
     }
   }
 
-  return { name , version , protocols , folder , file }
+  return { name , version , drive:{ protocols , folder , file } }
 }

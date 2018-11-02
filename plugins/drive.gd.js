@@ -13,20 +13,19 @@ const defaultProtocol = 'gd'
 
 const host = 'https://drive.google.com'
 
-module.exports = (helper , cache , config) => {
-
-  const request = helper.request
+module.exports = ({ request , getConfig , datetime , cache }) => {
 
   // gd folder => files
   const folder = async(id) => {
     let resid = `${defaultProtocol}:${id}`
     let resp = {id , type:'folder' , protocol:defaultProtocol}
-    if(cache(resid)) {
-      resp = cache(resid)
+    let r = cache(resid)
+    if(r) {
+      resp = r
       if(
         resp.updated_at && 
         resp.children &&
-        ( Date.now() - resp.updated_at < config.data.cache_refresh_dir)
+        ( Date.now() - resp.updated_at < getConfig().cache_refresh_dir)
 
       ){
         console.log('get gd folder from cache')
@@ -59,8 +58,8 @@ module.exports = (helper , cache , config) => {
         protocol:defaultProtocol,
         parent:i[1][0],
         mime:i[3],
-        created_at:helper.datetime(i[9]),
-        updated_at:helper.datetime(i[10]),
+        created_at:datetime(i[9]),
+        updated_at:datetime(i[10]),
         size:parseInt(i[13]),
         type : i[3].indexOf('.folder')>=0  ? 'folder' : undefined,
       }
@@ -83,7 +82,7 @@ module.exports = (helper , cache , config) => {
       data && 
       data.url_updated && 
       data.url &&
-      ( Date.now() - data.url_updated < config.data.cache_refresh_file)
+      ( Date.now() - data.url_updated < getConfig().cache_refresh_file)
 
     ){
       console.log('get gd file from cache')
@@ -113,5 +112,5 @@ module.exports = (helper , cache , config) => {
     return data
   }
 
-  return { name , version, protocols, folder , file }
+  return { name , version, drive:{ protocols, folder , file } }
 }

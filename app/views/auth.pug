@@ -11,17 +11,18 @@ block content
     h3 #{name}
     div
       .form-group
-        input.sl-input(id="j_passwd",type='password', name='passwd', placeholder=__('auth_placeholder'))
-      button.sl-button.btn-primary(type="button") =__('ok')
+        input.sl-input(id="j_user",type='text', name='user', placeholder=__('auth_user_placeholder'))
+        input.sl-input(id="j_passwd",type='password', name='passwd', placeholder=__('auth_user_placeholder'))
+      button.sl-button.btn-primary(type="button")= __('ok')
   script(src='https://cdn.bootcss.com/jquery/3.3.1/jquery.min.js')
   
   script.
     function checkAuth(){
-      let passwd = $('#j_passwd').val() , path = location.pathname
+      let passwd = $('#j_passwd').val(), user = $('#j_user').val() , path = location.pathname
       $('button').addClass('loading')
       $.ajax({
         url:'/api/access', dataType:'json', method:'POST',
-        data:{ path ,passwd },
+        data:{ path : path , user:user , passwd : passwd },
         success:function(resp){
           $('button').removeClass('loading')
           if(resp.status == 0){

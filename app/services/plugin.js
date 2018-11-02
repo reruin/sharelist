@@ -1,7 +1,6 @@
 const fs = require('fs')
 const path = require('path')
 const querystring = require('querystring')
-const resources = {}
 const {MIMEType , isArray , isObject , params , decode } = require('../utils/base')
 const format = require('../utils/format')
 const cache = require('../utils/cache')
@@ -10,13 +9,19 @@ const config = require('../config')
 
 const assign = (...rest) => Object.assign(...rest)
 
-const driverMap = {}
+let driveMap = {}
 
-const parserMap = {}
+let formatMap = {}
+
+let authMap = {}
+
+let resources = {}
+
+let resourcesCount = 0
 
 const getSource = async (id , driverName) => {
-  if(driverMap[driverName]){
-    let vendor = getDriver(driverName)
+  if(driveMap[driverName]){
+    let vendor = getDrive(driverName)
     let d = await vendor.file(id)
 
     if(d.outputType === 'file'){
@@ -31,6 +36,10 @@ const getSource = async (id , driverName) => {
   return false
 }
 
+const getConfig = () => {
+  return { ...config.data }
+}
+
 const helper = {
   isArray : isArray,
   isObject: isObject,
@@ -38,71 +47,85 @@ const helper = {
   request:http, 
   querystring:querystring,
   decode:decode,
-  source: getSource
+  cache:cache,
+  getSource: getSource,
+  getConfig : getConfig,
 }
 
 const load = (options) => {
+
   const dir = options.dir
   const dirs = options.dirs
 
   if (dir && dirs.indexOf(dir) === -1) {
     dirs.push(dir)
   }
-
+  
   for (let i = 0; i < dirs.length; i++) {
     const p = dirs[i]
-
     if (!fs.existsSync(p)) {
       continue
     }
 
     const names = fs.readdirSync(p)
+
     for (let j = 0; j < names.length; j++) {
       const name = names[j];
-      const filepath = path.join(p, name);
 
-      const pluginName = name.split('.').slice(0,-1).join('.')
-      let resource = {};
+      let resource;
 
       if (name.endsWith('.js') ) {
-        resource = require(filepath)(helper , cache , config , getSource)
-        if(resource.name){
-          resources[pluginName] = {}
-          assign(resources[pluginName], resource)
+        const filepath = path.join(p, name);
 
-          if( resource.protocols ){
-            let couldMount = 'file' in resource
-            let couldFormat = 'format' in resource
-            resource.protocols.forEach( protocol => {
-              if(couldMount){
-                driverMap[protocol] = pluginName
-              }
-              if(couldFormat){
-                parserMap[protocol] = pluginName
-              }
-            })
+        const pluginName = name.split('.').slice(0,-1).join('.')
+        const type = name.split('.')[0]
+
+        const resource = require(filepath)(helper)
+
+        console.log('Load Plugins: ',pluginName)
+
+        const id = 'plugin_' + resourcesCount++
+
+        resources[id] = resource
+
+        if( resource.auth ){
+          for(let key in resource.auth){
+            authMap[key] = id
+          }
+        }
+
+        if( resource.drive ){
+          let mountable = resource.drive.mountable !== false
+          let protocols = [].concat(resource.drive.protocols || [])
+          
+          protocols.forEach( protocol => {
+            if(mountable){
+              driveMap[protocol] = id
+            }
+          })
+        }
+        
+        if(resource.format){
+          for(let key in resource.format){
+            formatMap[key] = id
           }
         }
       }
     }
   }
 
-  console.log('Load Drive: ',driverMap)
 }
 
 
-const getDriver = (ext) => {
-  let name = driverMap[ext]
-
-  return resources[name]
+const getDrive = (ext) => {
+  let id = driveMap[ext]
+  return resources[id].drive
 }
 
 const getFormater = (ext) => {
-  let name = parserMap[ext]
-  return name ? resources[name].format : null
+  let name = formatMap[ext]
+  return name ? resources[name].format[ext] : null
 }
-
-
 
 //更新文件详情数据
 const updateFile = async (file) => {
@@ -158,7 +181,7 @@ const updateFolder = (folder) => {
       }
 
       //虚拟磁盘
-      if( len > 1 && driverMap[type] ){
+      if( len > 1 && driveMap[type] ){
         d.name = tmp.slice(0,-1).join('.')
         d.type = 'folder'
         d.lnk = true
@@ -172,6 +195,10 @@ const updateFolder = (folder) => {
 
     d.displaySize = format.byte(d.size)
     d.$ = index
+
+    if(d.name === '.passwd'){
+      d.hidden = true
+    }
   })
   
   folder.children.sort((a,b)=>{
@@ -201,7 +228,7 @@ const updateLnk = async (d) => {
     //从 id 猜测协议
     let protocol = d.id.split('.').pop()
 
-    if(driverMap[protocol]){
+    if(driveMap[protocol]){
       d.protocol = protocol
       d.content = content
     }
@@ -213,7 +240,7 @@ const parseLnk = (content) => {
   let tmp = content.split(':')
   let protocol = tmp[0]
   //匹配到
-  if( driverMap[protocol] ){
+  if( driveMap[protocol] ){
     return { protocol , id:tmp.slice(1).join(':')}
   }else{
     return false
@@ -229,7 +256,18 @@ const getVendors = () => {
   return vendors
 }
 
+const getAuth = (type) => {
+  if( authMap[type] ){
+    return resources[ authMap[type] ].auth[type]
+  }else{
+    return false
+  }
+}
 //
-load({dirs:[__dirname + '/drive']})
 
-module.exports = { load , getDriver , getSource , updateFolder , updateFile , updateLnk , getVendors}
+const checkAuthority = async (d , user, passwd) => {
+  const content = await getSource(d.id , d.protocol)
+
+}
+
+module.exports = { load , getDrive , getSource , updateFolder , updateFile , updateLnk , getVendors , getAuth}

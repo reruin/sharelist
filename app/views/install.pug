@@ -55,6 +55,12 @@ block content
       }).on('click' ,'.remove-path' , function(){
         $(this).parents('.item').remove()
       })
+
+      let example = item.clone()
+      $('.group-path').append( example )
+      example.find('name="vendor"').val('ld')
+      example.find('name="name"').val('演示目录')
+      example.find('name="path"').val('./example')
     })
   include footer
 

@@ -11,12 +11,7 @@ const protocols = ['od', 'onedrive']
 
 const defaultProtocol = 'od'
 
-module.exports = (helper, cache, config) => {
-
-  const request = helper.request
-
-  const qs = helper.querystring
-
+module.exports = ({ request , cache , getConfig , querystring}) => {
 
   var _authkey, _appid, _rootcid, _cookie , _authid
 
@@ -40,7 +35,7 @@ module.exports = (helper, cache, config) => {
     let url = 'https://1drv.ms/f/' + _authid
     let resp = await request.get(url, { followRedirect: false })
     if (resp.headers && resp.headers.location) {
-      let params = qs.parse(resp.headers.location.split('?')[1])
+      let params = querystring.parse(resp.headers.location.split('?')[1])
       _authkey = params.authkey
 
       let cid = params.resid.split('!')[0].toLowerCase()
@@ -64,7 +59,7 @@ module.exports = (helper, cache, config) => {
     let url = 'https://1drv.ms/f/' + shareid.replace('od:', '')
     let r = await request.get(url, { followRedirect: false })
     if (r.headers && r.headers.location) {
-      let params = qs.parse(r.headers.location.split('?')[1])
+      let params = querystring.parse(r.headers.location.split('?')[1])
       cache('od:' + shareid, params.resid)
       return params.resid
     } else {
@@ -95,7 +90,7 @@ module.exports = (helper, cache, config) => {
       if (
         resp.updated_at &&
         resp.children &&
-        (Date.now() - resp.updated_at < config.data.cache_refresh_dir)
+        (Date.now() - resp.updated_at < getConfig().cache_refresh_dir)
 
       ) {
         console.log('get od folder from cache')
@@ -142,7 +137,7 @@ module.exports = (helper, cache, config) => {
       "Cookie": cookie
     }
 
-    r = await request.get('https://skyapi.onedrive.live.com/API/2/GetItems?' + qs.stringify(opts), { followRedirect: false, headers })
+    r = await request.get('https://skyapi.onedrive.live.com/API/2/GetItems?' + querystring.stringify(opts), { followRedirect: false, headers })
 
     r = JSON.parse(r.body)
     if (r.error) {
@@ -182,7 +177,7 @@ module.exports = (helper, cache, config) => {
       data &&
       data.url_updated &&
       data.url &&
-      (Date.now() - data.url_updated < config.data.cache_refresh_file)
+      (Date.now() - data.url_updated < getConfig().cache_refresh_file)
 
     ) {
       console.log('get od file from cache')
@@ -197,5 +192,5 @@ module.exports = (helper, cache, config) => {
     return hit || ''
   }
 
-  return { name, version, protocols, folder, file }
+  return { name, version, drive:{protocols, folder, file} }
 }

@@ -1,12 +1,12 @@
 const fs = require('fs')
 const request = require('request')
 
-const service = require('../services/index')
+const service = require('../services/sharelist')
 const http = require('../utils/http')
 const config = require('../config')
 const { sendFile , sendHTTPFile } = require('../utils/sendfile')
 const cache = {}
-const { parsePath , pathNormalize , encode , decode , enablePreview, enableRange , isRelativePath} = require('../utils/base')
+const { parsePath , pathNormalize , enablePreview, enableRange , isRelativePath} = require('../utils/base')
 
 const requireAuth = (data) => !!(data.children && data.children.find(i=>(i.name == '.passwd')))
 
@@ -14,7 +14,7 @@ const output = async (ctx , data)=>{
 
   const isPreview = ctx.request.querystring.indexOf('preview') >= 0
 
-  const isProxy = config.data.enabled_proxy || data.proxy
+  const isProxy = config.getConfig().proxy_enable || data.proxy
 
   let url = data.url
    
@@ -50,7 +50,6 @@ module.exports = {
     let data = await service.path(ctx.paths , ctx.query , ctx.paths)
     let base_url = ctx.path == '/' ? '' : ctx.path
     let parent = ctx.paths.length ? ('/' + ctx.paths.slice(0,-1).join('/')) : ''
-
     //data is readonly
     if( data === false){
       ctx.status = 404
@@ -62,13 +61,12 @@ module.exports = {
     else if(data.type == 'folder'){
 
       let ra = requireAuth(data)
-      console.log('ra===>',ra)
       if( ra !== false && !ctx.session.access.has( data.id )){
         //验证界面
         await ctx.render('auth',{
           parent , 
           id:data.protocol+':'+data.id , 
-          name:decodeURIComponent(decode(ctx.paths[ctx.paths.length-1]) || '')
+          name:decodeURIComponent(ctx.paths[ctx.paths.length-1] || '')
         })
         
       }else{
@@ -79,7 +77,7 @@ module.exports = {
             if( i.url && isRelativePath(i.url) ){
               href = pathNormalize(base_url + '/' + i.url)
             }else{
-              href = pathNormalize(base_url + '/' + encode(i.name))
+              href = pathNormalize(base_url + '/' + encodeURIComponent(i.name))
             }
 
             if(enablePreview(i.type)){
@@ -127,7 +125,7 @@ module.exports = {
         if( i.url && isRelativePath(i.url) ){
           obj.href = pathNormalize(base_url + '/' + i.url)
         }else{
-          obj.href = pathNormalize(base_url + '/' + encode(i.name))
+          obj.href = pathNormalize(base_url + '/' + encodeURIComponent(i.name))
         }
         return obj
       })

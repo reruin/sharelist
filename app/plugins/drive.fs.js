@@ -8,9 +8,9 @@ const name = 'FileSystem'
 
 const version = '1.0'
 
-const protocols = ['ld' , 'file']
+const protocols = ['fs' , 'file']
 
-const defaultProtocol = 'file'
+const defaultProtocol = 'fs'
 
 const path = require('path')
 const fs = require('fs')
@@ -22,7 +22,7 @@ const l2w = (p) => p.replace(/^\/([^\/]+?)/,'$1:\\').replace(/\//g,'\\').replace
 
 const realpath = (p) => (isWinOS ? l2w(p) : p)
 
-const normalize = (p) => p.replace(/\/{2,}/g,'/').replace(/\/+$/,'')
+const normalize = (p) => p.replace(/\/{2,}/g,'/').replace(/(?<=.+)\/+$/,'')
 
 const extname = (p) => path.extname(p).substring(1)
 
@@ -31,7 +31,6 @@ module.exports = ({datetime}) => {
   const folder = async(id) => {
     let dir = normalize(id) , resp = { id : dir , type:'folder', protocol:defaultProtocol}
     let realdir = realpath(dir)
-
     if( fs.existsSync(realdir) ){
       let children = []
 

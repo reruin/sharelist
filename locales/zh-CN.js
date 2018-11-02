@@ -14,7 +14,7 @@ module.exports = {
   "install":"初始化",
   "type":"类型",
   "name":"名称",
-  "submit":"提交",
+  "save":"保存",
   "export":"导出配置",
   "enable":"启用",
   "disable":"禁用",
@@ -22,10 +22,9 @@ module.exports = {
   "input_path_placeholder":"GoogleDrive/OneDrive 分享的文件夹ID、本地目录、虚拟目录文件地址",
   "signin":"登录",
   "input_token":"输入口令",
-  "enable_proxy":"启用下载中转（包括预览）",
-  "dragable_for_proxy_video":"中转视频预览允许拖拽（实验性功能）",
-  "folder_max_age":"目录缓存时长(秒)",
-  "file_max_age":"链接缓存时长(秒)",
+  "proxy_enable":"启用下载中转（包括预览）",
+  "max_age_dir":"目录缓存时长(秒)",
+  "max_age_file":"链接缓存时长(秒)",
   "virtual_path":"虚拟路径",
   "general":"常规"
 }

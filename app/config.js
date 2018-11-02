@@ -2,19 +2,16 @@ const fs = require('fs')
 const os = require('os')
 const config_path = process.cwd() +'/cache/config.json'
 const port = process.env.PORT || 33001
-const plugin = require('./services/plugin')
-
 
 var data = {
   port , 
 
-  enabled_proxy : 0 ,
+  proxy_enable : 0 ,
 
-  enabled_proxy_header: 0 ,
   //目录刷新时间 15分钟
-  cache_refresh_dir:15 * 60 * 1000,
+  max_age_dir: 15 * 60 * 1000,
   //外链 10分钟
-  cache_refresh_file: 5 * 60 * 1000
+  max_age_file: 5 * 60 * 1000
 }
 
 const save = async (d) => {
@@ -41,6 +38,15 @@ const installed = () => data.token && data.path
 
 const getTitle = () => data.title || 'ShareList'
 
+const getConfig = () => ({proxy_enable:data.proxy_enable , max_age_dir:data.max_age_dir , max_age_file:data.max_age_file})
+
+const getToken = () => data.token
+
+const getAllConfig = () => ({...data})
+
+const getPort = () => data.port
+
+const getPath = () => [].concat( data.path || [] )
 
 try{
   let cfg = fs.readFileSync(config_path,'utf-8');  
@@ -55,12 +61,4 @@ try{
 
 }
 
-
-const getVendors = () => {
-  return plugin.getVendors()
-}
-
-
-module.exports = {
- data, save , installed , port , getTitle , getVendors
-}
+module.exports = { get:getAllConfig, getConfig , getToken , getPath , getPort , getTitle , save , installed }

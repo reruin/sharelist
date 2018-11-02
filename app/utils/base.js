@@ -18,8 +18,7 @@ const parsePath = (url)=>{
     let paths = []
     for(let i = 0 ; i< raw.length ; i++){
       if( i == 0 || /[^!]$/.test(raw[i-1]) ){
-        paths.push(decode(raw[i]))
-        // paths.push(decode(raw[i].replace(/!$/,'')))
+        paths.push(decodeURIComponent(raw[i]))
       }
     }
     return [paths , raw]
@@ -71,7 +70,7 @@ const hash = (d , key) => {
 }
 
 
-const ip = () => (rnd(50,250) + "." + rnd(50,250) + "." + rnd(50,250)+ "." + rnd(50,250))
+const getRandomIP = () => (rnd(50,250) + "." + rnd(50,250) + "." + rnd(50,250)+ "." + rnd(50,250))
 
 const search = (ret , key , value) => {
   for(let i in ret){
@@ -97,17 +96,10 @@ const pathNormalize = (path) => {
   return path;
 }
 
-const encode = (v) => {
-  return v.replace(/\//g,'%2F').replace(/\\/g,'%5C')
+const base64 = {
+  encode : (v) => new Buffer(v).toString('base64'),
+  decode : (v) => new Buffer(v, 'base64').toString()
 }
-
-const decode = (v) => {
-  return v ? v.replace(/%2F/g,'/').replace(/%5C/g,'\\') : v
-}
-
-const base64_encode = (v) => new Buffer(v).toString('base64').replace(/\//g,'_')
-
-const base64_decode = (v) => new Buffer(v.replace(/_/g,'/'), 'base64').toString()
 
 const enablePreview = (v) => ['audio','video','image'].includes(v)
 
@@ -120,9 +112,7 @@ module.exports = {
 
   isArray , isObject, isString, isDate, isEmail, isRelativePath , enablePreview, enableRange , 
 
-  hash, extend, ip, pathNormalize , search,
-
-  encode , decode , base64_encode, base64_decode,
+  hash, extend, getRandomIP, pathNormalize , search, base64,
 
   params (url){
     url = url.split('?')[1]

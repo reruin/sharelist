@@ -14,7 +14,7 @@ module.exports = {
   "install":"Install",
   "type":"Type",
   "name":"Name",
-  "submit":"Submit",
+  "save":"Save",
   "export":"Export config",
   "enable":"Enable",
   "disable":"Disable",
@@ -22,10 +22,9 @@ module.exports = {
   "input_path_placeholder":"GoogleDrive/OneDrive share Id, local path, virtual path",
   "signin":"Signin",
   "input_token":"Please enter password",
-  "enable_proxy":"Enable proxy",
-  "dragable_for_proxy_video":"Enable seek for video play",
-  "folder_max_age":"Folder nax age(second)",
-  "file_max_age":"File max age(second)",
+  "proxy_enable":"Enable proxy",
+  "max_age_dir":"Folder max age(second)",
+  "max_age_file":"File max age(second)",
   "virtual_path":"Virtual path",
   "general":"General"
 }

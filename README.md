@@ -1,67 +1,115 @@
 # ShareList
 
-在线挂载 GoogleDrive、OneDrive 的简易工具，可通过插件扩展功能。
+ShareList 是一个易用的网盘工具，支持快速挂载 GoogleDrive、OneDrive ，可通过插件扩展功能。
 
-## 特性
-- 通过插件支持多种网盘系统。可通过自定义插件提供更多的类型支持
-插件请置于plugins目录，自动启用。  
-- 支持目录嵌套
-- 加密目录  
-在文件夹内新建 ```.密码.passwd``` 命名的文件即可，例如 
-```.123456.passwd```  
-不要省略最前方的```.``` 
-- 国际化支持 
-- 即将支持WebDAV 
+## 目录
+* [ShareList特性](#特性)  
+* [功能说明](#功能说明) 
+  * [挂载对象](#挂载对象) 
+  * [目录加密](#目录加密) 
+  * [虚拟目录](#虚拟目录) 
+  * [虚拟文件](#虚拟文件) 
+  * [WebDAV](#WebDAV) 
+* [插件机制](#插件机制) 
+  * [内置插件](#内置插件) 
+  * [常规插件](#常规插件) 
+  * [插件开发](#插件开发) 
+* [安装](#安装) 
 
-## 已内置插件 
-### GoogleDrive 
-提供对GoogleDrive的访问。协议名 gd，id为 分享文件夹ID
-### OneDrive 
-提供对OneDrive的访问。协议名 od，id为 分享文件夹ID 
-### OneDrive For Business
-提供对OneDrive Business的访问。协议名 odb，id为 分享的url 
-### HTTP(S) 
-提供对HTTP链接的访问。协议名 http，id为 uri 
-### LocalFileSystem
+## 特性 
+- 多种网盘系统快速挂载。 
+- 支持虚拟目录和虚拟文件。 
+- 支持目录加密。 
+- 插件机制。 
+- 国际化支持。  
+- WebDAV导出。  
+
+## 功能说明 
+### 挂载对象 
+首次使用时将提示选在挂载源，选择挂载源，填入对应路径即可。 
+系统内置了本地路径（FileSystem）挂载源。 
+
+### 目录加密 
+在需加密目录内新建 ```.passwd``` 文件，```type```为验证方式，```data```为验证内容。  
+```yaml
+type: basic 
+data: 
+  - user1:111111 
+  - user2:aaaaaa 
+``` 
+```basic```是内置的验证方式，使用用户名密码对进行判断，上面的例子中可使用```user1```的密码为```111```，```user2```的密码为```aaaaaa```。[请参考](blob/master/example/SecretFolder/.passwd)。 
+
+### 虚拟目录 
+在需创建虚拟目录处新建```目录名.d.ln```文件。 其内容为```挂载源:挂载路径``` 
+如：创建虚拟目录指向本地```/root```。 
+```
+fs:/root 
+``` 
+其中挂载源```fs```表示本地磁盘，```/root```代表路径。  
+
+再如：创建虚拟目录指向GoogleDrive的某个共享文件夹 
+```
+gd:0BwfTxffUGy_GNF9KQ25Xd0xxxxxxx 
+``` 
+```gd```是GoogleDrive的挂载源标示，冒号后的是共享文件夹ID。   
+
+  
+### 虚拟文件 
+与虚拟目录类似，目标指向具体文件。  
+在需创建虚拟文件处新建```文件名.后缀名.ln```文件。 其内容为```挂载源:挂载路径```。 
+如：创建一个```ubuntu_18.iso```的虚拟文件，请参考[example/linkTo_download_ubuntu_18.iso.ln](example)。 
+  
+### WebDAV 
+系统部分支持WebDAV。可使用的功能包括列目录、展示内容、权限校验。由于系统仅做挂载用途，不支持写入、删除、重命名、复制等操作。默认根路径为```/WebDAV```。 
+
+## 插件机制 
+插件可用于扩展挂载源、扩展加密方式。插件请置于plugins目录。 
+
+### 内置插件 
+内置插件位于[app/plugins](app/plugins) 
+#### HTTP(S)（内置） 
+为指向HTTP(S)的虚拟文件提供访问支持。挂载标示http(s)，实际url作为路径。  
+#### FileSystem（内置）
 提供对本地文件系统的访问。协议名 fd，id为 文件路径，统一使用linux的路径，例如 windows D盘 为 ```/d/```。 
-### ShareListDrive
-ShareListDrive是ShareList内置的一种虚拟文件系统，使用yaml构建。以```xd```作为后缀保存。参考 ```example/download.xd```。 
-### Ln(快捷方式)
-提供一种快捷方式的实现。只需要新建类似 ```名称.类型后缀.ln``` 的文件，文件内容为```协议:id``` 即可。 
-特别的，文件夹将使用```d```这个预设类型后缀。 
-例子：  
-1. 重定向到 某个http链接对应的文件 参考  ```example/http_download_ubuntu_18.iso.ln```  
-2. 重定向到 GoogleDrive的某个目录 参考 ```example/GoogleDrive.d.ln```  
-3. 重定向到 本地上级目录 参考 ```example/parent_folder.d.ln``` 
+#### ShareListDrive（内置）
+ShareListDrive是ShareList内置的一种虚拟文件系统，使用yaml构建。以```sld```作为后缀保存。参考[example/ShareListDrive.sld](example)。 
+#### BasicAuth（内置） 
+提供基础文件夹加密方式。 
 
 
-## 插件开发 
-待补充 
+### 常规插件 
+常用插件位于[plugins](plugins)  
+#### GoogleDrive 
+提供对GoogleDrive的访问。挂载标示：```gd```，分享文件夹ID作为路径。 
+#### OneDrive 
+提供对OneDrive的访问。挂载标示```od```，分享文件夹ID作为路径。 
+#### OneDrive For Business 
+提供对OneDrive Business的访问。挂载标示odb，分享的url作为路径。 
 
-## 已知BUG 
-1. GoogleDrive插件：目录内文件过多时无法完全显示，也无法分页。 
-
+### 插件开发 
+待完善   
 
 ## 安装
 ### Shell
-````bash
+```bash
 bash install.sh
-````
+```
 
 ### Docker support
-````bash
+```bash
 docker build -t yourname/sharelist .
 
 docker run -d -v /etc/sharelist:/app/cache -p 33001:33001 --name="sharelist" yourname/sharelist
-````
+```
 
 OR
 
-````bash
+```bash
 docker-compose up
-````
+```
 
 访问 `http://localhost:33001` 
+WebDAV 目录 `http://localhost:33001/webdav` 
 
 
 ### Heroku

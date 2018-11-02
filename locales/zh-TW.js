@@ -14,7 +14,7 @@ module.exports = {
   "install":"安裝",
   "type":"類型",
   "name":"自訂名稱",
-  "submit":"送出",
+  "save":"送出",
   "export":"匯出設定",
   "enable":"啟用",
   "disable":"禁用",
@@ -22,10 +22,9 @@ module.exports = {
   "input_path_placeholder":"GoogleDrive/OneDrive 分享的資料夾ID、本機資料夾、虛擬資料夾檔案位址",
   "signin":"登入",
   "input_token":"請輸入Token",
-  "enable_proxy":"網址代理",
-  "dragable_for_proxy_video":"代理模式下預覽影片的續傳功能(實驗性)",
-  "folder_max_age":"資料夾快取時間(秒)",
-  "file_max_age":"檔案快取時間(秒)",
+  "proxy_enable":"網址代理",
+  "max_age_dir":"資料夾快取時間(秒)",
+  "max_age_file":"檔案快取時間(秒)",
   "virtual_path":"虛擬路徑",
   "general":"一般"
 }

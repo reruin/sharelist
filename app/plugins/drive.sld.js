@@ -7,19 +7,19 @@ const name = 'ShareListDrive'
 
 const version = '1.0'
 
-const protocols = ['xd', 'sld']
+const protocols = ['sld','xd']
 
 const defaultProtocol = 'xd'
 
 const yaml = require('yaml').default
 
 
-module.exports = (helper, cache, config, getSource) => {
+module.exports = ({isObject , isArray , cache}) => {
 
   /* 递归生成 索引 id */
   const createId = (d, rootId) => {
     d.forEach((i, index) => {
-      if (helper.isObject(i)) {
+      if (isObject(i)) {
         i.id = rootId + '/' + i.name.replace(/\.d\.ln$/, '').replace(/\.ln$/, '')
         i.protocol = defaultProtocol
         if (i.children) {
@@ -30,7 +30,7 @@ module.exports = (helper, cache, config, getSource) => {
           i.ext = i.name.split('.').pop()
         }
 
-      } else if (helper.isArray(i)) {
+      } else if (isArray(i)) {
         createId(i, rootId)
       }
     })
@@ -40,18 +40,6 @@ module.exports = (helper, cache, config, getSource) => {
   const mount = async (rootId, data) => {
     let resid = `${defaultProtocol}:${rootId}`
     let resp = { id: rootId, type: 'folder', protocol: defaultProtocol }
-
-    // if(cache(resid)) {
-    //   resp = cache(resid)
-    //   if(
-    //     resp.updated_at && 
-    //     ( Date.now() - resp.updated_at < config.data.cache_refresh_dir)
-
-    //   ){
-    //     console.log('mount xd from cache')
-    //     return resp
-    //   }
-    // }
 
     if (data) {
       let json = yaml.parse(data)

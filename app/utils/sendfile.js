@@ -66,9 +66,7 @@ const sendFile = async(ctx , path , {maxage , immutable} = {maxage:0 , immutable
 }
 
 const sendHTTPFile = async (ctx , url , headers) => {
-
   ctx.body = ctx.req.pipe(http.stream({url , headers})).pipe(ctx.res)
-
 }
 
 module.exports = { sendFile , sendHTTPFile }

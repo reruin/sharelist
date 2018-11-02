@@ -13,11 +13,8 @@ if(!fs.existsSync('./cache')){
   fs.mkdirSync('./cache');
 }
 
-/**
- * Get port from environment and store in Express.
- */
 
-var port = normalizePort(config.port || 33001);
+var port = normalizePort(config.getPort() || 33001);
 
 var server = http.createServer(app.callback());
 
@@ -82,5 +79,5 @@ function onError(error) {
 
 function onListening() {
   console.log(new Date().toISOString())
-  console.log('App is running at http://'+getIpv4()+':'+config.port+'/')
+  console.log('App is running at http://'+getIpv4()+':'+port+'/')
 }

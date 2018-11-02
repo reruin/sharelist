@@ -116,6 +116,7 @@ class ShareList {
       // file  /a/b/c.jpg
       else {
         resp = await vendor.file(hit.id, hit)
+        // console.log( resp )
         await updateFile(resp)
       }
     }
@@ -137,7 +138,7 @@ class ShareList {
   }
 
   mount() {
-    let paths = config.data.path || [],
+    let paths = config.getPath() || [],
       key
     let ods = paths.some((i) => (/^od\:/.test(i.path)))
 

@@ -2,6 +2,7 @@ const base = require('../utils/base')
 const request = require('request')
 const config = require('../config')
 const cache = require('../utils/cache')
+const { getVendors } = require('../services/plugin')
 
 module.exports = {
 
@@ -12,7 +13,7 @@ module.exports = {
     let message  , access = false
 
     if( token ){
-      if( token == config.data.token ){
+      if( token == config.getToken() ){
         access = true
       }else{
         message = 'Invalid Password'
@@ -21,9 +22,9 @@ module.exports = {
     }
 
     if(act == 'export'){
-      ctx.body = config.data
+      ctx.body = config.get()
     }else{
-      await ctx.render('manage',{access  , message , config:config.data , vendors:config.getVendors()})
+      await ctx.render('manage',{access  , message , config:config.get() , vendors:getVendors()})
     }
   },
 
@@ -32,7 +33,7 @@ module.exports = {
     let act = ctx.request.body.a
     let message = '' 
 
-    if(token !== config.data.token){
+    if(token !== config.getToken()){
       ctx.redirect('/manage')
       return
     }
@@ -82,37 +83,33 @@ module.exports = {
       message = 'Success'
     }
     else if(act == 'cfg'){
-      let {enabled_proxy , enabled_proxy_header , cache_refresh_dir , cache_refresh_file} = ctx.request.body
+      let {proxy_enable  , max_age_dir , max_age_file} = ctx.request.body
       let opts = {}
-      if(cache_refresh_dir){
-        cache_refresh_dir = parseInt(cache_refresh_dir)
-        if(!isNaN(cache_refresh_dir)){
-          opts.cache_refresh_dir = cache_refresh_dir * 1000
+      if(max_age_dir !== undefined){
+        max_age_dir = parseInt(max_age_dir)
+        if(!isNaN(max_age_dir)){
+          opts.max_age_dir = max_age_dir * 1000
         }
       }
 
-      if(cache_refresh_file){
-        cache_refresh_file = parseInt(cache_refresh_file)
-        if(!isNaN(cache_refresh_file)){
-          opts.cache_refresh_file = cache_refresh_file * 1000
+      if(max_age_file){
+        max_age_file = parseInt(max_age_file)
+        if(!isNaN(max_age_file)){
+          opts.max_age_file = max_age_file * 1000
         }
       }
 
-      if(enabled_proxy){
-        enabled_proxy = enabled_proxy == '1' ? 1 : 0
-        opts.enabled_proxy = enabled_proxy
+      if(proxy_enable){
+        proxy_enable = proxy_enable == '1' ? 1 : 0
+        opts.proxy_enable = proxy_enable
       }
 
-      if(enabled_proxy_header){
-        enabled_proxy_header = enabled_proxy_header == '1' ? 1 : 0
-        opts.enabled_proxy_header = enabled_proxy_header
-      }
       await config.save( opts )
       message = 'Success'
 
     }
 
-    await ctx.render('manage',{ message , access : true , config:config.data , vendors:config.getVendors()})
+    await ctx.render('manage',{ message , access : true , config:config.get() , vendors:getVendors()})
     
   }
 

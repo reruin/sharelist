@@ -11,7 +11,7 @@ module.exports = {
     opts = opts || {}
     opts.url = url
     opts.method = 'HEAD'
-    opts.headers = base.extend(opts.headers || {} , headers)
+    opts.headers = Object.assign({} , opts.headers , headers)
     if(debug) opts.proxy = 'http://127.0.0.1:1087'
     return new Promise(function (resolve, reject) {
       request(opts, function(error, response, body){
@@ -20,102 +20,47 @@ module.exports = {
     })
   },
 
-  header2(url , opts){
-    opts = opts || {}
-    opts.url = url
-    opts.headers = base.extend(opts.headers || {} , headers)
-    if(debug) opts.proxy = 'http://127.0.0.1:1087'
-    return new Promise(function (resolve, reject) {
-      let req = request(opts).on('response',(resp)=>{
-        let headers = {}
-        if(resp){
-          headers = resp.headers || {}
-        }
-
-        let n = {}
-        for(var i in headers){
-          if(!['connection'].includes(i)){
-            n[i] = headers[i]
-          }
-        }
-
-        if( ! ('content-length' in n ) ){
-          let range = n['content-range']
-          if(range){
-            let m = range.split('/')[1]
-            if(!isNaN(parseInt(m))){
-              n['content-length'] = parseInt(m)
-            }
-          }
-        }
-
-        resolve(n)
-
-        req.abort()
-      })
-    })
-  },
 
   stream( opts ){
     if(debug) opts.proxy = 'http://127.0.0.1:1087'
     return request(opts) 
   },
-	get(url , opts ){
-    opts = opts || {}
+	get(url , opts = {}){
     let params = { ...opts }
-    if(params.fake){
-      delete params.fake
-      let rndip = base.ip()
-      params.headers = base.extend(params.headers || {}, {
-        'PHPSESSID':'nrop',
-        'CLIENT-IP':rndip,
-        'HTTP_X_FORWARDED_FOR':rndip
-      })
-
-      base.extend(params.headers , headers)
-    }else{
-      params.headers = base.extend(params.headers || {} , headers)
-    }
-
+    params.headers = Object.assign({} , params.headers , headers)
     params.url = url
-    if(debug) params.proxy = 'http://127.0.0.1:1087'
-    
+
+    if(debug) {
+      params.proxy = 'http://127.0.0.1:1087'
+      console.log(params)
+    }
 		return new Promise(function (resolve, reject) {
 			request(params, function(error, response, body){
-          if(error){
-            console.log(error)
-            reject(error)
-          }else{
-            resolve(response)
-          }
-		      // if (!error && response.statusCode == 200) {
-		      //   resolve(body)
-		      // }else{
-        //     reject(error || response.statusCode);
-		      // }
-		    })
+        if(error){
+          console.log(error)
+          reject(error)
+        }else{
+          resolve(response)
+        }
+	    })
 		})
 	},
 
-	post(url , form , fake){
-		let headers = {
-		    'Accept-Language':'zh-CN,zh;q=0.8',
-		}
-    if(fake){
-      let rndip = base.ip()
-      headers['PHPSESSID'] = 'fsef'
-      headers['CLIENT-IP'] = rndip
-      headers['HTTP_X_FORWARDED_FOR'] = rndip
-    }
-    
+	post(url , form , opts){
+    let params = { ...opts }
+    params.headers = Object.assign({} , params.headers , headers)
+    params.url = url
+    params.form = form
+    params.method = 'POST'
+
 		return new Promise(function (resolve, reject) {
-			request({url , form , headers} , function(error, response, body){
-		      if (!error && response.statusCode == 200) {
-		        resolve(body)
-		      }else{
-	           reject(error || response.statusCode);
-		      }
-		    })
+			request(params , function(error, response, body){
+	      if (!error && response.statusCode == 200) {
+	        resolve(body)
+	      }else{
+           reject(error || response.statusCode);
+	      }
+	    })
 		})
 	}
 }

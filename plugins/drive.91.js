@@ -12,15 +12,12 @@ const defaultProtocol = '91'
 
 const host = Buffer.from('aHR0cDovL3d3dy45MXBvcm4uY29t', 'base64').toString('binary')
 
-const base64decode = v => Buffer.from(v, 'base64').toString('binary')
-
-const base64encode = v => Buffer.from(v).toString('base64')
-
-// 返回 { name , protocols, folder , file }
 const cache = {}
 
-module.exports = ({request , decode , getSource}) => {
+module.exports = ({request , getConfig , getSource , getRandomIP }) => {
   
+  let last_update = Date.now()
+
   const pageSize = 100
 
   const min = (a , b) => (a < b ? a : b)
@@ -37,6 +34,15 @@ module.exports = ({request , decode , getSource}) => {
   ]
   //cate_page_viewkey
 
+  const createHeaders = () => {
+    let ip = getRandomIP()
+
+    return {
+      'PHPSESSID':'nrop',
+      'CLIENT-IP':ip,
+      'HTTP_X_FORWARDED_FOR':ip
+    }
+  }
   const mount = () => {
     return {
       id : '/',
@@ -69,7 +75,7 @@ module.exports = ({request , decode , getSource}) => {
 
   const getDetail = async (viewkey) => {
 
-    let { body } = await request.get(`${host}/view_video.php?viewkey=${viewkey}`, {fake:true})
+    let { body } = await request.get(`${host}/view_video.php?viewkey=${viewkey}`, {headers:createHeaders()})
 
     let url = (body.match(/source\s*src\s*=\s*"([^"]+)/) || ['',''])[1]
     let name =(body.match(/viewvideo-title">([^<]+)/) || ['',''])[1].replace(/[\r\n]/g,'').replace(/(^[\s]*|[\s]*$)/g,'')
@@ -82,6 +88,8 @@ module.exports = ({request , decode , getSource}) => {
       ext:'mp4',
       mime:'video/mp4',
       protocol:defaultProtocol,
+      $cached_at:Date.now(),
+      proxy:true,
       url:url
     }
   }
@@ -94,16 +102,21 @@ module.exports = ({request , decode , getSource}) => {
 
   const getRange = async (id , name) => {
     let [,cate,start] = id.split('/')
-    let { body } = await request.get(`${host}/v.php?page=1&category=${cate}`)
-    let pageCount = parseInt(body.match(/(?<=page=\d+\">)[\d]+/g).pop() || 0)
 
-    cache[`${cate}_page`] = pageCount
+    let pageCount
 
-    console.log( pageCount )
+    if( cache[`${cate}_page_count`] && last_update && ( Date.now() - last_update < getConfig().max_age_dir) ){
+      pageCount = cache[`${cate}_page_count`]
+    }else{
+      let { body } = await request.get(`${host}/v.php?page=1&category=${cate}`)
+      pageCount = parseInt(body.match(/(?<=page=\d+\">)[\d]+/g).pop() || 0)
+      cache[`${cate}_page_count`] = pageCount
+      last_update = Date.now()
+    }
+
     start = parseInt(start || 1)
     end = Math.ceil( pageCount / 100 )
 
-    console.log( start , end)
     //每100页 做一次分页
 
     return {
@@ -127,9 +140,8 @@ module.exports = ({request , decode , getSource}) => {
 
   const getRangePage = (id , start) => {
     let [,cate,rangeStart] = id.split('/')
-    
     rangeStart = parseInt( rangeStart || 1)
-    let rangeEnd = cache[`${cate}_page`]
+    let rangeEnd = cache[`${cate}_page_count`]
     let range = min( rangeEnd - rangeStart + 1 , pageSize)
 
     return {
@@ -139,7 +151,7 @@ module.exports = ({request , decode , getSource}) => {
       protocol:defaultProtocol,
       children:new Array(range).fill(1).map((i , index) => {
         return {
-          id : `/${cate}/${rangeStart}/${index}`, 
+          id : `/${cate}/${rangeStart}/${rangeStart + index}`, 
           name : `第${rangeStart + index}页`,
           protocol:defaultProtocol,
           updated_at:'-',
@@ -160,23 +172,25 @@ module.exports = ({request , decode , getSource}) => {
       id : '-1',
       type : 'folder',
       protocol:defaultProtocol,
-      updated_at:Date.now(),
+      updated_at:'-',
       children : [ child ]
     }
   }
 
   const getList = async (id) => {
-    let [,cate,page] = id.split('/')
+    if( cache[id] && cache[id].$cached_at && ( Date.now() - cache[id].$cached_at < getConfig().max_age_dir) ){
+      return cache[id]
+    }
+
+    let [,cate,range,page] = id.split('/')
     if(!page) page = 1
     page = parseInt(page)
     let { body } = await request.get(`${host}/v.php?page=${page}&category=${cate}`)
     let children = []
-    console.log( `${host}/v.php?page=${page}&category=${cate}` )
-    let pageCount = parseInt(body.match(/(?<=page=\d+\">)[\d]+/g).pop() || 0)
 
     body.replace(/viewkey=([0-9a-z]+)[^<]+?\s*<img\s+src="([^"]+?)"[\w\W]+?title="([^"]+?)"/g , ($0 , $1, $2, $3)=>{
       children.push({
-        id : `/${cate}/${page}/${$1}`, 
+        id : `${id}/${$1}`, 
         name : $3+'.mp4',
         url: `./${$1}/${$3}.mp4`,
         protocol:defaultProtocol,
@@ -188,13 +202,19 @@ module.exports = ({request , decode , getSource}) => {
       return ''
     })
 
-    return {
+
+    let resp = {
       id : '/'+cate+'/'+page,
       type : 'folder',
       protocol:defaultProtocol,
-      updated_at:Date.now(),
+      updated_at:'-',
+      $cached_at:Date.now(),
       children
     }
+
+    cache[id] = resp
+
+    return resp
   }
 
 
@@ -227,7 +247,7 @@ module.exports = ({request , decode , getSource}) => {
 
     const value = paths[0]
 
-    console.log('***' , lv,id , paths)
+    //console.log('***' , lv,id , paths)
 
     // case 0
     if( lv == 0 ){
@@ -236,7 +256,7 @@ module.exports = ({request , decode , getSource}) => {
       }
       // case b , c , d => mock
       else { 
-        return getCate(decodeURIComponent(decode(value)))
+        return getCate(decodeURIComponent(value))
       }
     }
 
@@ -249,7 +269,7 @@ module.exports = ({request , decode , getSource}) => {
       }
       // case c , paths = [range]
       else{
-        return await getRange( id + '/' + decodeURIComponent(decode(value)).replace(/第(\d+)-(\d+)页/,'$1') ,  value)
+        return await getRange( id + '/' + decodeURIComponent(value).replace(/第(\d+)-(\d+)页/,'$1') ,  value)
       }
     }
 
@@ -259,9 +279,8 @@ module.exports = ({request , decode , getSource}) => {
       if( len == 0){
         return await getRangePage( id  , 0)
       }
-      
       else {
-        return await getRangePage( id  ,  decodeURIComponent(decode(value)).replace(/第(\d+)页/,'$1'))
+        return await getRangePage( id  ,  decodeURIComponent(value).replace(/第(\d+)页/,'$1'))
       }
     }
     // case 2 /cate/range
@@ -285,7 +304,7 @@ module.exports = ({request , decode , getSource}) => {
       else if( len == 1){
         return getMock( {
           id : id + '/f' ,  
-          name:decodeURIComponent(decode(value)),
+          name:decodeURIComponent(value),
           ext:'mp4' ,
           mime:'video/mp4', 
           type:'video'
@@ -301,9 +320,15 @@ module.exports = ({request , decode , getSource}) => {
    * /f/viewkey
    */
   const file = async(id) =>{
+    if( cache[id] && cache[id].$cached_at && ( Date.now() - cache[id].$cached_at < getConfig().max_age_file) ){
+      return cache[id]
+    }
+
     let viewkey = id.split('/').slice(-2,-1)
-    if(viewkey){
-      let resp = await getDetail( viewkey )
+    if(viewkey[0]){
+      let resp = await getDetail( viewkey[0] )
+      resp.headers = createHeaders()
+      cache[id] = resp
       return resp
     }else{
       return false

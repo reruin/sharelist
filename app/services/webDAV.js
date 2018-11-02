@@ -1,7 +1,7 @@
 const http = require('../utils/http')
 const { sendFile , sendHTTPFile} = require('../utils/sendfile')
 
-const { auth } = require('./index')
+const { auth } = require('./sharelist')
 
 const slashify = (p) => (p[p.length-1] != '/' ? `${p}/` : p)
 
@@ -47,7 +47,7 @@ const respCreate = (data , options) => {
       body +=`<D:multistatus xmlns:D="DAV:">`
   data.forEach( file => {
     if( file.hidden !== true){
-      let href = path + encodeURIComponent(file.href) //path +'/' + encodeURIComponent(file.name)
+      let href = path + file.href //path +'/' + encodeURIComponent(file.name)
       let res = propsCreate(file , props)
       body += `
         <D:response>
@@ -121,7 +121,6 @@ class WebDAV {
     if( reqRes ){
       if( this.checkAuth() ){
         let [user , passwd] = this.getAuthority()
-        console.log( data )
         if( await auth(data , user , passwd) ){
           reqRes = false
         }
@@ -208,9 +207,7 @@ class WebDAV {
     
     options['props'] = props
 
-
     const files = this.data.children
-    console.log(files)
     if (files.length == 0) {
       this.setStatus("404 Not Found")
     }else{

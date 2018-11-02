@@ -55,9 +55,9 @@ module.exports = ({ request, cache, getConfig }) => {
     if (cache(resid)) {
       resp = cache(resid)
       if (
-        resp.updated_at &&
+        resp.$cached_at &&
         resp.children &&
-        (Date.now() - resp.updated_at < getConfig().cache_refresh_dir)
+        (Date.now() - resp.$cached_at < getConfig().max_age_dir)
 
       ) {
         console.log('get folder from cache')
@@ -105,7 +105,7 @@ module.exports = ({ request, cache, getConfig }) => {
 
     //folder 额外保存 
     resp.children = children
-    resp.updated_at = Date.now()
+    resp.$cached_at = Date.now()
 
     cache(resid, resp)
     return resp

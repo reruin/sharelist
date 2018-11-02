@@ -88,9 +88,9 @@ module.exports = ({ request , cache , getConfig , querystring}) => {
       resp = cache(resid)
 
       if (
-        resp.updated_at &&
+        resp.$cached_at &&
         resp.children &&
-        (Date.now() - resp.updated_at < getConfig().cache_refresh_dir)
+        (Date.now() - resp.$cached_at < getConfig().max_age_dir)
 
       ) {
         console.log('get od folder from cache')
@@ -147,7 +147,7 @@ module.exports = ({ request , cache , getConfig , querystring}) => {
       r = (r.items || [r.item])[0]
       children = r.folder ? r.folder.children.map((i) => {
         let ext = i.extension ? i.extension.replace(/\./g, '') : ''
-        console.log( i )
+        
         return {
           id: i.id,
           name: i.name + (i.folder ? '' : i.extension),
@@ -161,11 +161,11 @@ module.exports = ({ request , cache , getConfig , querystring}) => {
           type: i.folder ? 'folder' : undefined,
 
           url: i.folder ? '' : i.urls.download,
-          url_updated: Date.now()
+          $cached_at: Date.now()
         }
       }) : []
 
-      resp.updated_at = Date.now()
+      resp.$cached_at = Date.now()
       resp.children = children
       cache(resid, resp)
     }
@@ -175,9 +175,9 @@ module.exports = ({ request , cache , getConfig , querystring}) => {
   const file = async (id, data) => {
     if (
       data &&
-      data.url_updated &&
+      data.$cached_at &&
       data.url &&
-      (Date.now() - data.url_updated < getConfig().cache_refresh_file)
+      (Date.now() - data.$cached_at < getConfig().max_age_file)
 
     ) {
       console.log('get od file from cache')

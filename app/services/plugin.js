@@ -1,7 +1,7 @@
 const fs = require('fs')
 const path = require('path')
 const querystring = require('querystring')
-const {MIMEType , isArray , isObject , params , decode } = require('../utils/base')
+const {MIMEType , isArray , isObject , params , base64 , getRandomIP } = require('../utils/base')
 const format = require('../utils/format')
 const cache = require('../utils/cache')
 const http = require('../utils/http')
@@ -9,21 +9,22 @@ const config = require('../config')
 
 const assign = (...rest) => Object.assign(...rest)
 
-let driveMap = {}
+let driveMap = new Map()
 
-let formatMap = {}
+let driveMountableMap = new Map()
 
-let authMap = {}
+let formatMap = new Map()
+
+let authMap = new Map()
 
 let resources = {}
 
 let resourcesCount = 0
 
 const getSource = async (id , driverName) => {
-  if(driveMap[driverName]){
+  if(driveMap.has(driverName)){
     let vendor = getDrive(driverName)
     let d = await vendor.file(id)
-
     if(d.outputType === 'file'){
       if(fs.existsSync( d.url )){
         return fs.readFileSync(d.url, 'utf8')
@@ -36,20 +37,17 @@ const getSource = async (id , driverName) => {
   return false
 }
 
-const getConfig = () => {
-  return { ...config.data }
-}
-
 const helper = {
   isArray : isArray,
   isObject: isObject,
   datetime:format.datetime,
   request:http, 
   querystring:querystring,
-  decode:decode,
+  base64:base64,
   cache:cache,
   getSource: getSource,
-  getConfig : getConfig,
+  getConfig : config.getConfig,
+  getRandomIP:getRandomIP,
 }
 
 const load = (options) => {
@@ -90,24 +88,22 @@ const load = (options) => {
 
         if( resource.auth ){
           for(let key in resource.auth){
-            authMap[key] = id
+            authMap.set(key , id)
           }
         }
 
         if( resource.drive ){
-          let mountable = resource.drive.mountable !== false
           let protocols = [].concat(resource.drive.protocols || [])
-          
+          let mountable = resource.drive.mountable !== false
           protocols.forEach( protocol => {
-            if(mountable){
-              driveMap[protocol] = id
-            }
+            driveMap.set(protocol,id)
+            if(mountable) driveMountableMap.set(protocol , id)
           })
         }
         
         if(resource.format){
           for(let key in resource.format){
-            formatMap[key] = id
+            formatMap.set(key , id)
           }
         }
       }
@@ -118,12 +114,12 @@ const load = (options) => {
 
 
 const getDrive = (ext) => {
-  let id = driveMap[ext]
+  let id = driveMap.get(ext)
   return resources[id].drive
 }
 
 const getFormater = (ext) => {
-  let name = formatMap[ext]
+  let name = formatMap.get(ext)
   return name ? resources[name].format[ext] : null
 }
 
@@ -181,7 +177,7 @@ const updateFolder = (folder) => {
       }
 
       //虚拟磁盘
-      if( len > 1 && driveMap[type] ){
+      else if( driveMap.has(type) ){
         d.name = tmp.slice(0,-1).join('.')
         d.type = 'folder'
         d.lnk = true
@@ -228,7 +224,7 @@ const updateLnk = async (d) => {
     //从 id 猜测协议
     let protocol = d.id.split('.').pop()
 
-    if(driveMap[protocol]){
+    if(driveMap.has(protocol)){
       d.protocol = protocol
       d.content = content
     }
@@ -240,25 +236,23 @@ const parseLnk = (content) => {
   let tmp = content.split(':')
   let protocol = tmp[0]
   //匹配到
-  if( driveMap[protocol] ){
+  if( driveMap.has(protocol) ){
     return { protocol , id:tmp.slice(1).join(':')}
   }else{
     return false
   }
 }
 
-const getVendors = () => {
-  let vendors = []
-  for(let i in resources){
-    if(resources[i].mountable !== false && resources[i].name && resources[i].folder && resources[i].file)
-      vendors.push({protocol:resources[i].protocols[0] , name:resources[i].name})
+const getVendors = () => [...new Set(driveMountableMap.values())].map(id => {
+  return {
+    name : resources[id].name,
+    protocol : resources[id].drive.protocols[0]
   }
-  return vendors
-}
+})
 
 const getAuth = (type) => {
-  if( authMap[type] ){
-    return resources[ authMap[type] ].auth[type]
+  if( authMap.has(type) ){
+    return resources[ authMap.get(type) ].auth[type]
   }else{
     return false
   }

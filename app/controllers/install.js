@@ -1,6 +1,8 @@
 const base = require('../utils/base')
 const request = require('request')
 const config = require('../config')
+const { getVendors } = require('../services/plugin')
+
 const cache = require('../utils/cache')
 
 module.exports = {
@@ -10,7 +12,7 @@ module.exports = {
       ctx.redirect('/')
     }
     else{
-      await ctx.render('install' , {vendors:config.getVendors()})
+      await ctx.render('install' , {vendors:getVendors()})
     }
   }
   ,

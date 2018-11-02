@@ -23,9 +23,9 @@ module.exports = ({ request , getConfig , datetime , cache }) => {
     if(r) {
       resp = r
       if(
-        resp.updated_at && 
+        resp.$cached_at && 
         resp.children &&
-        ( Date.now() - resp.updated_at < getConfig().cache_refresh_dir)
+        ( Date.now() - resp.$cached_at < getConfig().max_age_dir)
 
       ){
         console.log('get gd folder from cache')
@@ -68,7 +68,7 @@ module.exports = ({ request , getConfig , datetime , cache }) => {
 
     //folder 额外保存 
     resp.children = children
-    resp.updated_at = Date.now()
+    resp.$cached_at = Date.now()
 
     cache(resid,resp)
     return resp
@@ -80,9 +80,9 @@ module.exports = ({ request , getConfig , datetime , cache }) => {
   const file = async(id , data = {}) =>{
     if(
       data && 
-      data.url_updated && 
+      data.$cached_at && 
       data.url &&
-      ( Date.now() - data.url_updated < getConfig().cache_refresh_file)
+      ( Date.now() - data.$cached_at < getConfig().max_age_file)
 
     ){
       console.log('get gd file from cache')
@@ -105,7 +105,7 @@ module.exports = ({ request , getConfig , datetime , cache }) => {
     }
 
     data.url = reallink
-    data.url_updated = Date.now()
+    data.$cached_at = Date.now()
 
     //强制保存 ， data 是指向 父级 的引用
     cache.save()

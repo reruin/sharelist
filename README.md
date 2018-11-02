@@ -67,10 +67,10 @@ gd:0BwfTxffUGy_GNF9KQ25Xd0xxxxxxx
 
 ### 内置插件 
 内置插件位于[app/plugins](app/plugins) 
-#### HTTP(S)（内置） 
-为指向HTTP(S)的虚拟文件提供访问支持。挂载标示http(s)，实际url作为路径。  
+#### HTTP/HTTPS（内置） 
+为指向HTTP(S)的虚拟文件提供访问支持。挂载标示```http/https```，实际url作为路径。  
 #### FileSystem（内置）
-提供对本地文件系统的访问。协议名 fd，id为 文件路径，统一使用linux的路径，例如 windows D盘 为 ```/d/```。 
+提供对本地文件系统的访问。挂载标示```fs```，id为 文件路径，统一使用linux的路径，例如 windows D盘 为 ```/d/```。 
 #### ShareListDrive（内置）
 ShareListDrive是ShareList内置的一种虚拟文件系统，使用yaml构建。以```sld```作为后缀保存。参考[example/ShareListDrive.sld](example)。 
 #### BasicAuth（内置） 

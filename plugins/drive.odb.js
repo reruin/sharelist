@@ -41,7 +41,7 @@ module.exports = ({ request, cache, getConfig }) => {
   }
 
   // folder => files
-  const folder = async (id) => {
+  const folder = async (id) => {console.log(id)
     const resid = `${defaultProtocol}:${id}`
 
     const baseUrl = id.split('/').slice(0, 3).join('/')

@@ -1,5 +1,4 @@
 const request = require('request')
-const base = require('./base')
 const debug = false //process.env.NODE_ENV == 'dev'
 const headers = {
     'Accept-Encoding': 'identity;q=1, *;q=0',

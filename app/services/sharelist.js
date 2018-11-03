@@ -138,23 +138,21 @@ class ShareList {
   }
 
   mount() {
-    let paths = config.getPath() || [],
-      key
-    let ods = paths.some((i) => (/^od\:/.test(i.path)))
+    let paths = config.getPath() || [], key
 
     // 如果只有一个目录 则直接列出
     if (paths.length == 1) {
       paths = paths[0].path
       return {
-        id: paths.replace(/^.*\:/, ''),
-        protocol: (paths.match(/^.*(?=\:)/) || [''])[0],
+        id: paths.split(':').slice(1).join(':'),
+        protocol: paths.split(':')[0],
         type: 'folder'
       }
     } else {
       //根路径不判断缓存，防止添加路径路径时丢失
       let disk = paths.map((i, index) => ({
-        id: i.path.replace(/^.*\:/, ''),
-        protocol: (i.path.match(/^.*(?=\:)/) || [''])[0],
+        id: i.path.split(':').slice(1).join(':'),
+        protocol: i.path.split(':')[0],
         name: i.name,
         size: '-',
         updated_at: '-',

@@ -1,9 +1,9 @@
 FROM node:8-alpine
 MAINTAINER reruin
 
-ADD . /app/
-WORKDIR /app
-VOLUME /app/cache
+ADD . /sharelist/
+WORKDIR /sharelist
+VOLUME /sharelist/cache
 
 RUN npm install
 

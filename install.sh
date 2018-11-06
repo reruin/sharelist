@@ -29,7 +29,7 @@ fi
 npm install
 npm install pm2 -g
 
-pm2 start bin/www
+pm2 start app.js
 pm2 save
 pm2 startup
 

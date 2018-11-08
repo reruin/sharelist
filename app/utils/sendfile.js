@@ -1,7 +1,6 @@
 const fs = require('fs')
 const mime = require('mime')
 const http = require('./http')
-const request = require('request')
 
 const getRange = (r , total)=>{
   let [, start, end] = r.match(/(\d*)-(\d*)/);
@@ -66,7 +65,12 @@ const sendFile = async(ctx , path , {maxage , immutable} = {maxage:0 , immutable
 }
 
 const sendHTTPFile = async (ctx , url , headers) => {
-  ctx.body = ctx.req.pipe(http.stream({url , headers})).pipe(ctx.res)
+  ctx.body = ctx.req.pipe(http({url , headers})).pipe(ctx.res)
 }
 
-module.exports = { sendFile , sendHTTPFile }
+const getHTTPFile = async (url ,headers = {}) => {
+  let { body } = await http.get(url , { headers } )
+  return body
+}
+
+module.exports = { sendFile , sendHTTPFile , getHTTPFile }

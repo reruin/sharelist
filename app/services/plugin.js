@@ -6,6 +6,7 @@ const format = require('../utils/format')
 const cache = require('../utils/cache')
 const http = require('../utils/http')
 const config = require('../config')
+const { getHTTPFile } = require('../utils/sendfile')
 
 const assign = (...rest) => Object.assign(...rest)
 
@@ -30,8 +31,7 @@ const getSource = async (id , driverName) => {
         return fs.readFileSync(d.url, 'utf8')
       }
     }else{
-      let data = await http.get(data.url)
-      return data.body
+      return await getHTTPFile(d.url , d.headers || {})
     }
   }
   return false

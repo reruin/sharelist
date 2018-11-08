@@ -19,7 +19,11 @@ http.header = (url, opts) => {
   if (debug) opts.proxy = 'http://127.0.0.1:1087'
   return new Promise(function(resolve, reject) {
     request(opts, function(error, response, body) {
-      resolve(response)
+      if (error) {
+        reject(error)
+      }else{
+        resolve(response)
+      }
     })
   })
 }
@@ -36,7 +40,6 @@ http.get = (url, opts = {}) => {
   return new Promise(function(resolve, reject) {
     request(params, function(error, response, body) {
       if (error) {
-        console.log(error)
         reject(error)
       } else {
         resolve(response)
@@ -55,7 +58,7 @@ http.post = (url, form, opts) => {
   return new Promise(function(resolve, reject) {
     request(params, function(error, response, body) {
       if (!error && response.statusCode == 200) {
-        resolve(body)
+        resolve(response)
       } else {
         reject(error || response.statusCode);
       }

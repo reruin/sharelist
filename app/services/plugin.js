@@ -201,7 +201,8 @@ const updateFolder = (folder) => {
     return a.type == 'folder' && b.type != 'folder' ? -1 : a.type != 'folder' && b.type == 'folder' ? 1 : (a.$ - b.$)
   })
 
-}
+  return folder
+} 
 
 
 /*

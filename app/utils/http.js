@@ -30,7 +30,7 @@ http.header = (url, opts) => {
 
 http.get = (url, opts = {}) => {
   let params = { ...opts }
-  params.headers = Object.assign({}, params.headers, headers)
+  params.headers = Object.assign({}, headers , params.headers || {})
   params.url = url
 
   if (debug) {
@@ -50,7 +50,7 @@ http.get = (url, opts = {}) => {
 
 http.post = (url, form, opts) => {
   let params = { ...opts }
-  params.headers = Object.assign({}, params.headers, headers)
+  params.headers = Object.assign({}, headers , params.headers || {})
   params.url = url
   params.form = form
   params.method = 'POST'

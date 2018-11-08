@@ -44,7 +44,7 @@ class ShareList {
     const content = cache.get(pl, true)
     if (content) {
       console.log(`Get Cahce For Path(${pl})`)
-      return access_check(content)
+      return updateFolder(content)
     }
 
     if (pl == '') {
@@ -59,12 +59,12 @@ class ShareList {
         // }else{
         let children = parent.children || []
         let index = base.search(children, 'name', curname)
-        //console.log('hit ' , index , curname)
         if (index != -1) {
           hit = children[index]
           //只为目录做缓存
-          if (hit.type == 'folder')
+          if (hit.type == 'folder' && hit.id){
             cache(pl, hit.protocol + ':' + hit.id)
+          }
         } else {
           return false
         }
@@ -101,7 +101,6 @@ class ShareList {
       if (hit.type == 'folder') {
 
         resp = await vendor.folder(hit.id, { query, paths: diff(paths, full_paths), content: hit.content })
-
         if (resp) updateFolder(resp)
         //let passwd = base.checkPasswd(resp)
         //resp.auth = passwd !== false
@@ -117,6 +116,7 @@ class ShareList {
       else {
         resp = await vendor.file(hit.id, hit)
         // console.log( resp )
+        // 最终输出时更新文件操作
         await updateFile(resp)
       }
     }

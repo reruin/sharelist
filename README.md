@@ -52,7 +52,6 @@ fs:/root
 gd:0BwfTxffUGy_GNF9KQ25Xd0xxxxxxx 
 ``` 
 ```gd```是GoogleDrive的挂载源标示，冒号后的是共享文件夹ID。   
-
   
 ### 虚拟文件 
 与虚拟目录类似，目标指向具体文件。  
@@ -88,10 +87,10 @@ ShareListDrive是ShareList内置的一种虚拟文件系统，使用yaml构建�
 #### OpenLoad 
 提供对[OpenLoad](https://openload.co/)的访问支持。挂载标示openload，```ApiLogin:ApiKey@folderId```作为路径，省略@则从根目录开始列出文件。 
 #### Lanzou蓝奏云 
-提供对[蓝奏云](https://www.lanzou.com/)的访问支持。挂载标示lanzou，```passwd@folderId```作为路径，无密码则直接使用```folderId```作为路径。   
+提供对[蓝奏云](https://www.lanzou.com/)的访问支持。挂载标示lanzou，```passwd@folderId```作为路径，无密码则直接使用```folderId```作为路径。```folderId```是分享链接中```bxxxxxx```部分。   
 插件为目录 以及 mp4/jpg等禁止上传的格式提供解析支持。     
-对于文件，将```xxx.mp4```命名为```xxx.mp4.ct```后再上传，插件将自动解析为mp4文件。  
-对于目录，创建```目录名.passwd@folderId.d.txt```的文件上传即可。  
+对于文件，以mp4为例，将```xxx.mp4```命名为```xxx.mp4.ct```后再上传，插件将自动解析为mp4文件。  
+对于目录，创建```目录名.passwd@folderId.d.txt```的文件上传即可（由于大小为 0 B的文件无法上传，请为这个txt文件随意添加些内容）。  
 
 ### 插件开发 
 待完善   

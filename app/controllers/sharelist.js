@@ -47,7 +47,7 @@ const output = async (ctx , data)=>{
 module.exports = {
   async index(ctx){
 
-    let data = await service.path(ctx.paths , ctx.query , ctx.paths)
+    let data = await service.path(ctx.paths , ctx.query , ctx.paths , ctx.method)
     let base_url = ctx.path == '/' ? '' : ctx.path
     let parent = ctx.paths.length ? ('/' + ctx.paths.slice(0,-1).join('/')) : ''
     //data is readonly
@@ -57,7 +57,15 @@ module.exports = {
     else if(data === 401){
       ctx.status = 401
     }
-
+    else if(data.body){
+      await ctx.render('custom',{
+        body : data.body
+      })
+    }
+    else if(data.redirect){
+      ctx.redirect(data.redirect)
+      return
+    }
     else if(data.type == 'folder'){
 
       let ra = requireAuth(data)

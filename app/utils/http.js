@@ -1,3 +1,19 @@
+// var https = require('https');
+// var HttpsProxyAgent = require('https-proxy-agent');
+// var agent = new HttpsProxyAgent('http://127.0.0.1:1087');
+// var __request = https.request
+
+
+// https.request = function(options, callback) {
+//   var __options = options;
+//   __options.agent = agent
+//   var req = __request(__options, function(res) {
+//     callback(res);
+//   });
+//   return req;
+// };
+
+
 const request = require('request')
 const debug = false //process.env.NODE_ENV == 'dev'
 const headers = {
@@ -21,7 +37,7 @@ http.header = (url, opts) => {
     request(opts, function(error, response, body) {
       if (error) {
         reject(error)
-      }else{
+      } else {
         resolve(response)
       }
     })
@@ -30,12 +46,12 @@ http.header = (url, opts) => {
 
 http.get = (url, opts = {}) => {
   let params = { ...opts }
-  params.headers = Object.assign({}, headers , params.headers || {})
+  params.headers = Object.assign({}, headers, params.headers || {})
   params.url = url
 
   if (debug) {
     params.proxy = 'http://127.0.0.1:1087'
-    console.log(params)
+    console.log('DEBUG:', params)
   }
   return new Promise(function(resolve, reject) {
     request(params, function(error, response, body) {
@@ -50,7 +66,7 @@ http.get = (url, opts = {}) => {
 
 http.post = (url, form, opts) => {
   let params = { ...opts }
-  params.headers = Object.assign({}, headers , params.headers || {})
+  params.headers = Object.assign({}, headers, params.headers || {})
   params.url = url
   params.form = form
   params.method = 'POST'

@@ -35,22 +35,15 @@ module.exports = ({ request, cache, getConfig }) => {
 
       cookies[rootId] = cookie
 
-
       return [cookie, res.headers.location]
     }
   }
 
   // folder => files
-  const folder = async (id) => {console.log(id)
+  const folder = async (id) => {
     const resid = `${defaultProtocol}:${id}`
 
-    const baseUrl = id.split('/').slice(0, 3).join('/')
-
-    let [rootId, path] = parse(id)
-
     let resp = { id, type: 'folder', protocol: defaultProtocol }
-
-    let url = baseUrl + path
 
     if (cache(resid)) {
       resp = cache(resid)
@@ -65,19 +58,23 @@ module.exports = ({ request, cache, getConfig }) => {
       }
     }
 
-    const [cookie, rootUrl] = await getCookie(rootId)
 
-    if (rootUrl) {
-      url = baseUrl + rootUrl
+    const [rootId, path] = parse(id)
+
+    const baseUrl = id.split('/').slice(0, 3).join('/')
+
+    const [cookie, directUrl] = await getCookie(rootId)
+
+    //字符转义
+    let url = baseUrl + encodeURI(path)
+
+    if (directUrl) {
+      url = baseUrl + directUrl
     }
 
-    // console.log(url,id,path == '','<<<')
-
-    res = await request.get(url, { headers: { 'Cookie': cookie } })
-
+    let res = await request.get(url, { headers: { 'Cookie': cookie } })
     let code = (res.body.match(/g_listData\s*=\s*([\w\W]+)(?=;if)/) || ['', ''])[1]
     let data = code.toString(16)
-
     if (data) {
       try {
         data = JSON.parse(data)
@@ -121,8 +118,7 @@ module.exports = ({ request, cache, getConfig }) => {
 
     const baseUrl = id.split('/').slice(0, 3).join('/')
 
-    let url = baseUrl + path
-
+    let url = baseUrl + encodeURI(path)
     return {
       url: url,
       name: data.name,

@@ -35,7 +35,7 @@ class ShareList {
     //{gd , od , xd , ld , remote}
   }
 
-  async path(paths, query, full_paths) {
+  async path(paths, query, full_paths , method) {
     let pl = paths.join('/'),
       hit, resp = false,
       miss
@@ -50,7 +50,7 @@ class ShareList {
     if (pl == '') {
       hit = this.mount()
     } else {
-      let parent = await this.path(paths.slice(0, -1), query, full_paths)
+      let parent = await this.path(paths.slice(0, -1), query, full_paths , method)
       let curname = decodeURIComponent(paths[paths.length - 1])
       //父目录必然是 folder
       if (parent) {
@@ -100,7 +100,7 @@ class ShareList {
       // folder /a/b/c
       if (hit.type == 'folder') {
 
-        resp = await vendor.folder(hit.id, { query, paths: diff(paths, full_paths), content: hit.content })
+        resp = await vendor.folder(hit.id, { query, req : config.getLocation() ,paths: diff(paths, full_paths), content: hit.content })
         if (resp) updateFolder(resp)
         //let passwd = base.checkPasswd(resp)
         //resp.auth = passwd !== false

@@ -1,0 +1,12 @@
+extends layout
+
+block content
+  include message
+  
+  header
+    .wrap
+      a.home(href='/')= _title_()
+  section.wrap
+    div!= body
+
+  include footer

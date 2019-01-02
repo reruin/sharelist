@@ -3,6 +3,8 @@ const os = require('os')
 const config_path = process.cwd() +'/cache/config.json'
 const port = process.env.PORT || 33001
 
+var location = {}
+
 var data = {
   port , 
 
@@ -48,6 +50,14 @@ const getPort = () => data.port
 
 const getPath = () => [].concat( data.path || [] )
 
+const setLocation = (d) => { location = d }
+
+const getLocation = () => location
+
+const setConfig = (d) => {
+  
+} 
+
 try{
   let cfg = fs.readFileSync(config_path,'utf-8');  
   if(cfg){
@@ -61,4 +71,4 @@ try{
 
 }
 
-module.exports = { get:getAllConfig, getConfig , getToken , getPath , getPort , getTitle , save , installed }
+module.exports = { get:getAllConfig, getConfig , getToken , getPath , getPort , getTitle , save , installed , getLocation , setLocation}

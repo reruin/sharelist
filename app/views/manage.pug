@@ -1,7 +1,11 @@
 extends layout
 
 block content
-  include message
+  .sl-message(style="display:none;")
+    .sl-message-notice
+      .sl-message-notice-content
+        .sl-message-custom-content
+          span
   
   header
     .wrap
@@ -16,7 +20,7 @@ block content
           .panel-heading
             span= __("general")
           .panel-body
-            form.form-horizontal(method='post')
+            form.form-horizontal(method='post',action="/manage/api")
               input(type='hidden',name='a',value='cfg')
               .form-group
                 .col-sm-6
@@ -37,14 +41,14 @@ block content
                   input.form-control(type='text', name='max_age_file' , value=config.max_age_file / 1000,required)
               .form-group.text-center
                 button.btn.btn-default(type='submit')= __('save')
-            form.form-horizontal(method='post')
+            form.form-horizontal(method='post',action="/manage/api")
                   input(type='hidden',name='a',value='clear_cache')
-                  button.btn.btn-danger(href='?a=clear_cache')= __('clear_cache')
+                  button.btn.btn-danger= __('clear_cache')
 
         .panel.panel-default
           .panel-heading= __('token')
           .panel-body
-            form.form-horizontal(method='post')
+            form.form-horizontal(method='post',action="/manage/api")
               input(type='hidden',name='a',value='token')
               .form-group
                 .col-sm-12
@@ -54,7 +58,7 @@ block content
         .panel.panel-default
           .panel-heading= __('site_title')
           .panel-body
-            form.form-horizontal(method='post')
+            form.form-horizontal(method='post',action="/manage/api")
               input(type='hidden',name='a',value='title')
               .form-group
                 .col-sm-12
@@ -66,7 +70,7 @@ block content
             span= __('virtual_path')
             a.create-path(style='float:right;')= __('add')
           .panel-body
-            form.form-horizontal#j_path(method='post')
+            form.form-horizontal#j_path(method='post',action="/manage/api")
               .group-path
                 input(type='hidden',name='a',value='path')
                 each i in config.path
@@ -78,7 +82,7 @@ block content
                     .col-sm-2
                       input.form-control(type='text', name='name', value=i.name,placeholder=__('name'),required)
                     .col-sm-7
-                      input.form-control(type='text', name='path', value=i.path.replace(/^.*\:/,''),placeholder=__('input_path_placeholder'),required)
+                      input.form-control(type='text', name='path', value=i.path.replace(/^.*?\:/,''),placeholder=__('input_path_placeholder'),required)
                     .col-sm-1
                       button.btn.btn-default.remove-path(type='button') -
               .form-group.text-center
@@ -88,13 +92,17 @@ block content
         div.auth
           h3= __("manage")
           div
-            .form-group
-              input.sl-input#j_token(type='password', name='token', placeholder=__('input_token'))
-            button.sl-button.btn-primary#signin(type="button")= __('signin')
+            form.form-horizontal(method='post',action="/manage/api")
+              input(type='hidden',name='a',value='signin')
+              .form-group
+                input.sl-input#j_token(type='password', name='token', placeholder=__('input_token'))
+              button.sl-button.btn-primary#signin(type="submit")= __('signin')
   script(src='https://cdn.bootcss.com/jquery/3.3.1/jquery.min.js')
-  
+  script(src='https://cdn.bootcss.com/jquery.form/4.2.2/jquery.form.min.js')
+
   script.
     $(function(){
+      /*
       $('#signin').on('click' , function(){
         location.href = '/manage/'+ $('#j_token').val()
       })
@@ -104,7 +112,7 @@ block content
           location.href = '/manage/'+ $('#j_token').val()
         }
       })
-
+    */
       var item
       if($('.item').length){
         item = $('.item:first').clone()
@@ -117,12 +125,27 @@ block content
         $(this).parents('.item').remove()
       })
 
-      $('.sl-message').fadeOut(3000)
+      function showMsg(m){
+        $('.sl-message span').html(m)
+        $('.sl-message').fadeIn(50)
+        setTimeout(function(){
+          $('.sl-message').fadeOut(1000)
+        },2000)
+
+      }
+      $('form').ajaxForm({success:function(resp){
+        console.log(resp)
+        if(resp && resp.message){
+          showMsg(resp.message)
+        }
+        
+        if( (resp.a =='signin' || resp.a == 'token') && resp.status == 0){
+          location.reload()
+        }
+      }})
     })
     
-    function update(){
-
-    }
+    
 
   include footer
 

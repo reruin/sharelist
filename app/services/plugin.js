@@ -48,7 +48,12 @@ const helper = {
   getSource: getSource,
   getConfig : config.getConfig,
   getRandomIP:getRandomIP,
+  getLocation : config.getLocation
 }
+
+const setPrivateConfig = (name) => ( path ) => {
+  
+} 
 
 const load = (options) => {
 
@@ -142,6 +147,7 @@ const updateFile = async (file) => {
 // 用于更新目录数据
 const updateFolder = (folder) => {
   let parentType = folder.protocol
+  if(!folder.children) return folder
   folder.children.forEach( (d , index) => {
     let name = d.name
 

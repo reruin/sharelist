@@ -59,7 +59,7 @@ gd:0BwfTxffUGy_GNF9KQ25Xd0xxxxxxx
 如：创建一个```ubuntu_18.iso```的虚拟文件，请参考[example/linkTo_download_ubuntu_18.iso.ln](example)。 
   
 ### WebDAV 
-系统部分支持WebDAV。可使用的功能包括列目录、展示内容、权限校验。由于系统仅做挂载用途，不支持写入、删除、重命名、复制等操作。默认根路径为```/WebDAV```。 
+系统部分支持WebDAV。可使用的功能包括列目录、展示内容、权限校验。由于系统仅做挂载用途，不支持写入、删除、重命名、复制等操作。默认根路径为```/webdav```，可在后台修改WebDAV的路径。 
 
 ## 插件机制 
 插件可用于扩展挂载源、扩展加密方式。插件请置于plugins目录。 
@@ -84,13 +84,13 @@ ShareListDrive是ShareList内置的一种虚拟文件系统，使用yaml构建�
 提供对OneDrive的访问。挂载标示```od```，分享文件夹ID作为路径。 
 #### OneDrive For Business 
 提供对OneDrive Business的访问。挂载标示odb，分享的url作为路径。 
-#### OpenLoad 
-提供对[OpenLoad](https://openload.co/)的访问支持。挂载标示openload，```ApiLogin:ApiKey@folderId```作为路径，省略@则从根目录开始列出文件。 
+#### ~~OpenLoad~~
+~~提供对[OpenLoad](https://openload.co/)的访问支持。挂载标示openload，```ApiLogin:ApiKey@folderId```作为路径，省略@则从根目录开始列出文件。~~ 
 #### Lanzou蓝奏云 
 提供对[蓝奏云](https://www.lanzou.com/)的访问支持。挂载标示lanzou，```passwd@folderId```作为路径，无密码则直接使用```folderId```作为路径。```folderId```是分享链接中```bxxxxxx```部分。   
 插件为目录 以及 mp4/jpg等禁止上传的格式提供解析支持。     
-对于文件，以mp4为例，将```xxx.mp4```命名为```xxx.mp4.ct```后再上传，插件将自动解析为mp4文件。  
-对于目录，创建```目录名.passwd@folderId.d.txt```的文件上传即可（由于大小为 0 B的文件无法上传，请为这个txt文件随意添加些内容）。  
+文件：附加```txt```后缀即可。以mp4为例，将```xxx.mp4```命名为```xxx.mp4.txt```后再上传，插件将自动解析为mp4文件。  
+目录：创建```目录名.passwd@folderId.d.txt```的文件上传即可（由于大小为 0 B的文件无法上传，请为这个txt文件随意添加些内容）。  
 
 ### 插件开发 
 待完善   

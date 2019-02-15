@@ -26,5 +26,6 @@ module.exports = {
   "max_age_dir":"目录缓存时长(秒)",
   "max_age_file":"链接缓存时长(秒)",
   "virtual_path":"虚拟路径",
-  "general":"常规"
+  "general":"常规",
+  "webdav_path":"WebDAV路径"
 }

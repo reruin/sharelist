@@ -14,9 +14,9 @@ const isEmail = (v) => /^[A-Za-zd]+([-_.][A-Za-zd]+)*@([A-Za-zd]+[-.])+[A-Za-zd]
 
 const parsePath = (url)=>{
   if(url){
-    let raw = url.split('/')
+    let raw = url.replace(/^\/*/,'').split('/')
     let paths = []
-    for(let i = 0 ; i< raw.length ; i++){
+    for(let i = 0 ; i<raw.length ; i++){
       if( i == 0 || /[^!]$/.test(raw[i-1]) ){
         paths.push(decodeURIComponent(raw[i]))
       }

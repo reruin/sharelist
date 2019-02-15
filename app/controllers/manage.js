@@ -88,7 +88,7 @@ module.exports = {
           cache.clear()
           result.message = 'Success'
         } else if (a == 'cfg') {
-          let { proxy_enable, max_age_dir, max_age_file } = body
+          let { proxy_enable, max_age_dir, max_age_file , webdav_path } = body
           let opts = {}
           if (max_age_dir !== undefined) {
             max_age_dir = parseInt(max_age_dir)
@@ -107,6 +107,10 @@ module.exports = {
           if (proxy_enable) {
             proxy_enable = proxy_enable == '1' ? 1 : 0
             opts.proxy_enable = proxy_enable
+          }
+
+          if(webdav_path){
+            opts.webdav_path = webdav_path
           }
 
           await config.save(opts)

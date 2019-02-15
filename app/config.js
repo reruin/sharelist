@@ -10,6 +10,7 @@ var data = {
 
   proxy_enable : 0 ,
 
+  webdav_path : '/webdav/',
   //目录刷新时间 15分钟
   max_age_dir: 15 * 60 * 1000,
   //外链 10分钟
@@ -54,6 +55,8 @@ const setLocation = (d) => { location = d }
 
 const getLocation = () => location
 
+const getWebdavPath = () => data.webdav_path
+
 const setConfig = (d) => {
   
 } 
@@ -71,4 +74,4 @@ try{
 
 }
 
-module.exports = { get:getAllConfig, getConfig , getToken , getPath , getPort , getTitle , save , installed , getLocation , setLocation}
+module.exports = { get:getAllConfig, getConfig , getToken , getPath , getPort , getTitle , save , installed , getLocation , setLocation , getWebdavPath}

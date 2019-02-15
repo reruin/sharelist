@@ -70,7 +70,6 @@ http.post = (url, form, opts) => {
   params.url = url
   params.form = form
   params.method = 'POST'
-
   return new Promise(function(resolve, reject) {
     request(params, function(error, response, body) {
       if (!error && response.statusCode == 200) {

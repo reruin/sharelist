@@ -117,17 +117,19 @@ class WebDAV {
     }*/
 
     // require auth
-    let reqRes = data.auth
-    if( reqRes ){
+    let reqAuth = data.auth
+    let access = true
+    if( reqAuth ){
+      access = false
+
       if( this.checkAuth() ){
         let [user , passwd] = this.getAuthority()
         if( await auth(data , user , passwd) ){
-          reqRes = false
+          access = true
         }
       }
     }
-
-    if( reqRes ){
+    if( !access ){
       this.setHeader('WWW-Authenticate' ,`Basic realm="${this.httpAuthRealm}"`)
       this.setStatus('401 Unauthorized')
       return

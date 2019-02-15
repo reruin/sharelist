@@ -26,5 +26,6 @@ module.exports = {
   "max_age_dir":"Folder max age(second)",
   "max_age_file":"File max age(second)",
   "virtual_path":"Virtual path",
-  "general":"General"
+  "general":"General",
+  "webdav_path":"WebDAV Path"
 }

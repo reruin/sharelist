@@ -46,7 +46,6 @@ const output = async (ctx , data)=>{
 
 module.exports = {
   async index(ctx){
-
     let data = await service.path(ctx.paths , ctx.query , ctx.paths , ctx.method)
     let base_url = ctx.path == '/' ? '' : ctx.path
     let parent = ctx.paths.length ? ('/' + ctx.paths.slice(0,-1).join('/')) : ''
@@ -111,9 +110,9 @@ module.exports = {
     
   },
 
-  async api(path , paths , query){
+  async api(basePath , paths , query){
     let data = await service.path(paths , query , paths)
-    let base_url = path 
+    let base_url = basePath 
     let parent = paths.length ? ('/' + paths.slice(0,-1).join('/')) : ''
 
     //data is readonly

@@ -39,6 +39,11 @@ block content
                   label= __('max_age_file')
                 .col-sm-3
                   input.form-control(type='text', name='max_age_file' , value=config.max_age_file / 1000,required)
+              .form-group
+                .col-sm-6
+                  label= __('webdav_path')
+                .col-sm-3
+                  input.form-control(type='text', name='webdav_path' , value=config.webdav_path,required)
               .form-group.text-center
                 button.btn.btn-default(type='submit')= __('save')
             form.form-horizontal(method='post',action="/manage/api")
@@ -134,12 +139,15 @@ block content
 
       }
       $('form').ajaxForm({success:function(resp){
-        console.log(resp)
         if(resp && resp.message){
           showMsg(resp.message)
         }
         
-        if( (resp.a =='signin' || resp.a == 'token') && resp.status == 0){
+        if( 
+          (resp.a =='signin' || resp.a == 'token') && resp.status == 0
+        ){
+          location.reload()
+        }else if(resp.status != 0){
           location.reload()
         }
       }})

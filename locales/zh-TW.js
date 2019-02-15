@@ -26,5 +26,6 @@ module.exports = {
   "max_age_dir":"資料夾快取時間(秒)",
   "max_age_file":"檔案快取時間(秒)",
   "virtual_path":"虛擬路徑",
-  "general":"一般"
+  "general":"一般",
+  "webdav_path":"WebDAV路徑"
 }

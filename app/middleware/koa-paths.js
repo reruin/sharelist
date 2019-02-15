@@ -1,6 +1,6 @@
 const parseXML = require('xml2js').parseString
 const parsePath = require('../utils/base').parsePath
-const { setLocation } = require('../config')
+const { setLocation , getWebdavPath } = require('../config')
 
 const parser = (req, options) => {
   return new Promise((resolve, reject) => {
@@ -28,10 +28,11 @@ module.exports = async(ctx, next) => {
   }
 
   let { path , method } = ctx
-  let isWebDAV = path.startsWith('/webdav')
-  let url = path.replace(/^\/webdav/ , '').substring(1).replace(/\/$/,'')
-
+  let webdavPath = (getWebdavPath() + '/').replace(/\/+$/,'')
+  let isWebDAV = path.startsWith(webdavPath)
+  let url = path.replace(new RegExp('^'+webdavPath) , '').replace(/\/$/,'')
   let [paths, paths_raw] = parsePath(url)
+
   ctx.paths = paths
   ctx.paths_raw = paths_raw
   setLocation({
@@ -42,17 +43,17 @@ module.exports = async(ctx, next) => {
     origin:ctx.origin,
     protocol:ctx.protocol
   })
-  console.log('webdav:',isWebDAV )
-  console.log(ctx.href, ctx.request.body)
+  // console.log(ctx.href, ctx.request.body)
   if( 
       ( isWebDAV || ctx.is('xml') )  
       &&
       ( webdavMethods.length == 0 || webdavMethods.includes(method.toLowerCase()) )
     ){
+
     let xml = await parser(ctx.req)
     let json = await xml2js( xml )
+
     ctx.webdav = json
   }
-
   await next()
 }

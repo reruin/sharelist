@@ -8,7 +8,7 @@ const webdav = require('../controllers/webdav')
 
 const routers = router
   .all('/:path(.*)', async (ctx, next) => {
-    if (ctx.webdav) {
+    if (ctx.isWebDAV) {
       await webdav(ctx, next)
     } else {
       await sharelist.index(ctx, next)

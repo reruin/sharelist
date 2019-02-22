@@ -1,6 +1,6 @@
 /*
  * Google Drive API
- * 采用官方API的版本
+ * 使用官方API挂载
  * token -x-> generateAuthUrl --code--> getToken 
  */
 

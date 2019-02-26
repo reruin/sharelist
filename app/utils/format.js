@@ -1,7 +1,7 @@
 const { isString , isDate } = require('./base')
 
 const datetime = (date, expr) => {
-  expr = expr || 'yyyy-MM-dd'
+  expr = expr || 'yyyy-MM-dd hh:mm:ss'
   var a = new Date()
   if(isDate(date)){
     a = date
@@ -74,9 +74,23 @@ const byte = (v) => {
     lo++
   }
 
-  return Math.floor(v * 100) / 100 + ' ' + ['B','KB','MB','GB','TB'][lo]
+  return Math.floor(v * 100) / 100 + ' ' + ['B','KB','MB','GB','TB','PB','EB'][lo]
+}
+
+const byteMap = {'B':1,'KB':1e3,'MB':1e6,'GB':1e9,'TB':1e12,'PB':1e15,'EB':1e18}
+const retrieveByte = (v) => {
+  if(/[\d\.]+\s*(B|KB|MB|GB|TB|PB|EB|K|M|G|T|P|E)/.test(v)){
+    let num = parseFloat(v)
+    let unit = (v.match(/(B|KB|MB|GB|TB|PB|EB|K|M|G|T|P|E)/) || [''])[0]
+    if(unit && num){
+      if(unit != 'B') unit += 'B'
+      return num * (byteMap[unit] || 0)
+    }
+  }
+  
+  return 0
 }
 
 module.exports = {
-  datetime , byte
+  datetime , byte , retrieveByte
 }

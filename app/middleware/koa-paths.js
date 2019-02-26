@@ -21,7 +21,7 @@ const xml2js = ( xml , options = {}) => {
 }
 
 const guessWebDAV = (ua) => {
-  return /(Microsoft\-WebDAV|FileExplorer)/i.test(ua)
+  return /(Microsoft\-WebDAV|FileExplorer|WinSCP)/i.test(ua)
 }
 
 const webdavMethods = ['options','head','trace','get','put','post','delete','mkcol','propfind','proppatch','copy','move','lock','unlock']
@@ -39,6 +39,7 @@ module.exports = async(ctx, next) => {
 
   ctx.paths = paths
   ctx.paths_raw = paths_raw
+
   setLocation({
     href:ctx.href,
     path:ctx.path,
@@ -47,20 +48,24 @@ module.exports = async(ctx, next) => {
     origin:ctx.origin,
     protocol:ctx.protocol
   })
-
+  
   if(webdavPath == ''){
     isWebDAV = ctx.is('xml') || guessWebDAV(ctx.request.headers['user-agent'])
   }
   if( 
       isWebDAV
       &&
-      ( webdavMethods.length == 0 || webdavMethods.includes(method.toLowerCase()) )
+      ( webdavMethods.includes(method.toLowerCase()) )
     ){
-
     let xml = await parser(ctx.req)
-    let json = await xml2js( xml )
-    ctx.isWebDAV = true
-    ctx.webdav = json
+    let json = await xml2js( xml , {
+      explicitChildren:true,
+      explicitArray:false
+    })
+    ctx.webdav = {
+      data:json , 
+      depth:ctx.get('depth')
+    }
   }
   await next()
 }

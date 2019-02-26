@@ -13,7 +13,7 @@ const defaultProtocol = 'lanzou'
 
 const host = 'https://www.lanzous.com'
 
-module.exports = ({ request , getConfig , datetime , cache }) => {
+module.exports = ({ request , getConfig , datetime , cache , retrieveSize }) => {
 
   const allowExt = 'd,apk,zip,rar,txt,7z,z,e,ct,doc,docx,exe,ke,db,tar,pdf,epub,mobi,azw,azw3,w3x,osk,osz,jar,xpk,cpk,lua,dmg,ppt,pptx,xls,xlsx,mp3,gz,psd,ipa,iso,ttf,txf,ttc,img,bin,gho,patch'.split(',')
 
@@ -112,9 +112,9 @@ module.exports = ({ request , getConfig , datetime , cache }) => {
         if( res.body && res.body.text){
           resp = {id , type:'folder' , protocol:defaultProtocol}
           let children = []
-
           res.body.text.forEach( i => {
             let name = filterExt(i.name_all)//.replace(/\.ct$/,'')
+            console.log(i)
 
             children.push(updateFile({
               id:i.id,
@@ -122,6 +122,7 @@ module.exports = ({ request , getConfig , datetime , cache }) => {
               ext:name.split('.').pop(),
               protocol:defaultProtocol,
               // updated_at:datetime(i.upload_at*1000),
+              size:retrieveSize(i.size),
               displaySize:i.size,
               type : undefined,
             }))

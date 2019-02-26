@@ -1,37 +1,61 @@
 const http = require('../utils/http')
 const { sendFile, sendHTTPFile } = require('../utils/sendfile')
 
-const { auth } = require('./sharelist')
+const { auth , api } = require('./sharelist')
 
 const slashify = (p) => (p[p.length - 1] != '/' ? `${p}/` : p)
 
 const default_props = {
   getlastmodified: '',
   getcontentlength: '',
+  getcontenttype:'',
   creationdate: '',
-  resourcetype: ''
+  resourcetype: '',
+  displayname:''
 }
 
-const propsCreate = (data, props) => {
+const dateFormat = (d) => {
+  let nd = new Date(d)
+  if(nd instanceof Date && !isNaN(nd)){
+    return nd.toGMTString()
+  }else{
+    return null
+  }
+}
+
+const propsCreate = (data, options) => {
   let out = ''
+  let { props , ns: { name , value} } = options
+
   for (let key in props) {
-    if (key == 'getlastmodified') {
-      out += `<D:${key}>${data.updated_at}</D:${key}>`
+
+    // TODO getlastmodified format: 
+    // Mon, 22 Jan 2018 20:03:49 GMT
+    // https://tools.ietf.org/html/rfc2616#page-20
+
+    if (key == 'getlastmodified' && data.updated_at) {
+      let getlastmodified = dateFormat(data.updated_at)
+      if( getlastmodified ){
+        out += `<${name}:${key}>${getlastmodified}</${name}:${key}>`
+      }
     }
     if (key == 'displayname') {
-      out += `<D:${key}>${data.name}</D:${key}>`
+      out += `<${name}:${key}>${data.name}</${name}:${key}>`
     }
     if (key == 'getcontentlength') {
-      out += `<D:${key}>${parseInt(data.size.replace('-',0) || 0)}</D:${key}>`
+      out += `<${name}:${key}>${parseInt(data.size)}</${name}:${key}>`
     }
     if (key == 'resourcetype') {
-      out += `<D:${key}>${data.type == 'folder' ? '<D:collection/>' : ''}</D:${key}>`
+      out += `<${name}:${key}>${data.type == 'folder' ? '<D:collection/>' : ''}</${name}:${key}>`
     }
     if (key == 'getcontenttype' && data.type != 'folder') {
-      out += `<D:${key}>${data.mime}</D:${key}>`
+      out += `<${name}:${key}>${data.mime}</${name}:${key}>`
     }
-    if (key == 'creationdate') {
-      out += `<D:${key}>${data.created_at}</D:${key}>`
+    if (key == 'creationdate' && data.created_at) {
+      let creationdate = dateFormat(data.created_at)
+      if( creationdate ){
+        out += `<${name}:${key}>${creationdate}</${name}:${key}>`
+      }
     }
   }
 
@@ -39,38 +63,62 @@ const propsCreate = (data, props) => {
 }
 
 const propsParse = (data) => {
-  if(!data){
+  if(!data || data['propfind']['allprop']){
     return default_props
   }
-  let props = data['D:propfind']['D:prop'][0]
+  let props = data['propfind']['prop'][0]
   let ret = {}
   for (let prop in props) {
-    ret[prop.split(':')[1]] = props[prop][0]
+    ret[prop] = props[prop][0]
   }
   // console.log('req:',ret)
   return ret
 }
 
+const nsParse = (data) => {
+  let def = {
+    name:'D',
+    value:'DAV:'
+  }
+  if(data && data['propfind']){
+    let ns = Object.keys(data['propfind']['$'])[0]
+    if(/xmlns:/.test(ns) ){
+      return {
+        name: ns.replace('xmlns:',''),
+        value: data['propfind']['$'][ns]
+      }
+    }
+    else{
+      return def
+    } 
+  }else{
+    return def
+  }
+}
+
 const respCreate = (data, options) => {
-  let { props, path } = options
-  let body = `<?xml version="1.0" encoding="utf-8"?>`
-  body += `<D:multistatus xmlns:D="DAV:">`
+  let { props, path , ns: {name , value} } = options
+
+  let body = `<?xml version="1.0" encoding="utf-8" ?>`
+  body += `<${name}:multistatus xmlns:${name}="${value}">`
   data.forEach(file => {
     if (file.hidden !== true) {
-      let href = path + file.href //path +'/' + encodeURIComponent(file.name)
-      let res = propsCreate(file, props)
+      let href = file.href.replace(/\/{2,}/g,'/') //path +'/' + encodeURIComponent(file.name)
+      //console.log(props)
+      let res = propsCreate(file, options)
       body += `
-        <D:response>
-          <D:href>${href}</D:href>
-          <D:propstat>
-            <D:status>HTTP/1.1 200 OK</D:status>
-            <D:prop xmlns:R="http://ns.example.com/boxschema/">${res}</D:prop>
-          </D:propstat>
-        </D:response>`
+        <${name}:response>
+          <${name}:href>${href}</${name}:href>
+          <${name}:propstat>
+            <${name}:status>HTTP/1.1 200 OK</${name}:status>
+            <${name}:prop>${res}</${name}:prop>
+          </${name}:propstat>
+        </${name}:response>`
     }
   })
 
-  body += `</D:multistatus>`
+  body += `</${name}:multistatus>`
+
   return body
 }
 
@@ -82,7 +130,6 @@ class WebDAV {
     this.httpAuthRealm = "ShareList WebDAV"
 
     this.allows = ['GET', 'PUT', 'HEAD', 'OPTIONS', 'PROPFIND']
-
   }
 
   getAuthority() {
@@ -100,32 +147,53 @@ class WebDAV {
     }
   }
 
-  async serveRequest(ctx, next, data) {
+  async serveRequest(ctx, next , data) {
     this.ctx = ctx
-    this.data = data
+
+    this.data  = data
 
     this.path = this.ctx.protocol + '://' + this.ctx.host //+ this.ctx.path
 
     this.setHeader("X-Dav-Powered-By", this.davPoweredBy || 'ShareList')
 
-    let method = this.ctx.method.toLowerCase()
+    this.depth = ctx.webdav.depth
 
     /*
-    if ( !(method == 'options' && this.ctx.path == "/") 
-         && (this._check_auth())) {
-        // RFC2518 says we must use Digest instead of Basic
-        // but Microsoft Clients do not support Digest
-        // and we don't support NTLM and Kerberos
-        // so we are stuck with Basic here
-        this.setHeader(`WWW-Authenticate: Basic realm="${this.httpAuthRealm}"`)
+      //
+      if (this.depth == 0) {
+        options["depth"] = '0'
+      } 
+      else if(this.depth == 1){
+        options["depth"] = '1'
+      }
+      else {
+        options["depth"] = "infinity"
+      }
 
-        // Windows seems to require this being the last header sent
-        // (changed according to PECL bug #3138)
-        this.setStatus('401 Unauthorized')
+    */
+    let method = this.ctx.method.toLowerCase()
 
-        return
-    }*/
+    console.log('==>',ctx.webdav)
+    const options = {
+      depth : this.depth ,
+      ns: nsParse(ctx.webdav.data),
+      props:propsParse(ctx.webdav.data)
+    }
 
+    const wrapperFn = "http_" + method;
+
+    if (
+      this[wrapperFn]
+    ) {
+      return await this[wrapperFn](options)
+    } else {
+      this.setStatus("405 Method not allowed")
+      this.setHeader("Allow", this.allows.join(', '))
+      return false
+    }
+  }
+
+  async afterRequest(data){
     // require auth
     let reqAuth = data.auth
     let access = true
@@ -139,22 +207,19 @@ class WebDAV {
         }
       }
     }
+
     if (!access) {
+      // RFC2518 says we must use Digest instead of Basic
+      // but Microsoft Clients do not support Digest
+      // and we don't support NTLM and Kerberos
+      // so we are stuck with Basic here
       this.setHeader('WWW-Authenticate', `Basic realm="${this.httpAuthRealm}"`)
+      // Windows seems to require this being the last header sent
+      // (changed according to PECL bug #3138)
       this.setStatus('401 Unauthorized')
       return
     }
 
-    const wrapperFn = "http_" + method;
-
-    if (
-      this[wrapperFn]
-    ) {
-      await this[wrapperFn]()
-    } else {
-      this.setStatus("405 Method not allowed")
-      this.setHeader("Allow", this.allows.join(', '))
-    }
   }
 
   setHeader(k, v) {
@@ -163,6 +228,7 @@ class WebDAV {
 
   setBody(body) {
     this.ctx.type = 'text/xml; charset="utf-8"'
+    this.setHeader('Content-Length', body.length);
     this.ctx.body = body
   }
 
@@ -170,14 +236,13 @@ class WebDAV {
     if (status === true) {
       status = "200 OK"
     }
+
     let statusCode = status.split(' ')[0]
     this.ctx.status = parseInt(statusCode)
     this.setHeader('X-WebDAV-Status', status)
   }
 
   async http_options() {
-    // For Microsoft clients
-    this.setHeader("MS-Author-Via", "DAV")
 
     const allows = this.allows
 
@@ -186,11 +251,12 @@ class WebDAV {
     if (allows.includes('LOCK')) {
       dav.push(2)
     }
+    // For Microsoft clients
+    this.setHeader("MS-Author-Via", "DAV")
 
     this.setStatus("200 OK");
     this.setHeader("DAV", dav.join(', '))
     this.setHeader("Allow", allows.join(', '))
-    // this.setHeader("Content-length");
   }
 
   /**
@@ -199,30 +265,22 @@ class WebDAV {
    * @param  void
    * @return void
    */
-  async http_propfind() {
-    const { ctx, data } = this
-
-    let options = {
-      path: this.path
-    }
-
-    // search depth (default is "infinity)
-    //
-    if (ctx.get('HTTP_DEPTH')) {
-      options["depth"] = ctx.get('HTTP_DEPTH')
-    } else {
-      options["depth"] = "infinity"
-    }
-    let props = propsParse(ctx.webdav)
-    options['props'] = props
-
-    const files = this.data.children
-    if (files.length == 0) {
-      this.setStatus("404 Not Found")
-    } else {
+  async http_propfind(options) {
+    console.log('====>','http_propfind',options)
+    if( options.depth == '0'){
       this.setStatus("207 Multi-Status")
-      this.setBody(respCreate(files, options))
+      this.setBody(respCreate([{type:'folder',href:'/' , name:'webdav'}], options))
+    }else{
+      const files = this.data.children
+      await this.afterRequest(files)
+      if (files.length == 0) {
+        this.setStatus("404 Not Found")
+      } else {
+        this.setStatus("207 Multi-Status")
+        this.setBody(respCreate(files, options))
+      }
     }
+
   }
 
 

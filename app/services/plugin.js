@@ -1,7 +1,7 @@
 const fs = require('fs')
 const path = require('path')
 const querystring = require('querystring')
-const {MIMEType , isArray , isObject , params , base64 , getRandomIP } = require('../utils/base')
+const {MIMEType , isArray , isObject , params , base64 , getRandomIP , retrieveSize } = require('../utils/base')
 const format = require('../utils/format')
 const cache = require('../utils/cache')
 const http = require('../utils/http')
@@ -48,7 +48,8 @@ const helper = {
   getSource: getSource,
   getConfig : config.getConfig,
   getRandomIP:getRandomIP,
-  getLocation : config.getLocation
+  getLocation : config.getLocation,
+  retrieveSize : format.retrieveByte
 }
 
 const setPrivateConfig = (name) => ( path ) => {

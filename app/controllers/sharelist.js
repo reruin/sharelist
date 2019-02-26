@@ -110,9 +110,9 @@ module.exports = {
     
   },
 
-  async api(basePath , paths , query){
+  async api(ctx , base_path = ''){
+    const { paths , query } = ctx
     let data = await service.path(paths , query , paths)
-    let base_url = basePath 
     let parent = paths.length ? ('/' + paths.slice(0,-1).join('/')) : ''
 
     //data is readonly
@@ -126,13 +126,12 @@ module.exports = {
     else if(data.type == 'folder'){
       let ret = { ...data }
       ret.auth = requireAuth(data)
-
       ret.children = data.children.map(i => {
         let obj = { ...i }
         if( i.url && isRelativePath(i.url) ){
-          obj.href = pathNormalize(base_url + '/' + i.url)
+          obj.href = pathNormalize(base_path + '/' + i.url)
         }else{
-          obj.href = pathNormalize(base_url + '/' + encodeURIComponent(i.name))
+          obj.href = pathNormalize(base_path + '/' + encodeURIComponent(i.name))
         }
         return obj
       })

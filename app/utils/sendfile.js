@@ -10,6 +10,18 @@ const getRange = (r , total)=>{
   return [start , end]
 }
 
+const mergeHeaders = (a , b) => {
+  const exclude = ['host','accept-encoding']
+  let pre = {...a , ...b}
+  let headers = {}
+  for(let key in pre){
+    if(exclude.includes(key) == false){
+      headers[key] = pre[key]
+    }
+  }
+  return headers
+}
+
 const sendFile = async(ctx , path , {maxage , immutable} = {maxage:0 , immutable:false})=>{
   let stats
   try {
@@ -60,11 +72,15 @@ const sendFile = async(ctx , path , {maxage , immutable} = {maxage:0 , immutable
   }
   ctx.length = chunksize
 
-  ctx.response.set('Content-Disposition',`attachment;filename=${encodeURIComponent(filename)}`)
+  ctx.set('Content-Disposition',`attachment;filename=${encodeURIComponent(filename)}`)
   ctx.body = fs.createReadStream(path , readOpts)
 }
 
-const sendHTTPFile = async (ctx , url , headers) => {
+const sendHTTPFile = async (ctx , url , headers ,data) => {
+  headers = mergeHeaders(ctx.req.headers , headers)
+  if(data && data.size){
+    ctx.set('Content-Range', 'bytes ' + `0-${data.size-1}/${data.size}`)
+  }
   ctx.body = ctx.req.pipe(http({url , headers})).pipe(ctx.res)
 }
 

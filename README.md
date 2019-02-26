@@ -59,7 +59,9 @@ gd:0BwfTxffUGy_GNF9KQ25Xd0xxxxxxx
 如：创建一个```ubuntu_18.iso```的虚拟文件，请参考[example/linkTo_download_ubuntu_18.iso.ln](example)。 
   
 ### WebDAV 
-系统部分支持WebDAV。可使用的功能包括列目录、展示内容、权限校验。由于系统仅做挂载用途，不支持写入、删除、重命名、复制等操作。默认根路径为```/webdav```，可在后台修改WebDAV的路径。 
+系统部分支持WebDAV。可使用的功能包括列目录、展示内容、权限校验。由于系统仅做挂载用途，不支持写入、删除、重命名、复制等操作。默认根路径为```/webdav```，可在后台修改WebDAV的路径。   
+注意事项：  
+windows挂载webdav可读取文件最大为50M，请[参考](https://answers.microsoft.com/en-us/ie/forum/all/error-0x800700df-the-file-size-exceeds-the-limit/d208bba6-920c-4639-bd45-f345f462934f)修改 
 
 ## 插件机制 
 插件可用于扩展挂载源、扩展加密方式。插件请置于plugins目录。 

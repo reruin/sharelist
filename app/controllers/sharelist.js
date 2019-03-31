@@ -36,7 +36,7 @@ const output = async (ctx , data)=>{
     
     else{
       if(isProxy){
-        await sendHTTPFile(ctx , url , data.headers || {})
+        await sendHTTPFile(ctx , url , data.headers || {} , data)
       }else{
         ctx.redirect( url )
       }

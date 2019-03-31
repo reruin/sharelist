@@ -79,9 +79,24 @@ const sendFile = async(ctx , path , {maxage , immutable} = {maxage:0 , immutable
 const sendHTTPFile = async (ctx , url , headers ,data) => {
   headers = mergeHeaders(ctx.req.headers , headers)
   if(data && data.size){
-    ctx.set('Content-Range', 'bytes ' + `0-${data.size-1}/${data.size}`)
+    let range = ctx.get('range')
+    let fileSize = data.size
+
+    if(range){
+      let [start , end] = getRange(ctx.header.range , fileSize)
+      ctx.set('Content-Range', 'bytes ' + `${start}-${end}/${fileSize}`)
+      ctx.status = 206
+
+      chunksize = end - start + 1
+    }else{
+      ctx.set('Content-Range', 'bytes ' + `0-${fileSize-1}/${fileSize}`)
+    }
+    ctx.length = chunksize
   }
-  ctx.body = ctx.req.pipe(http({url , headers})).pipe(ctx.res)
+
+  // console.log(headers)
+  // console.log('>>>>>',headers , url , data)
+  ctx.body = ctx.req.pipe(http({url , headers})) //.pipe(ctx.res)
 }
 
 const getHTTPFile = async (url ,headers = {}) => {

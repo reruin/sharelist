@@ -38,7 +38,7 @@ http.header = (url, opts) => {
       if (error) {
         reject(error)
       } else {
-        resolve(response)
+        resolve(response.headers)
       }
     })
   })

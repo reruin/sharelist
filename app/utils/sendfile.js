@@ -76,9 +76,23 @@ const sendFile = async(ctx , path , {maxage , immutable} = {maxage:0 , immutable
   ctx.body = fs.createReadStream(path , readOpts)
 }
 
+const getFileSize = async (url , headers) => {
+  let nh = await http.header(url , {headers})
+  if(nh && nh['content-length']){
+    return nh['content-length']
+  }else{
+    return null
+  }
+}
 const sendHTTPFile = async (ctx , url , headers ,data) => {
   headers = mergeHeaders(ctx.req.headers , headers)
+  let fileSize = null;
   if(data && data.size){
+    fileSize = data.size;
+  }else{
+    fileSize = await getFileSize(url , headers)
+  }
+  if(fileSize){
     let range = ctx.get('range')
     let fileSize = data.size
 

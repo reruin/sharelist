@@ -6,7 +6,7 @@ const format = require('../utils/format')
 const cache = require('../utils/cache')
 const http = require('../utils/http')
 const config = require('../config')
-const { getHTTPFile } = require('../utils/sendfile')
+const { sendFile , sendHTTPFile ,sendStream, getFile, getHTTPFile } = require('../utils/sendfile')
 
 const assign = (...rest) => Object.assign(...rest)
 
@@ -27,16 +27,35 @@ const getSource = async (id , driverName) => {
     let vendor = getDrive(driverName)
     let d = await vendor.file(id)
     if(d.outputType === 'file'){
-      if(fs.existsSync( d.url )){
-        return fs.readFileSync(d.url, 'utf8')
-      }
-    }else{
+      return await getFile(d.url)
+    }
+    else if(d.outputType === 'stream' && vendor.stream){
+      return await vendor.stream(id);
+    }
+    else{
       return await getHTTPFile(d.url , d.headers || {})
     }
   }
   return false
 }
 
+//和getSource类似
+const getStream = async (ctx , url ,type, protocol , data) => {
+  if(type === 'file'){
+    return await sendFile(ctx , url)
+  }
+  else if(type === 'stream'){
+    let vendor = getDrive(protocol)
+    if(vendor && vendor.stream){
+      return await sendStream(ctx , url , vendor.stream , data);
+    }
+  }
+  else{
+    return await sendHTTPFile(ctx , url , data)
+  }
+
+  return false
+}
 const helper = {
   isArray : isArray,
   isObject: isObject,
@@ -272,4 +291,4 @@ const checkAuthority = async (d , user, passwd) => {
 
 }
 
-module.exports = { load , getDrive , getSource , updateFolder , updateFile , updateLnk , getVendors , getAuth}
+module.exports = { load , getDrive , getStream , getSource , updateFolder , updateFile , updateLnk , getVendors , getAuth}

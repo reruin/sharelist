@@ -4,7 +4,7 @@ const base = require('../utils/base')
 const cache = require('../utils/cache')
 const config = require('../config')
 const format = require('../utils/format')
-const { getDrive, getAuth, getSource, updateLnk, checkAuthority, updateFile, updateFolder } = require('./plugin')
+const { getDrive, getAuth, getStream , getSource, updateLnk, checkAuthority, updateFile, updateFolder } = require('./plugin')
 
 const access_check = (d) => {
   return d
@@ -135,6 +135,11 @@ class ShareList {
     } else {
       return false
     }
+  }
+
+  /* ctx , url , protocol , type , data */
+  async stream(ctx , id , type , protocol , data){
+    return await getStream(ctx , id , type , protocol ,  data)
   }
 
   mount() {

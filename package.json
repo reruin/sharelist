@@ -12,6 +12,7 @@
   },
   "dependencies": {
     "@koa/cors": "^2.2.1",
+    "basic-ftp": "^3.4.4",
     "googleapis": "^35.0.0",
     "https-proxy-agent": "^2.2.1",
     "koa": "^2.2.0",

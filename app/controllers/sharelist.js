@@ -1,11 +1,7 @@
-const fs = require('fs')
-const request = require('request')
-
 const service = require('../services/sharelist')
-const http = require('../utils/http')
 const config = require('../config')
-const { sendFile , sendHTTPFile } = require('../utils/sendfile')
-const cache = {}
+
+// const { sendFile , sendHTTPFile } = require('../utils/sendfile')
 const { parsePath , pathNormalize , enablePreview, enableRange , isRelativePath} = require('../utils/base')
 
 const requireAuth = (data) => !!(data.children && data.children.find(i=>(i.name == '.passwd')))
@@ -24,19 +20,24 @@ const output = async (ctx , data)=>{
       data , url : isProxy ? ctx.path : url
     })
   }
-  //三种方式 , file  | redirect | url
+  // file | redirect | url | stream
+  // ctx , url , protocol , type , data
   else{
     if(data.outputType === 'file'){
-      await sendFile(ctx, url)
+      await service.stream(ctx , url , data.outputType , data.protocol)
     }
     
     else if( data.outputType == 'redirect'){
       ctx.redirect( url )
     }
     
+    else if( data.outputType == 'stream' ){
+      await service.stream(ctx , url , data.outputType , data.protocol , data)
+    }
+    
     else{
       if(isProxy){
-        await sendHTTPFile(ctx , url , data.headers || {} , data)
+        await service.stream(ctx , url , 'url' , data.protocol , data)
       }else{
         ctx.redirect( url )
       }

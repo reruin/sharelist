@@ -1,6 +1,7 @@
 const fs = require('fs')
 const mime = require('mime')
 const http = require('./http')
+const { Writable } = require('stream');
 
 const getRange = (r , total)=>{
   let [, start, end] = r.match(/(\d*)-(\d*)/);
@@ -84,7 +85,9 @@ const getFileSize = async (url , headers) => {
     return null
   }
 }
-const sendHTTPFile = async (ctx , url , headers ,data) => {
+const sendHTTPFile = async (ctx , url  ,data) => {
+  let headers = data.headers || {}
+
   headers = mergeHeaders(ctx.req.headers , headers)
   let fileSize = null;
   if(data && data.size){
@@ -95,6 +98,7 @@ const sendHTTPFile = async (ctx , url , headers ,data) => {
   if(fileSize){
     let range = ctx.get('range')
     let fileSize = data.size
+    let chunksize = fileSize
 
     if(range){
       let [start , end] = getRange(ctx.header.range , fileSize)
@@ -113,9 +117,45 @@ const sendHTTPFile = async (ctx , url , headers ,data) => {
   ctx.body = ctx.req.pipe(http({url , headers})) //.pipe(ctx.res)
 }
 
+const getFile = async (url) => {
+  if(fs.existsSync( url )){
+    return fs.readFileSync(url, 'utf8')
+  }
+}
+
 const getHTTPFile = async (url ,headers = {}) => {
   let { body } = await http.get(url , { headers } )
   return body
 }
 
-module.exports = { sendFile , sendHTTPFile , getHTTPFile }
+const sendStream = async (ctx , url , stream , data) => {
+  let fileSize = null , start;
+  if(data && data.size){
+    fileSize = data.size;
+  }
+  if(fileSize){
+    let range = ctx.get('range')
+    let fileSize = data.size
+    let chunksize = fileSize
+
+    if(range){
+
+      let range = getRange(ctx.header.range , fileSize)
+      start = range[0]
+      let end = range[1]
+      ctx.set('Content-Range', 'bytes ' + `${start}-${end}/${fileSize}`)
+      ctx.status = 206
+
+      chunksize = end - start + 1
+
+    }else{
+      ctx.set('Content-Range', 'bytes ' + `0-${fileSize-1}/${fileSize}`)
+    }
+
+    ctx.length = chunksize
+  }
+
+  ctx.body = await stream(url , start , ctx.res)
+}
+
+module.exports = { sendFile , sendHTTPFile , sendStream , getHTTPFile , getFile }

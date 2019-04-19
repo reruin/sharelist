@@ -163,12 +163,14 @@ module.exports = ({ getConfig, cache }) => {
     return resp
   }
 
-  const stream = async (id, startAt = 0, writableStream) => {
+  const stream = async (id, options = {}) => {
     let client = await getClient(id, true)
     let file = id.split('/').pop()
+    let startAt = (options && options.range && options.range[0]) ? options.range[0] : 0;
+    let writeStream = options.writeStream;
     if (client) {
-      if (writableStream) {
-        return await client.download(writableStream, file, startAt)
+      if (writeStream) {
+        return await client.download(writeStream, file, startAt)
       } else {
         let dest = new Writable()
         await client.download(dest, file, startAt)

@@ -21,7 +21,7 @@ const xml2js = ( xml , options = {}) => {
 }
 
 const guessWebDAV = (ua) => {
-  return /(Microsoft\-WebDAV|FileExplorer|WinSCP)/i.test(ua)
+  return /(Microsoft\-WebDAV|FileExplorer|WinSCP|WebDAVLib)/i.test(ua)
 }
 
 const webdavMethods = ['options','head','trace','get','put','post','delete','mkcol','propfind','proppatch','copy','move','lock','unlock']
@@ -48,7 +48,6 @@ module.exports = async(ctx, next) => {
     origin:ctx.origin,
     protocol:ctx.protocol
   })
-  
   if(webdavPath == ''){
     isWebDAV = ctx.is('xml') || guessWebDAV(ctx.request.headers['user-agent'])
   }

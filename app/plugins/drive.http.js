@@ -8,8 +8,6 @@ const version = '1.0'
 
 const protocols = ['http']
 
-const url = require("url")
-
 module.exports = (format) => {
 
   const file = (id)=>{

@@ -1,3 +1,5 @@
+const mime = require('mime');
+
 const rnd = (min , max) => Math.floor(min+Math.random()*(max-min))
 
 const isType = (type) => (obj) => ( Object.prototype.toString.call(obj) === `[object ${type}]`)
@@ -52,6 +54,10 @@ const MIMEType = (v) => {
   else{
     return 'other'
   }
+}
+
+const MIME = (v) => {
+  return mime.getType(v)
 }
 
 const extend = (source , src) => {

@@ -129,7 +129,7 @@ const getHTTPFile = async (url ,headers = {}) => {
 }
 
 const sendStream = async (ctx , url , stream , data) => {
-  let fileSize = null , start;
+  let fileSize = null , start , options_range = [];
   if(data && data.size){
     fileSize = data.size;
   }
@@ -147,7 +147,7 @@ const sendStream = async (ctx , url , stream , data) => {
       ctx.status = 206
 
       chunksize = end - start + 1
-
+      options_range = [start , end]
     }else{
       ctx.set('Content-Range', 'bytes ' + `0-${fileSize-1}/${fileSize}`)
     }
@@ -155,7 +155,9 @@ const sendStream = async (ctx , url , stream , data) => {
     ctx.length = chunksize
   }
 
-  ctx.body = await stream(url , start , ctx.res)
+  let opts = { ...data , range:options_range , writeStream:ctx.res}
+
+  ctx.body = await stream(url , opts)
 }
 
 module.exports = { sendFile , sendHTTPFile , sendStream , getHTTPFile , getFile }

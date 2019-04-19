@@ -1,7 +1,7 @@
 const fs = require('fs')
 const path = require('path')
 const querystring = require('querystring')
-const {MIMEType , isArray , isObject , params , base64 , getRandomIP , retrieveSize } = require('../utils/base')
+const {MIMEType , MIME , isArray , isObject , params , base64 , getRandomIP , retrieveSize } = require('../utils/base')
 const format = require('../utils/format')
 const cache = require('../utils/cache')
 const http = require('../utils/http')
@@ -213,6 +213,7 @@ const updateFolder = (folder) => {
 
     if(d.type != 'folder'){
       d.type = MIMEType(d.ext)
+      if(d.mime) d.mime = MIME(d.ext)
     }
 
     d.displaySize = format.byte(d.size)

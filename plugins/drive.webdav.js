@@ -35,7 +35,6 @@ module.exports = ({ getConfig, cache , base64 }) => {
     let { protocol , username, password, host, port, pathname } = new URL(url);
     let client = clientMap[key]
     let remote_url = protocol + '//' + host + pathname
-    console.log(remote_url , username , password)
     if (!client) {
       // client = createClient('https://dervoerin.stor.backup.50network.com:2078/',{
       //   username:'webdav@reruin.backup-hosting.50network.com',password:'@Wuting0122'
@@ -107,22 +106,23 @@ module.exports = ({ getConfig, cache , base64 }) => {
 
   const file = async (id , data = {}) => {
     
+    data.url = id
     data.outputType = 'stream'
     data.proxy = 'stream'
 
     return data
   }
 
-  const stream = async (id, options = {}) => {
-    let [server , path] = id.split('>');
+  const stream = async (url, options = {}) => {
+    let [server , path] = url.split('>');
     let client = await getClient(server, true)
 
     if (client) {
       let writeStream = options.writeStream;
       let headers = Object.assign({},options.headers);
-
-      if(options.range && options.range.length == 2){
-        headers['Content-Range'] = 'bytes ' + `${options.range[0]}-${options.range[1]}/${data.size}`
+      let fileSize = options.data ? options.data.size : 0
+      if(options.range && options.range.length == 2 && fileSize){
+        headers['Content-Range'] = 'bytes ' + `${options.range[0]}-${options.range[1]}/${fileSize}`
       }
       if (writeStream) {
         return client.createReadStream(path , {headers}).pipe(writeStream)

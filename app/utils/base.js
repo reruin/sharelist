@@ -29,7 +29,7 @@ const parsePath = (url)=>{
   }
 }
 
-const MIMEType = (v) => {
+const getFileType = (v) => {
   if(['mp4' , 'mpeg' , 'wmv' , 'webm' , 'avi' , 'rmvb' , 'mov' , 'mkv','f4v','flv'].includes(v)){
     return 'video'
   }
@@ -56,7 +56,7 @@ const MIMEType = (v) => {
   }
 }
 
-const MIME = (v) => {
+const getMIME = (v) => {
   return mime.getType(v)
 }
 
@@ -114,7 +114,7 @@ const enableRange = (v) => ['audio','video'].includes(v)
 const isRelativePath = (v) => !/^http/.test(v)
 
 module.exports = {
-  parsePath , MIMEType,
+  parsePath , getFileType, getMIME,
 
   isArray , isObject, isString, isDate, isEmail, isRelativePath , enablePreview, enableRange , 
 

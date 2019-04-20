@@ -3,7 +3,7 @@
  */
 
 
-const name = 'webdav'
+const name = 'WebDAV'
 
 const version = '1.0'
 
@@ -37,10 +37,12 @@ module.exports = ({ getConfig, cache , base64 }) => {
     let remote_url = protocol + '//' + host + pathname
     console.log(remote_url , username , password)
     if (!client) {
+      // client = createClient('https://dervoerin.stor.backup.50network.com:2078/',{
+      //   username:'webdav@reruin.backup-hosting.50network.com',password:'@Wuting0122'
+      // });
       client = createClient(remote_url,{
         username:decodeURIComponent(username),password:decodeURIComponent(password)
       });
-
       clientMap[key] = client
     }
     
@@ -71,7 +73,7 @@ module.exports = ({ getConfig, cache , base64 }) => {
     */
 
     let client = await getClient(server)
-
+    // console.log(path)
     if (client) {
       let data = await client.getDirectoryContents(path || '/');
 

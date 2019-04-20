@@ -1,7 +1,7 @@
 const fs = require('fs')
 const path = require('path')
 const querystring = require('querystring')
-const {MIMEType , MIME , isArray , isObject , params , base64 , getRandomIP , retrieveSize } = require('../utils/base')
+const {getFileType , getMIME , isArray , isObject , params , base64 , getRandomIP , retrieveSize } = require('../utils/base')
 const format = require('../utils/format')
 const cache = require('../utils/cache')
 const http = require('../utils/http')
@@ -151,7 +151,7 @@ const getFormater = (ext) => {
 //更新文件详情数据
 const updateFile = async (file) => {
   if(file.type != 'folder'){
-    file.type = MIMEType(file.ext)
+    file.type = getFileType(file.ext)
   }
 
   file.displaySize = format.byte(file.size)
@@ -212,8 +212,8 @@ const updateFolder = (folder) => {
     }
 
     if(d.type != 'folder'){
-      d.type = MIMEType(d.ext)
-      if(d.mime) d.mime = MIME(d.ext)
+      d.type = getFileType(d.ext)
+      if(!d.mime) d.mime = getMIME(d.ext) || 'file/unknow'
     }
 
     d.displaySize = format.byte(d.size)

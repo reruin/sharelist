@@ -31,9 +31,9 @@ module.exports = ({ getConfig, cache }) => {
   }
 
   const getClient = async (url, cd = false) => {
-    let key = (url.match(/\/\/[\w\W]+?\//) || [''])[0];
-    let { username, password, host, port, pathname } = new URL('ftp:' + url);
-    
+    let key = (url.match(/ftp\:\/\/[\w\W]+?\//) || [''])[0];
+    let { username, password, host, port, pathname } = new URL(url);
+    console.log(username, password)
     /*
     let client = clientMap[key]
 
@@ -54,8 +54,8 @@ module.exports = ({ getConfig, cache }) => {
     try {
       await client.access({
         host: host,
-        user: username,
-        password: password,
+        user: decodeURIComponent(username),
+        password: decodeURIComponent(password),
         port: port || 21,
         secure: false
       })
@@ -106,7 +106,7 @@ module.exports = ({ getConfig, cache }) => {
       let children = [];
 
       data.forEach(i => {
-        let path = (id + '/' + i.name).replace(/(?<=.+)\/{2,}/g, '/')
+        let path = (id + '/').replace(/\/{2,}$/g,'/') + i.name
         let obj = {
           id: path,
           name: i.name,

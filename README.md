@@ -86,8 +86,11 @@ ShareListDrive是ShareList内置的一种虚拟文件系统，使用yaml构建�
 提供对OneDrive的访问。挂载标示```od```，分享文件夹ID作为路径。 
 #### OneDrive For Business 
 提供对OneDrive Business的访问。挂载标示odb，分享的url作为路径。 
-#### FTP 
-用于访问FTP服务。使用ftp路径作为挂载标示。 例如```ftp://username:password@localhost/```
+#### WebDAV ####
+用于访问WebDAV服务。使用标准WebDAV路径即可。  
+例如```https://username:password@webdavserver.com:1222/path```  
+若服务端不支持断点续传，请在路径后追加```acceptRanges=none```。  
+例如```https://username:password@webdavserver.com:1222/?acceptRanges=none```
 #### ~~OpenLoad~~
 ~~提供对[OpenLoad](https://openload.co/)的访问支持。挂载标示openload，```ApiLogin:ApiKey@folderId```作为路径，省略@则从根目录开始列出文件。~~ 
 #### Lanzou蓝奏云 

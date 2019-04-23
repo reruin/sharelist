@@ -128,36 +128,45 @@ const getHTTPFile = async (url ,headers = {}) => {
   return body
 }
 
-const sendStream = async (ctx , url , stream , data) => {
-  let fileSize = null , start , options_range = [];
+const sendStream = async (ctx , url , adapter , data = {}) => {
+  let fileSize = null , start , range = {};
+
+  headers = mergeHeaders(ctx.req.headers , data.headers || {})
+
+  let havaSize = false
   if(data && data.size){
     fileSize = data.size;
+    havaSize = true
   }
+
   if(fileSize){
-    let range = ctx.get('range')
-    let fileSize = data.size
-    let chunksize = fileSize
-
-    if(range){
-
-      let range = getRange(ctx.header.range , fileSize)
-      start = range[0]
-      let end = range[1]
-      ctx.set('Content-Range', 'bytes ' + `${start}-${end}/${fileSize}`)
-      ctx.status = 206
-
-      chunksize = end - start + 1
-      options_range = [start , end]
+    if(ctx.get('range')){
+      let [ start , end ] = getRange(ctx.get('range') , fileSize)
+      range = {start , end , chunksize : end - start + 1}
     }else{
-      ctx.set('Content-Range', 'bytes ' + `0-${fileSize-1}/${fileSize}`)
+      range = {start:0 , end:fileSize-1 , chunksize:fileSize}
     }
-
-    ctx.length = chunksize
   }
 
-  let opts = { ...data , range:options_range , writeStream:ctx.res}
+  let opts = { ...data , reqHeaders:headers , range , ctx:ctx}
 
-  ctx.body = await stream(url , opts)
+  const { stream  , acceptRanges } = await adapter(url , opts)
+
+  if(havaSize){
+    if(acceptRanges){
+      ctx.status = 206
+      ctx.set('Accept-Ranges', 'bytes')
+      ctx.set('Content-Range', 'bytes ' + `${range.start}-${range.end}/${range.chunksize}`)
+      ctx.length = range.chunksize
+    }else{
+      ctx.set('Accept-Ranges', 'none')
+      ctx.length = fileSize
+    }
+  }else{
+    ctx.set('Accept-Ranges', 'none')
+  }
+  
+  if(stream) ctx.body = stream
 }
 
 module.exports = { sendFile , sendHTTPFile , sendStream , getHTTPFile , getFile }

@@ -1,7 +1,7 @@
 /*
  * WebDAV
+ * http(s)://username:password@host.com:port/?acceptRanges=none
  */
-
 
 const name = 'WebDAV'
 
@@ -21,32 +21,28 @@ const { Writable } = require('stream')
 
 const clientMap = {}
 
-module.exports = ({ getConfig, cache , base64 }) => {
+module.exports = ({ getConfig, cache, base64 }) => {
 
   const extname = (p) => path.extname(p).substring(1)
 
-  const getPath = (url) => {
-    let { pathname } = new URL('ftp:' + url);
-    return pathname
-  }
-
   const getClient = async (url, cd = false) => {
     let key = (url.match(/https?\:\/\/[\w\W]+?\//) || [''])[0];
-    let { protocol , username, password, host, port, pathname } = new URL(url);
-    let client = clientMap[key]
+    let { protocol , username, password, host, port, pathname , searchParams } = new URL(url);
+    let hit = clientMap[key]
     let remote_url = protocol + '//' + host + pathname
-    if (!client) {
-      // client = createClient('https://dervoerin.stor.backup.50network.com:2078/',{
-      //   username:'webdav@reruin.backup-hosting.50network.com',password:'@Wuting0122'
-      // });
-      client = createClient(remote_url,{
+    if (!hit) {
+      let client = createClient(remote_url,{
         username:decodeURIComponent(username),password:decodeURIComponent(password)
       });
-      clientMap[key] = client
+      let options = {}
+      searchParams.forEach((value, name) => {
+        options[name] = value
+      })
+
+      clientMap[key] = hit = { client , options }
     }
     
-    return client;
-
+    return hit;
   }
 
   const folder = async (id) => {
@@ -71,10 +67,10 @@ module.exports = ({ getConfig, cache , base64 }) => {
     }
     */
 
-    let client = await getClient(server)
+    let { client } = await getClient(server)
     // console.log(path)
     if (client) {
-      let data = await client.getDirectoryContents(path || '/');
+      let data = await client.getDirectoryContents(path || '',{withCredentials:false});
 
       let children = [];
       data.forEach(i => {
@@ -114,21 +110,26 @@ module.exports = ({ getConfig, cache , base64 }) => {
   }
 
   const stream = async (url, options = {}) => {
-    let [server , path] = url.split('>');
-    let client = await getClient(server, true)
+    let [server, path] = url.split('>');
+    let { client , options:clientOptions } = await getClient(server)
 
     if (client) {
-      let writeStream = options.writeStream;
-      let headers = Object.assign({},options.headers);
-      let fileSize = options.data ? options.data.size : 0
-      if(options.range && options.range.length == 2 && fileSize){
-        headers['Content-Range'] = 'bytes ' + `${options.range[0]}-${options.range[1]}/${fileSize}`
+
+      if(options.contentFormat){
+        return await client.getFileContents(path , { format : 'text'})
+      }else{
+        let range = options.range
+
+        let opts = {}
+        if(clientOptions.acceptRanges != 'none' && options.range){
+          opts.range = options.range
+        }
+        return {
+          stream: client.createReadStream(path, opts),
+          acceptRanges: false
+        }
       }
-      if (writeStream) {
-        return client.createReadStream(path , {headers}).pipe(writeStream)
-      } else {
-        return await client.getFileContents(path)
-      }
+      
     } else {
       return null
     }

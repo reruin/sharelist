@@ -1,9 +1,11 @@
 /*
  * Openload(openload.co)
  * openload:APILogin:APIKey@
+ * 
+ * Deprecated 无法实现图片验证码识别
  */
 
-const name = 'Openload'
+const name = 'Openload(Deprecated)'
 
 const version = '1.0'
 

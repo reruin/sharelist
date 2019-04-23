@@ -1,9 +1,8 @@
 /*
- * FTP
+ * FTP >> Deprecated
  */
 
-
-const name = 'FTP'
+const name = 'FTP(Deprecated)'
 
 const version = '1.0'
 
@@ -17,7 +16,7 @@ const ftp = require("basic-ftp")
 
 const { URL } = require("url")
 
-const { Writable } = require('stream')
+const { PassThrough } = require('stream')
 
 const clientMap = {}
 
@@ -25,15 +24,9 @@ module.exports = ({ getConfig, cache }) => {
 
   const extname = (p) => path.extname(p).substring(1)
 
-  const getPath = (url) => {
-    let { pathname } = new URL('ftp:' + url);
-    return pathname
-  }
-
   const getClient = async (url, cd = false) => {
     let key = (url.match(/ftp\:\/\/[\w\W]+?\//) || [''])[0];
-    let { username, password, host, port, pathname } = new URL(url);
-    console.log(username, password)
+    let { username, password, hostname, port, pathname } = new URL(url);
     /*
     let client = clientMap[key]
 
@@ -50,16 +43,15 @@ module.exports = ({ getConfig, cache }) => {
     */
     let client = new ftp.Client();
     let flag = false
-    client.ftp.verbose = false
+    client.ftp.verbose = true
     try {
-      await client.access({
-        host: host,
+      let p = await client.access({
+        host: hostname,
         user: decodeURIComponent(username),
         password: decodeURIComponent(password),
         port: port || 21,
         secure: false
       })
-
       if (pathname) {
         if (cd) {
           pathname = pathname.replace(/\/[^\/]+?$/, '')
@@ -141,6 +133,7 @@ module.exports = ({ getConfig, cache }) => {
   }
 
   const file = async (id) => {
+    console.log(id)
     let client = await getClient(id , true)
     let resp = {
       id,
@@ -166,15 +159,13 @@ module.exports = ({ getConfig, cache }) => {
   const stream = async (id, options = {}) => {
     let client = await getClient(id, true)
     let file = id.split('/').pop()
-    let startAt = (options && options.range && options.range[0]) ? options.range[0] : 0;
-    let writeStream = options.writeStream;
+    let startAt = (options && options.range && options.range.start) ? options.range.start : 0;
     if (client) {
-      if (writeStream) {
-        return await client.download(writeStream, file, startAt)
-      } else {
-        let dest = new Writable()
-        await client.download(dest, file, startAt)
-        return dest
+      let dest = new PassThrough()
+      client.download(dest, file)
+      return { 
+        stream: dest,
+        acceptRanges:false
       }
     } else {
       return null

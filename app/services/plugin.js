@@ -30,7 +30,7 @@ const getSource = async (id , driverName) => {
       return await getFile(d.url)
     }
     else if(d.outputType === 'stream' && vendor.stream){
-      return await vendor.stream(id);
+      return await vendor.stream(id , {contentFormat:true});
     }
     else{
       return await getHTTPFile(d.url , d.headers || {})

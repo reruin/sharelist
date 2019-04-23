@@ -1,6 +1,7 @@
 /*
  * WebDAV
  * http(s)://username:password@host.com:port/?acceptRanges=none
+ * 如果webdav server 不支持 206，需要带上acceptRanges=none 标识
  */
 
 const name = 'WebDAV'
@@ -26,10 +27,10 @@ module.exports = ({ getConfig, cache, base64 }) => {
   const extname = (p) => path.extname(p).substring(1)
 
   const getClient = async (url, cd = false) => {
-    let key = (url.match(/https?\:\/\/[\w\W]+?\//) || [''])[0];
     let { protocol , username, password, host, port, pathname , searchParams } = new URL(url);
-    let hit = clientMap[key]
     let remote_url = protocol + '//' + host + pathname
+    let hit = clientMap[remote_url]
+
     if (!hit) {
       let client = createClient(remote_url,{
         username:decodeURIComponent(username),password:decodeURIComponent(password)
@@ -39,7 +40,7 @@ module.exports = ({ getConfig, cache, base64 }) => {
         options[name] = value
       })
 
-      clientMap[key] = hit = { client , options }
+      clientMap[remote_url] = hit = { client , options }
     }
     
     return hit;

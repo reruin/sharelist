@@ -1,5 +1,5 @@
 const request = require('request')
-const debug = true
+const debug = false
 const headers = {
   'Accept-Encoding': 'identity;q=1, *;q=0',
   'Accept-Language': 'zh-CN,zh;q=0.8',

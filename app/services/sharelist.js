@@ -63,7 +63,7 @@ class ShareList {
           hit = children[index]
           //只为目录做缓存
           if (hit.type == 'folder' && hit.id){
-            cache(pl, hit.protocol + ':' + hit.id)
+            cache.set(pl, hit.protocol + ':' + hit.id)
           }
         } else {
           return false
@@ -94,13 +94,13 @@ class ShareList {
         vendor = getDrive(hit.protocol)
 
         //缓存 快捷方式 的实际链接
-        cache(originId, hit.protocol + ':' + hit.id)
+        cache.set(originId, hit.protocol + ':' + hit.id)
       }
 
       // folder /a/b/c
       if (hit.type == 'folder') {
 
-        resp = await vendor.folder(hit.id, { query, req : config.getLocation() ,paths: diff(paths, full_paths), content: hit.content })
+        resp = await vendor.folder(hit.id, { query, req : config.getRuntime('req') ,paths: diff(paths, full_paths), content: hit.content })
         if (resp) updateFolder(resp)
         //let passwd = base.checkPasswd(resp)
         //resp.auth = passwd !== false
@@ -108,7 +108,7 @@ class ShareList {
         //存在 id 变化 ，例如 OneDrive 的shareid <-> resid, ln 的链接
         //重新缓存 path -> resid
         if (hit.id != resp.id) {
-          cache(pl, hit.protocol + ':' + resp.id)
+          cache.set(pl, hit.protocol + ':' + resp.id)
         }
 
       }
@@ -143,7 +143,7 @@ class ShareList {
   }
 
   mount() {
-    let paths = config.getPath() || [], key
+    let paths = config.getPath(), key
 
     // 如果只有一个目录 则直接列出
     if (paths.length == 1) {

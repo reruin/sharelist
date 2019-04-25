@@ -62,7 +62,7 @@ app.use(koaStatic(__dirname + '/public'))
 
 app.use(async (ctx , next) => {
   ctx.state.__ = ctx.__.bind(ctx)
-  ctx.state._title_ = config.getTitle.bind(ctx)
+  ctx.state._config_ = config.getConfig.bind(ctx)
   await next()
 })
 

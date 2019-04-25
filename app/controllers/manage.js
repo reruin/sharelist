@@ -13,7 +13,7 @@ module.exports = {
     let message, access = !!ctx.session.admin
 
     if (access) {
-      await ctx.render('manage', { access, message, config: config.get(), vendors: getVendors() })
+      await ctx.render('manage', { access, message, config: config.getAllConfig(), vendors: getVendors() })
     } else {
       await ctx.render('manage', { access })
     }
@@ -32,7 +32,7 @@ module.exports = {
     let result = { status: 0, message: 'Success', data: '' , a}
 
     if (a == 'signin') {
-      if (body.token == config.getToken()) {
+      if (body.token == config.getConfig('token')) {
         ctx.session.admin = true
         result.a = a
         result.message = 'Success'

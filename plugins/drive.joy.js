@@ -134,7 +134,7 @@ module.exports = ({request , getConfig , getSource , getRandomIP }) => {
 
     let pageCount
 
-    if( cache[`${cate}_page_count`] && last_update && ( Date.now() - last_update < getConfig().max_age_dir) ){
+    if( cache[`${cate}_page_count`] && last_update && ( Date.now() - last_update < getConfig('max_age_dir')) ){
       pageCount = cache[`${cate}_page_count`]
     }else{
       let { body } = await request.get(`${host}/v.php?page=1&category=${cate}`)
@@ -207,7 +207,7 @@ module.exports = ({request , getConfig , getSource , getRandomIP }) => {
   }
 
   const getList = async (id) => {
-    if( cache[id] && cache[id].$cached_at && ( Date.now() - cache[id].$cached_at < getConfig().max_age_dir) ){
+    if( cache[id] && cache[id].$cached_at && ( Date.now() - cache[id].$cached_at < getConfig('max_age_dir')) ){
       return cache[id]
     }
 
@@ -349,7 +349,7 @@ module.exports = ({request , getConfig , getSource , getRandomIP }) => {
    * /f/viewkey
    */
   const file = async(id) =>{
-    if( cache[id] && cache[id].$cached_at && ( Date.now() - cache[id].$cached_at < getConfig().max_age_file) ){
+    if( cache[id] && cache[id].$cached_at && ( Date.now() - cache[id].$cached_at < getConfig('max_age_file')) ){
       return cache[id]
     }
 

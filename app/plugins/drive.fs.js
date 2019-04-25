@@ -49,18 +49,17 @@ module.exports = ({datetime}) => {
         }
 
         if(stat){
-          obj.size = stat.size
+          let isFolder = stat.isDirectory()
           obj.created_at = datetime(stat.ctime)
           obj.updated_at = datetime(stat.mtime)
-          obj.mime = ''
-          if(stat.isDirectory()){
+          if(isFolder){
             obj.type = 'folder'
           }
           if(stat.isFile()){
             obj.ext = extname(filename)
+            obj.size = stat.size
           }
         }
-        
         children.push(obj)
       })
 

@@ -10,7 +10,7 @@ const output = async (ctx , data)=>{
 
   const isPreview = ctx.request.querystring.indexOf('preview') >= 0
 
-  const isProxy = config.getConfig().proxy_enable || data.proxy
+  const isProxy = config.getConfig('proxy_enable') || data.proxy
 
   let url = data.url
    

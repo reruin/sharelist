@@ -45,12 +45,12 @@ module.exports = ({ request, cache, getConfig }) => {
 
     let resp = { id, type: 'folder', protocol: defaultProtocol }
 
-    if (cache(resid)) {
-      resp = cache(resid)
+    if (cache.get(resid)) {
+      resp = cache.get(resid)
       if (
         resp.$cached_at &&
         resp.children &&
-        (Date.now() - resp.$cached_at < getConfig().max_age_dir)
+        (Date.now() - resp.$cached_at < getConfig('max_age_dir'))
 
       ) {
         console.log('get folder from cache')
@@ -104,7 +104,7 @@ module.exports = ({ request, cache, getConfig }) => {
     resp.children = children
     resp.$cached_at = Date.now()
 
-    cache(resid, resp)
+    cache.set(resid, resp)
     return resp
   }
 

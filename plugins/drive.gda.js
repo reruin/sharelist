@@ -88,7 +88,7 @@ module.exports = ({ request, cache, getConfig, querystring, getLocation , base64
   expiry_date: 1545641928033
   */
   const saveAuth = async (key , d) => {
-    cache(`gd_token@${key}` , d)
+    cache.set(`gd_token@${key}` , d)
   }
 
   const generateAuthUrl = async (client_id, client_secret, redirect_uri) => {

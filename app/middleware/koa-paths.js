@@ -1,6 +1,6 @@
 const parseXML = require('xml2js').parseString
 const parsePath = require('../utils/base').parsePath
-const { setLocation , getWebdavPath } = require('../config')
+const { setLocation , getConfig } = require('../config')
 
 const parser = (req, options) => {
   return new Promise((resolve, reject) => {
@@ -32,14 +32,14 @@ module.exports = async(ctx, next) => {
   }
 
   let { path , method } = ctx
-  let webdavPath = (getWebdavPath() + '/').replace(/\/+$/,'')
+  let webdavPath = (getConfig('webdav_path') + '/').replace(/\/+$/,'')
   let isWebDAV = path.startsWith(webdavPath)
   let url = path.replace(new RegExp('^'+webdavPath) , '').replace(/\/$/,'')
   let [paths, paths_raw] = parsePath(url)
 
   ctx.paths = paths
   ctx.paths_raw = paths_raw
-
+  /*
   setLocation({
     href:ctx.href,
     path:ctx.path,
@@ -48,6 +48,8 @@ module.exports = async(ctx, next) => {
     origin:ctx.origin,
     protocol:ctx.protocol
   })
+  */
+  
   if(webdavPath == ''){
     isWebDAV = ctx.is('xml') || guessWebDAV(ctx.request.headers['user-agent'])
   }

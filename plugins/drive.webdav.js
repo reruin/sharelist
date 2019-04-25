@@ -52,14 +52,14 @@ module.exports = ({ getConfig, cache, base64 }) => {
 
     /*
     let resid = `${defaultProtocol}:${id}`
-    let r = cache(resid)
+    let r = cache.get(resid)
 
     if (r) {
       resp = r
       if (
         resp.$cached_at &&
         resp.children &&
-        (Date.now() - resp.$cached_at < getConfig().max_age_dir)
+        (Date.now() - resp.$cached_at < getConfig('max_age_dir'))
 
       ) {
         console.log('get webdav folder from cache')
@@ -93,7 +93,7 @@ module.exports = ({ getConfig, cache, base64 }) => {
 
       resp.$cached_at = Date.now()
       resp.children = children
-      //cache(resid, resp)
+      //cache.set(resid, resp)
 
       return resp
     } else {

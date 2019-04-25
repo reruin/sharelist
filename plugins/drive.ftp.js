@@ -72,7 +72,7 @@ module.exports = ({ getConfig, cache }) => {
 
   const folder = async (id) => {
     let resid = `${defaultProtocol}:${id}`
-    let r = cache(resid)
+    let r = cache.get(resid)
     let resp = { id: id, type: 'folder', protocol: defaultProtocol }
 
     if (r) {
@@ -80,7 +80,7 @@ module.exports = ({ getConfig, cache }) => {
       if (
         resp.$cached_at &&
         resp.children &&
-        (Date.now() - resp.$cached_at < getConfig().max_age_dir)
+        (Date.now() - resp.$cached_at < getConfig('max_age_dir'))
 
       ) {
         console.log('get ftp folder from cache')
@@ -124,7 +124,7 @@ module.exports = ({ getConfig, cache }) => {
 
       resp.$cached_at = Date.now()
       resp.children = children
-      cache(resid, resp)
+      cache.set(resid, resp)
 
       return resp
     } else {

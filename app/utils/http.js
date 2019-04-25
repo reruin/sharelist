@@ -1,21 +1,5 @@
-// var https = require('https');
-// var HttpsProxyAgent = require('https-proxy-agent');
-// var agent = new HttpsProxyAgent('http://127.0.0.1:1087');
-// var __request = https.request
-
-
-// https.request = function(options, callback) {
-//   var __options = options;
-//   __options.agent = agent
-//   var req = __request(__options, function(res) {
-//     callback(res);
-//   });
-//   return req;
-// };
-
-
 const request = require('request')
-const debug = false //process.env.NODE_ENV == 'dev'
+const debug = true
 const headers = {
   'Accept-Encoding': 'identity;q=1, *;q=0',
   'Accept-Language': 'zh-CN,zh;q=0.8',
@@ -51,7 +35,7 @@ http.get = (url, opts = {}) => {
 
   if (debug) {
     params.proxy = 'http://127.0.0.1:1087'
-    console.log('DEBUG:', params)
+    //console.log('DEBUG:', params)
   }
   return new Promise(function(resolve, reject) {
     request(params, function(error, response, body) {

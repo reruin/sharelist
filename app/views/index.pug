@@ -6,7 +6,7 @@ block content
     .wrap
       -if(parent)
         a.back(href=parent)
-      a.home(href='/')= _title_()
+      a.home(href='/')= _config_('title')
   section.wrap
     .list-header
       .row

@@ -52,15 +52,15 @@ module.exports = ({ request , cache , getConfig , querystring}) => {
   // shareid => id
   const conv = async (shareid) => {
     
-    if (cache('od:' + shareid)) {
-      return cache('od:' + shareid)
+    if (cache.get('od:' + shareid)) {
+      return cache.get('od:' + shareid)
     }
     
     let url = 'https://1drv.ms/f/' + shareid.replace('od:', '')
     let r = await request.get(url, { followRedirect: false })
     if (r.headers && r.headers.location) {
       let params = querystring.parse(r.headers.location.split('?')[1])
-      cache('od:' + shareid, params.resid)
+      cache.set('od:' + shareid, params.resid)
       return params.resid
     } else {
       return ''
@@ -84,13 +84,13 @@ module.exports = ({ request , cache , getConfig , querystring}) => {
     let resid = 'od:' + id
     let resp = { id, type: 'folder', protocol: defaultProtocol, children: [] }
 
-    if (cache(resid) && !nocache) {
-      resp = cache(resid)
+    if (cache.get(resid) && !nocache) {
+      resp = cache.get(resid)
 
       if (
         resp.$cached_at &&
         resp.children &&
-        (Date.now() - resp.$cached_at < getConfig().max_age_dir)
+        (Date.now() - resp.$cached_at < getConfig('max_age_dir'))
 
       ) {
         console.log('get od folder from cache')
@@ -167,7 +167,7 @@ module.exports = ({ request , cache , getConfig , querystring}) => {
 
       resp.$cached_at = Date.now()
       resp.children = children
-      cache(resid, resp)
+      cache.set(resid, resp)
     }
     return resp
   }
@@ -177,7 +177,7 @@ module.exports = ({ request , cache , getConfig , querystring}) => {
       data &&
       data.$cached_at &&
       data.url &&
-      (Date.now() - data.$cached_at < getConfig().max_age_file)
+      (Date.now() - data.$cached_at < getConfig('max_age_file'))
 
     ) {
       console.log('get od file from cache')

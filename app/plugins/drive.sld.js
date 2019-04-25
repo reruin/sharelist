@@ -11,10 +11,19 @@ const protocols = ['sld','xd']
 
 const defaultProtocol = 'xd'
 
-const yaml = require('yaml').default
+const yaml = require('yaml')
 
+module.exports = ({isObject , isArray}) => {
 
-module.exports = ({isObject , isArray , cache}) => {
+  const diskMap = {}
+
+  const getDisk = (id) => {
+    let [rootId , diskPath] = id.split('->')
+    return {
+      disk:diskMap[rootId] , 
+      path:(diskPath || '').replace(/^\/+/,'').split('/')
+    }
+  }
 
   /* 递归生成 索引 id */
   const createId = (d, rootId) => {
@@ -38,17 +47,17 @@ module.exports = ({isObject , isArray , cache}) => {
   }
 
   const mount = async (rootId, data) => {
-    let resid = `${defaultProtocol}:${rootId}`
     let resp = { id: rootId, type: 'folder', protocol: defaultProtocol }
 
     if (data) {
       let json = yaml.parse(data)
 
-      json = createId(json, rootId + ':')
+      json = createId(json, rootId + '->')
       resp.children = json
       resp.updated_at = Date.now()
 
-      cache(resid, resp)
+      diskMap[rootId] = resp
+
       return resp
     } else {
       return undefined
@@ -56,25 +65,25 @@ module.exports = ({isObject , isArray , cache}) => {
   }
 
   const findById = (id) => {
-    let rootId = id.split(':').slice(0, -1).join(':')
-    let disk = cache(`${defaultProtocol}:${rootId}`)
-    let path = id.split(':/')[1].split('/')
-
-
-    for (let i = 0; i < path.length && disk; i++) {
-      disk = disk.children
-      disk = disk.find(j => {
-        return `${j.name}` == path[i]
-
-        if (j.type == 'folder') {
-          return `${j.name}.${j.ext}` == path[i]
-        } else {
+    let { disk , path } = getDisk(id)
+    if(disk){
+      for (let i = 0; i < path.length && disk; i++) {
+        disk = disk.children
+        disk = disk.find(j => {
           return `${j.name}` == path[i]
-        }
-      }) //[ parseInt(path[i]) ]
-    }
 
-    return disk
+          if (j.type == 'folder') {
+            return `${j.name}.${j.ext}` == path[i]
+          } else {
+            return `${j.name}` == path[i]
+          }
+        }) //[ parseInt(path[i]) ]
+      }
+
+      return disk
+    }else{
+      return []
+    }
   }
 
   const folder = async (id, data) => {

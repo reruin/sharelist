@@ -37,13 +37,13 @@ module.exports = ({ request , getConfig , datetime , cache }) => {
   const folder = async(id) => {
     let resid = `${defaultProtocol}:${id}`
     let resp = false
-    let r = cache(resid)
+    let r = cache.get(resid)
     if(r) {
       resp = r
       if(
         resp.$cached_at && 
         resp.children &&
-        ( Date.now() - resp.$cached_at < getConfig().max_age_dir)
+        ( Date.now() - resp.$cached_at < getConfig('max_age_dir'))
 
       ){
         console.log('get folder from cache')
@@ -91,7 +91,7 @@ module.exports = ({ request , getConfig , datetime , cache }) => {
         resp.children = children
         resp.$cached_at = Date.now()
 
-        cache(resid,resp)
+        cache.set(resid,resp)
       }
     }
 

@@ -18,6 +18,10 @@ const db = createFiledb(configPath , {raw:true} , {
   max_age_file: 5 * 60 * 1000
 });
 
+if(process.env.PORT){
+  db.set(port , port)
+}
+
 const save = async (d) => db.set(d)
 
 const installed = () => {

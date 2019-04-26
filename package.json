@@ -5,7 +5,7 @@
   "repository": "https://github.com/reruin/sharelist",
   "license": "Apache-2.0",
   "scripts": {
-    "start": "set NODE_ENV=dev && node app.js",
+    "start": "node app.js",
     "dev": "./node_modules/.bin/nodemon app.js",
     "prd": "pm2 start app.js --name sharelist --env prod",
     "test": "echo \"Error: no test specified\" && exit 1"

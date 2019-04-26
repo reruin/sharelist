@@ -3,7 +3,6 @@ const os = require('os')
 const { createFiledb } = require('./utils/db/filedb');
 const configPath = process.cwd() +'/cache/config.json'
 const port = process.env.PORT || 33001
-
 const runtime = {}
 
 const db = createFiledb(configPath , {raw:true} , {
@@ -19,7 +18,7 @@ const db = createFiledb(configPath , {raw:true} , {
 });
 
 if(process.env.PORT){
-  db.set(port , port)
+  db.set('port' , port)
 }
 
 const save = async (d) => db.set(d)

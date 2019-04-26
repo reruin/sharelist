@@ -11,8 +11,8 @@ const mkdir = function(p) {
 };
 
 const base64 = {
-  encode: (v) => new Buffer(v).toString('base64'),
-  decode: (v) => new Buffer(v, 'base64').toString()
+  encode: (v) => Buffer.from(v).toString('base64'),
+  decode: (v) => Buffer.from(v, 'base64').toString()
 }
 
 class Filedb {

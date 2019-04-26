@@ -92,9 +92,8 @@ const sendHTTPFile = async (ctx , url  ,data) => {
   let fileSize = null;
   if(data && data.size){
     fileSize = data.size;
-  }else{
-    fileSize = await getFileSize(url , headers)
   }
+  
   if(fileSize){
     let range = ctx.get('range')
     let fileSize = data.size

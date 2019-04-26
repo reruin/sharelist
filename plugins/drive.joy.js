@@ -101,6 +101,15 @@ module.exports = ({request , getConfig , getSource , getRandomIP }) => {
     }
   }
 
+  const getFileSize = async (url , headers) => {
+    let nh = await request.header(url , {headers})
+    if(nh && nh['content-length']){
+      return nh['content-length']
+    }else{
+      return null
+    }
+  }
+
   const getDetail = async (viewkey) => {
 
     let { body } = await request.get(`${host}/view_video.php?viewkey=${viewkey}`, {headers:createHeaders()})
@@ -357,6 +366,11 @@ module.exports = ({request , getConfig , getSource , getRandomIP }) => {
     if(viewkey[0]){
       let resp = await getDetail( viewkey[0] )
       resp.headers = createHeaders()
+
+      let size = await getFileSize(resp.url , resp.headers)
+      if(size){
+        resp.size = size
+      }
       cache[id] = resp
       return resp
     }else{

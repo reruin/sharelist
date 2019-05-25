@@ -1,6 +1,6 @@
 const parseXML = require('xml2js').parseString
 const parsePath = require('../utils/base').parsePath
-const { setLocation , getConfig } = require('../config')
+const { setLocation , getConfig , setRuntime } = require('../config')
 
 const parser = (req, options) => {
   return new Promise((resolve, reject) => {
@@ -39,6 +39,16 @@ module.exports = async(ctx, next) => {
 
   ctx.paths = paths
   ctx.paths_raw = paths_raw
+
+  setRuntime('req' , {
+    href:ctx.href,
+    path:ctx.path,
+    query:ctx.query,
+    body:ctx.body,
+    host:ctx.host,
+    origin:ctx.origin,
+    protocol:ctx.protocol
+  })
   /*
   setLocation({
     href:ctx.href,

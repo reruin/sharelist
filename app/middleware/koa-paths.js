@@ -44,7 +44,7 @@ module.exports = async(ctx, next) => {
     href:ctx.href,
     path:ctx.path,
     query:ctx.query,
-    body:ctx.body,
+    body:ctx.request.body,
     host:ctx.host,
     origin:ctx.origin,
     protocol:ctx.protocol

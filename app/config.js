@@ -10,6 +10,8 @@ const db = createFiledb(configPath , {raw:true} , {
 
   proxy_enable : 0 ,
 
+  preview_enable : 1,
+
   webdav_path : '/webdav/',
   //目录刷新时间 15分钟
   max_age_dir: 15 * 60 * 1000,
@@ -41,4 +43,26 @@ const setRuntime = (key , value) => {
   runtime[key] = value
 }
 
-module.exports = { getConfig , getAllConfig, save , installed , getPath , setRuntime , getRuntime}
+const saveDrive = (value) => {
+  const name = runtime.req.path.replace(/^\//g,'')
+  const path = getPath()
+  console.log('save' , name , value)
+  let hit = path.find( i => i.name == name)
+  if(hit){
+    hit.path = value
+    db.save(path)
+  }
+}
+
+const getDrive = () => {
+  const name = runtime.req.path.replace(/^\//g,'')
+  const path = getPath()
+  const hit = path.find( i => i.name == name)
+  if(hit){
+    return hit.path
+  }else{
+    return false
+  }
+}
+
+module.exports = { getConfig , getAllConfig, save , installed , getPath , setRuntime , getRuntime , saveDrive , getDrive }

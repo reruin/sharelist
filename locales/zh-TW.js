@@ -23,6 +23,7 @@ module.exports = {
   "signin":"登入",
   "input_token":"請輸入Token",
   "proxy_enable":"網址代理",
+  "preview_enable":"预览",
   "max_age_dir":"資料夾快取時間(秒)",
   "max_age_file":"檔案快取時間(秒)",
   "virtual_path":"虛擬路徑",

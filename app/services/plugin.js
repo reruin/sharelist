@@ -68,7 +68,9 @@ const helper = {
   getConfig : config.getConfig,
   getRandomIP:getRandomIP,
   getLocation : config.getLocation,
-  retrieveSize : format.retrieveByte
+  retrieveSize : format.retrieveByte,
+  saveDrive : config.saveDrive,
+  getDrive : config.getDrive,
 }
 
 const setPrivateConfig = (name) => ( path ) => {

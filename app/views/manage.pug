@@ -29,6 +29,12 @@ block content
                   select.form-control(name='proxy_enable',value=config.proxy_enable,required)
                     option(value='1', selected=config.proxy_enable==1 ? 'selected' : null)= __('enable')
                     option(value='0', selected=config.proxy_enable==0 ? 'selected' : null)= __('disable')
+                .col-sm-6
+                  label= __('preview_enable')
+                .col-sm-3
+                  select.form-control(name='preview_enable',value=config.preview_enable,required)
+                    option(value='1', selected=config.preview_enable==1 ? 'selected' : null)= __('enable')
+                    option(value='0', selected=config.preview_enable==0 ? 'selected' : null)= __('disable')
               .form-group
                 .col-sm-6
                   label= __('max_age_dir')

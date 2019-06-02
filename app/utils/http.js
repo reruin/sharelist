@@ -59,6 +59,7 @@ http.post = (url, form, opts) => {
       if (!error && response.statusCode == 200) {
         resolve(response)
       } else {
+        console.log(error , body)
         reject(error || response.statusCode);
       }
     })

@@ -1,4 +1,4 @@
-const yaml = require('yaml').default
+const yaml = require('yaml')
 const http = require('../utils/http')
 const base = require('../utils/base')
 const cache = require('../utils/cache')

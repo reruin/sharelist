@@ -12,8 +12,6 @@ const output = async (ctx , data)=>{
 
   const isProxy = config.getConfig('proxy_enable') || data.proxy
 
-  let { preview_enable } = config
-
   let url = data.url
    
   if(isPreview){
@@ -81,7 +79,7 @@ module.exports = {
         
       }else{
         let resp = []
-        let { preview_enable } = config
+        let preview_enable = config.getConfig('preview_enable')
         data.children.forEach((i)=>{
           if(i.ext != 'passwd'){
             let href = ''

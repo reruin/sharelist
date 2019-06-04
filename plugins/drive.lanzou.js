@@ -147,8 +147,16 @@ module.exports = ({ request , getConfig , datetime , cache , retrieveSize }) => 
   const file = async(id , data = {}) =>{
     
     let { body }  = await request.get(`${host}/tp/${id}` , {headers:{'User-Agent':'Mozilla/5.0 (Linux; Android 6.0; 1503-M02 Build/MRA58K) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/37.0.0.0 Mobile MQQBrowser/6.2 TBS/036558 Safari/537.36 MicroMessenger/6.3.25.861 NetType/WIFI Language/zh_CN'}})
-    let url = body.match(/(?<=link[^\=]*=\s*')[^']+/)[0]
-    let base = body.match(/(?<=urlp[^\=]*=\s*')[^']+/)[0]
+    let url , base
+
+    url = (body.match(/(?<=link[^\=]*=\s*')[^']+/) || [false])[0]
+    base = (body.match(/(?<=urlp[^\=]*=\s*')[^']+/)|| [false])[0]
+    if(url == false){
+      url = (body.match(/(?<=urlp[^\"\']*[\"\']\s*)\?[^'"]+/)|| [false])[0]
+      if( url == false){
+        return false
+      }
+    }
     url = base + url
     data.url = url
     data.$cached_at = Date.now()

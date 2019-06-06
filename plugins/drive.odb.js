@@ -3,7 +3,7 @@
  * id: full path
  */
 
-const name = 'OneDriveForBusiness'
+const name = '(Deprecated)OneDriveForBusiness'
 
 const version = '1.0'
 

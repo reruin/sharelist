@@ -48,7 +48,7 @@ module.exports = ({ getConfig, cache, base64 }) => {
 
   const folder = async (id) => {
     let [server , path] = id.split('>');
-    let resp = { id: id, type: 'folder', protocol: defaultProtocol }
+    let resp = { id : id, type: 'folder', protocol: defaultProtocol }
 
     /*
     let resid = `${defaultProtocol}:${id}`

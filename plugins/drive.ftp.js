@@ -2,7 +2,7 @@
  * FTP >> Deprecated
  */
 
-const name = 'FTP(Deprecated)'
+const name = '(Deprecated)FTP'
 
 const version = '1.0'
 

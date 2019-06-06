@@ -41,7 +41,7 @@ class oauth2ForOd {
   }
   async createAppLink(redirect_uri){
     if(redirect_uri.indexOf('://localhost') == -1){
-      //redirect_uri = 'https://oneindex.github.io/'
+      //redirect_uri = 'https://sharelist.github.io/'
     }
 
     let ru = `https://developer.microsoft.com/en-us/graph/quick-start?appID=_appId_&appName=_appName_&redirectUrl=${redirect_uri}&platform=option-node`;
@@ -157,7 +157,7 @@ module.exports = ({ request, cache, getConfig, querystring, getLocation , base64
   const error = async (msg , href) => {
     return `
       <div class="auth">
-        <h3>挂载 OneDrive 成功</h3>
+        <h3>挂载 OneDrive 失败</h3>
         <p style="font-size:12px;">失败请重试。原因：${msg}</p>
         <p style="font-size:12px;"><a target="_blank" style="font-size:12px;margin-right:5px;color:#337ab7;" href="${href}">点此重新开始</a></p>
       </div>
@@ -260,7 +260,7 @@ module.exports = ({ request, cache, getConfig, querystring, getLocation , base64
           id,
           type: 'folder',
           protocol: defaultProtocol,
-          redirect: error(tokenResult.msg , href)
+          body: error(tokenResult.msg , href)
         }
       }
       else {
@@ -276,6 +276,17 @@ module.exports = ({ request, cache, getConfig, querystring, getLocation , base64
         }
       }
       
+    }
+
+    if(req.query.error && req.query.error_description){
+      let href = req.origin + req.path
+
+      return {
+        id,
+        type: 'folder',
+        protocol: defaultProtocol,
+        body: await error(`[${req.query.error}]${req.query.error_description}`, href)
+      }
     }
 
     //finnal

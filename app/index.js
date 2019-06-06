@@ -23,7 +23,7 @@ const pluginLoad = require('./services/plugin').load
 // const proxy = require('./utils/proxy')
 
 const app = new Koa()
-
+app.proxy = true
 pluginLoad({
   dirs: [__dirname + '/plugins',path.resolve('plugins')],
 })

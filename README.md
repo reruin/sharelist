@@ -10,7 +10,7 @@ ShareList 是一个易用的网盘工具，支持快速挂载 GoogleDrive、OneD
   * [虚拟目录](#虚拟目录) 
   * [虚拟文件](#虚拟文件) 
   * [WebDAV](#WebDAV) 
-* [插件机制](#插件机制) 
+* [插件](#插件) 
   * [内置插件](#内置插件) 
   * [常规插件](#常规插件) 
   * [插件开发](#插件开发) 
@@ -63,7 +63,7 @@ gd:0BwfTxffUGy_GNF9KQ25Xd0xxxxxxx
 注意事项：  
 windows挂载webdav可读取文件最大为50M，请[参考](https://answers.microsoft.com/en-us/ie/forum/all/error-0x800700df-the-file-size-exceeds-the-limit/d208bba6-920c-4639-bd45-f345f462934f)修改 
 
-## 插件机制 
+## 插件 
 插件可用于扩展挂载源、扩展加密方式。插件请置于plugins目录。 
 
 ### 内置插件 
@@ -84,8 +84,13 @@ ShareListDrive是ShareList内置的一种虚拟文件系统，使用yaml构建�
 提供对GoogleDrive的访问。挂载标示：```gd```，分享文件夹ID作为路径。 
 #### OneDrive 
 提供对OneDrive的访问。挂载标示```od```，分享文件夹ID作为路径。 
-#### OneDrive For Business 
-提供对OneDrive Business的访问。挂载标示odb，分享的url作为路径。 
+#### ~~OneDrive For Business~~ 
+~~提供对OneDrive Business的访问。挂载标示odb，分享的url作为路径。 ~~
+#### OneDrive API 
+OneDrive API版挂载插件。挂载标示：```oda```。   
+路径比较复杂： ```OneDrive路径->应用ID|应用机钥|回调地址|refresh_token```  
+如果没有能力组织以上标示，也没关系，只需要录入```路径```，ShareList将会在首次访对应地址时，开启挂载向导，按指示操作即可。  
+例如，需要挂载onedrive的 /abc/123目录，只需输入 ```/abc/123``` 即可。  
 #### WebDAV ####
 用于访问WebDAV服务。使用标准WebDAV路径即可。  
 例如```https://username:password@webdavserver.com:1222/path```  

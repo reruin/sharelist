@@ -34,7 +34,7 @@ const output = async (ctx , data)=>{
     else if( data.outputType == 'stream' ){
       await service.stream(ctx , url , data.outputType , data.protocol , data)
     }
-    
+    // http
     else{
       if(isProxy){
         await service.stream(ctx , url , 'url' , data.protocol , data)
@@ -154,10 +154,9 @@ module.exports = {
     let result = { status : 0 , message:''}
     let ra = requireAuth(data)
 
-    // console.log( hit , 'hit')
     //需要验证
     if( ra ){
-      let access = await service.auth(data , user , passwd )
+      let access = await service.auth(data , user , passwd)
       if( access ){
         ctx.session.access.add( data.id )
       }else{

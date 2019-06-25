@@ -104,8 +104,8 @@ module.exports = ({ getConfig, cache, base64 }) => {
   const file = async (id , data = {}) => {
     
     data.url = id
-    data.outputType = 'stream'
-    data.proxy = 'stream'
+    data.outputType = 'url'
+    //data.proxy = 'stream'
 
     return data
   }

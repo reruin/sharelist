@@ -29,19 +29,26 @@ const apis = {
   oauthUrl:'https://login.microsoftonline.com/common/oauth2/v2.0/token',
   authorizeUrl:(client_id, scope, redirect_uri) => `https://login.microsoftonline.com/common/oauth2/v2.0/authorize?client_id=${client_id}&scope=${scope}&response_type=code&redirect_uri=${redirect_uri}`,
   list:path => 'https://graph.microsoft.com/v1.0' + ((!path || path == '/') ? `/me/drive/root/` : `/me/drive/items/root:${encodeURIComponent(path).replace(/\/+$/g,'/')}:/`) + 'children?select=id,name,size,file,folder,@microsoft.graph.downloadUrl,thumbnails,createdDateTime,lastModifiedDateTime&top=999999',
+  item:path => `https://graph.microsoft.com/v1.0/me/drive/root:${encodeURIComponent(path).replace(/\/+$/g,'/')}:/`,
   listById:itemId => `/me/drive/items/${itemId}`,
+  proxyUrl:'https://reruin.github.io/redirect/onedrive.html',
+
 }
 
-class oauth2ForOd {
+const isSecretUrl = (url) => {
+  return !(url.includes('://localhost') == false && url.startsWith('https') == false)
+}
+
+class oauth2ForOnedrive {
   constructor(request){
     this.request = request
     this.clientMap = {}
     this.pathAppMap = {}
-
   }
-  async createAppLink(redirect_uri){
-    if(redirect_uri.indexOf('://localhost') == -1){
-      //redirect_uri = 'https://sharelist.github.io/'
+  async createAppLink(redirect_uri , proxy_uri){
+    //非安全域名 添加中转
+    if(!isSecretUrl(redirect_uri)){
+      redirect_uri = proxy_uri
     }
 
     let ru = `https://developer.microsoft.com/en-us/graph/quick-start?appID=_appId_&appName=_appName_&redirectUrl=${redirect_uri}&platform=option-node`;
@@ -51,15 +58,20 @@ class oauth2ForOd {
     return app_url
   }
 
-  async generateAuthUrl (client_id, client_secret, redirect_uri , uri) {
-    let scope = encodeURIComponent("offline_access files.readwrite.all");
+  //生成认证地址
+  async generateAuthUrl (client_id, client_secret, redirect_uri  , proxy_uri) {
+    const scope = encodeURIComponent("offline_access files.readwrite.all");
+    
+    const baseUrl = redirect_uri
+
     let link = apis.authorizeUrl(client_id , scope , redirect_uri);
-    
-    if(uri.indexOf('://localhost') == -1){
-      //link += '&state='+encodeURIComponent(uri);
+
+    if(!isSecretUrl(redirect_uri)){
+      link = apis.authorizeUrl(client_id , scope , proxy_uri) + '&state=' +encodeURIComponent(redirect_uri);
+      redirect_uri = proxy_uri
     }
-    
-    this.pathAppMap[uri] = {client_id , client_secret , redirect_uri , create_time:Date.now()}
+
+    this.pathAppMap[baseUrl] = {client_id , client_secret , redirect_uri , create_time:Date.now()}
 
     return link; 
   }
@@ -75,14 +87,14 @@ class oauth2ForOd {
       }catch(e){
         resp = e
       }
-      if(resp.body){
+      if(resp.body && !resp.body.error){
         let { refresh_token , expires_in , access_token } = resp.body
         let clientId = [client_id , client_secret , redirect_uri , refresh_token].join("|")
         this.clientMap[clientId] = {client_id , client_secret , redirect_uri , refresh_token, expires_in, access_token}
         delete this.pathAppMap[key]
         return clientId
       }else{
-        return { error: true , msg:resp.error_description }
+        return { error: true , msg:resp.body.error_description }
       }
     }else{
       return { error: true , msg:'没有匹配到app_id' }
@@ -126,18 +138,16 @@ class oauth2ForOd {
 
 }
 
-//kvfXIY=|jxghTDHU23564:%
-// client Id  --> client_id:client_secret
-
 
 module.exports = ({ request, cache, getConfig, querystring, getLocation , base64 , saveDrive , getDrive}) => {
 
-  const oauth2 = new oauth2ForOd(request)
+  const oauth2 = new oauth2ForOnedrive(request)
 
   const extname = (p) => path.extname(p).substring(1)
 
-  const install = async (redirect_uri) => {
-    let authUrl = await oauth2.createAppLink(redirect_uri)
+  const install = async (redirect_uri , proxy_uri) => {
+    let authUrl = await oauth2.createAppLink(redirect_uri , proxy_uri)
+    const isSecret = !isSecretUrl(redirect_uri) ? '<p>当前地址不符合OneDrive安全要求，故采用<a target="_blank" href="https://github.com/reruin/reruin.github.io/blob/master/redirect/onedrive.html">页面中转</a>验证</p>' : ''
     return `
       <div class="auth">
         <h3>OneDrive 挂载向导</h3>
@@ -172,6 +182,8 @@ module.exports = ({ request, cache, getConfig, querystring, getLocation , base64
 
     let result = { id, type: 'folder', protocol: defaultProtocol }
 
+    const baseUrl = req.origin + req.path
+
     let r = cache.get(resid)
     if(r) {
       if(
@@ -190,13 +202,13 @@ module.exports = ({ request, cache, getConfig, querystring, getLocation , base64
     if(key){
       let accessConfig = await oauth2.get(key)
 
-      //跳转到安装指引
+      //安装指引 1: 跳转到安装页面
       if(accessConfig == false){
         return {
           id,
           type: 'folder',
           protocol: defaultProtocol,
-          body: await install(req.href)
+          body: await install(baseUrl , apis.proxyUrl)
         }
       }else{
         
@@ -234,37 +246,37 @@ module.exports = ({ request, cache, getConfig, querystring, getLocation , base64
     }
 
 
-    //验证app_id 和 app_secret
+    //安装指引 2: 验证app_id 和 app_secret
     if(req.body && req.body.act && req.body.act == 'install'){
-      let href = req.origin + req.path
 
       let { client_id , client_secret , redirect_uri } = req.body
+      //暂不启用自定义回调 redirect_uri
       if(client_id && client_secret && redirect_uri){
         return {
           id,
           type: 'folder',
           protocol: defaultProtocol,
-          redirect: await oauth2.generateAuthUrl(client_id , client_secret , redirect_uri , href)
+          redirect: await oauth2.generateAuthUrl(client_id , client_secret , baseUrl , apis.proxyUrl)
         }
       }
     }
 
 
-    //验证完成回调
+    //安装指引 3:验证回调
     if(req.query.code){
-      let href = req.origin + req.path
-      let tokenResult = await oauth2.getToken(href , req.query.code)
+
+      let tokenResult = await oauth2.getToken(baseUrl , req.query.code)
       if(tokenResult.error){
         // 刷新页面 
         return {
           id,
           type: 'folder',
           protocol: defaultProtocol,
-          body: error(tokenResult.msg , href)
+          body: await error(tokenResult.msg , baseUrl)
         }
       }
       else {
-        currentDrive = getDrive()
+        const currentDrive = getDrive()
         let [prefix] = currentDrive.split('->')
         saveDrive(prefix+'->'+tokenResult)
         // 刷新页面 
@@ -272,20 +284,19 @@ module.exports = ({ request, cache, getConfig, querystring, getLocation , base64
           id,
           type: 'folder',
           protocol: defaultProtocol,
-          redirect: href
+          redirect: baseUrl
         }
       }
       
     }
 
+    //安装指引 3.1: 返回失败
     if(req.query.error && req.query.error_description){
-      let href = req.origin + req.path
-
       return {
         id,
         type: 'folder',
         protocol: defaultProtocol,
-        body: await error(`[${req.query.error}]${req.query.error_description}`, href)
+        body: await error(`[${req.query.error}]${req.query.error_description}`, baseUrl)
       }
     }
 
@@ -294,7 +305,7 @@ module.exports = ({ request, cache, getConfig, querystring, getLocation , base64
       id,
       type: 'folder',
       protocol: defaultProtocol,
-      body: await install(req.href)
+      body: await install(baseUrl , apis.proxyUrl)
     }
 
   }
@@ -302,7 +313,44 @@ module.exports = ({ request, cache, getConfig, querystring, getLocation , base64
   const file = async (id , data = {}) => {
     //data.url = data.downloadUrl
     // console.log(id , data)
-    return data
+    if(
+      data && 
+      data.url 
+    ){
+      console.log('get od download url from cache')
+      return data
+    }
+
+    let [fid,key] = id.split('->')
+
+    let accessConfig = await oauth2.get(key)
+    if(accessConfig == false){
+      return false
+    }
+
+    let api = apis.item(fid)
+      
+    let resp = await request.get(api , {headers:{
+      'Authorization':`bearer ${accessConfig.access_token}`,
+      'Content-Type': 'application/json'
+    },json:true})
+
+
+    if(resp.body){
+      data = {
+        id: id,
+        fid:resp.body.id,
+        name: resp.body.name,
+        protocol: defaultProtocol,
+        size: resp.body.size,
+        created_at: resp.body.createdDateTime,
+        updated_at: resp.body.lastModifiedDateTime,
+        ext: extname(resp.body.name),
+        url:resp.body['@microsoft.graph.downloadUrl'],
+        type: resp.body.folder ? 'folder' : 'other',
+      }
+      return data
+    }
   }
   
   return { name, version, drive: { protocols, folder, file } }

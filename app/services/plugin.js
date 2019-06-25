@@ -39,7 +39,7 @@ const getSource = async (id , driverName) => {
   return false
 }
 
-//和getSource类似
+//和getSource类似 file | stream | url
 const getStream = async (ctx , url ,type, protocol , data) => {
   if(type === 'file'){
     return await sendFile(ctx , url)

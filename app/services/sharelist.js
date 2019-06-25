@@ -127,7 +127,7 @@ class ShareList {
 
   async auth(data, user, passwd) {
     let hit = data.children.find(i => i.name == '.passwd')
-    let content = await getSource(hit.id, hit.protocol)
+    let content = await getSource(hit.id, hit.protocol , hit)
     let body = yaml.parse(content)
     let auth = getAuth(body.type)
     if (auth) {

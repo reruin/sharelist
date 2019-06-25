@@ -91,6 +91,9 @@ OneDrive API版挂载插件。挂载标示：```oda```。
 路径比较复杂： ```OneDrive路径->应用ID|应用机钥|回调地址|refresh_token```  
 如果没有能力组织以上标示，也没关系，只需要录入```路径```，ShareList将会在首次访对应地址时，开启挂载向导，按指示操作即可。  
 例如，需要挂载onedrive的 /abc/123目录，只需输入 ```/abc/123``` 即可。  
+
+对于不符合OneDrive安全要求的域名，将采用中转方式验证，[查看中转页面](https://github.com/reruin/reruin.github.io/blob/master/redirect/onedrive.html)。  
+
 #### WebDAV ####
 用于访问WebDAV服务。使用标准WebDAV路径即可。  
 例如```https://username:password@webdavserver.com:1222/path```  

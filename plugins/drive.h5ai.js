@@ -38,7 +38,6 @@ module.exports = ({ request , getConfig, cache, base64 }) => {
         }
       })
     }
-    console.log(data)
     return data
   }
 
@@ -78,7 +77,6 @@ module.exports = ({ request , getConfig, cache, base64 }) => {
     data.url = id
     // data.outputType = 'stream'
     //data.proxy = 'stream'
-    console.log(data)
     return data
   }
 

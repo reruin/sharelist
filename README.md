@@ -106,6 +106,9 @@ OneDrive API版挂载插件。挂载标示：```oda```。
 插件为目录 以及 mp4/jpg等禁止上传的格式提供解析支持。     
 文件：附加```txt```后缀即可。以mp4为例，将```xxx.mp4```命名为```xxx.mp4.txt```后再上传，插件将自动解析为mp4文件。  
 目录：创建```目录名.passwd@folderId.d.txt```的文件上传即可（由于大小为 0 B的文件无法上传，请为这个txt文件随意添加些内容）。  
+#### h5ai(beta)
+用于访问h5ai目录程序。使用http url挂载即可。例如：     
+```https://larsjung.de/h5ai/demo/```   
 
 ### 插件开发 
 待完善   

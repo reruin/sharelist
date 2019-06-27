@@ -9,7 +9,8 @@ const routers = router
   .get('/', manage.home)
   .post('/', manage.home)
   .post('/api' , manage.api)
-  // .get('/:token', manage.home)
+  .post('/api/:token', manage.api_token)
+  .get('/api/:token', manage.api_token)
   // .post('/:token', manage.update)
 
  

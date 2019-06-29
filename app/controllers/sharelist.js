@@ -16,7 +16,7 @@ const output = async (ctx , data)=>{
    
   if(isPreview){
     //代理 或者 文件系统
-    await ctx.render('detail',{
+    await ctx.renderSkin('detail',{
       data , url : isProxy ? ctx.path : url
     })
   }
@@ -58,7 +58,7 @@ module.exports = {
       ctx.status = 401
     }
     else if(data.body){
-      await ctx.render('custom',{
+      await ctx.renderSkin('custom',{
         body : data.body
       })
     }
@@ -71,7 +71,7 @@ module.exports = {
       let ra = requireAuth(data)
       if( ra !== false && !ctx.session.access.has( data.id )){
         //验证界面
-        await ctx.render('auth',{
+        await ctx.renderSkin('auth',{
           parent , 
           id:data.protocol+':'+data.id , 
           name:decodeURIComponent(ctx.paths[ctx.paths.length-1] || '')
@@ -99,7 +99,7 @@ module.exports = {
         })
 
         if( !ctx.webdav ){
-          await ctx.render('index',{
+          await ctx.renderSkin('index',{
             data:resp , base_url , parent
           })
         }

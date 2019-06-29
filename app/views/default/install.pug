@@ -1,7 +1,7 @@
-extends layout
+extends partial/layout
 
 block content
-  include message
+  include partial/message
   
   header
     .wrap
@@ -61,6 +61,6 @@ block content
       example.find('[name="name"]').val('演示目录')
       example.find('[name="path"]').val('./example')
     })
-  include footer
+  include partial/footer
 
   

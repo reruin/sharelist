@@ -1,4 +1,4 @@
-extends layout
+extends partial/layout
 
 block content
   
@@ -15,7 +15,7 @@ block content
         audio(src=url,controls='controls',autoplay='autoplay')
       -else
         p= __('unable_to_preview')   
-  include footer
+  include partial/footer
 
 
 

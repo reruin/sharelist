@@ -1,7 +1,7 @@
-extends layout
+extends partial/layout
 
 block content
-  include message
+  include partial/message
   header
     .wrap
       -if(parent)
@@ -61,5 +61,4 @@ block content
     })
       
 
-  include footer
-
+  include partial/footer

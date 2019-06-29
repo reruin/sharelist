@@ -1,7 +1,7 @@
-extends layout
+extends partial/layout
 
 block content
-  include message
+  include partial/message
   
   header
     .wrap
@@ -9,4 +9,4 @@ block content
   section.wrap
     div!= body
 
-  include footer
+  include partial/footer

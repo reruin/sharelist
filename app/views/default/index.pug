@@ -1,4 +1,4 @@
-extends layout
+extends partial/layout
 
 block content
   
@@ -10,23 +10,23 @@ block content
   section.wrap
     .list-header
       .row
-        .col-md-7.col-sm-6.col-xs-10= __('filename')
-        .col-md-2.col-sm-2.col-xs-2.text-right= __('size')
+        .col-md-7.col-sm-6.col-xs-8= __('filename')
+        .col-md-2.col-sm-2.col-xs-4.text-right= __('size')
         .col-md-3.col-sm-4.hidden-xs.text-right= __('last_modified')
     ul.list
       each i in data
         li
           a.clearfix(href=i.href , target=i.type == 'folder' ? '' : '_blank')
             .row
-              span.file-name.col-md-7.col-sm-6.col-xs-9
+              span.file-name.col-md-7.col-sm-6.col-xs-8
                 i.ic(class=i.type)
                 | #{i.name}
-              span.file-size.col-md-2.col-sm-2.col-xs-3.text-right
+              span.file-size.col-md-2.col-sm-2.col-xs-4.text-right
                 | #{i.size}
               span.file-modified.col-md-3.col-sm-4.hidden-xs.text-right
                 | #{i.updated_at}
       
-  include footer
+  include partial/footer
 
 
 

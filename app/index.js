@@ -13,6 +13,7 @@ const session = require('koa-session-minimal')
 const less = require('./middleware/koa-less')
 const addr = require('./middleware/koa-addr')
 const paths = require('./middleware/koa-paths')
+const render = require('./middleware/koa-render')
 
 const routers = require('./routers/index')
 const cors = require('@koa/cors')
@@ -50,6 +51,8 @@ app.use(json())
 app.use(addr)
 
 app.use(paths)
+
+app.use(render)
 
 // 配置控制台日志中间件
 app.use(logger())

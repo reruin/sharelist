@@ -19,7 +19,7 @@ const { Writable } = require('stream')
 
 const clientMap = {}
 
-module.exports = ({ request , getConfig, cache, base64 }) => {
+module.exports = ({ request , getConfig, cache, base64 , retrieveSize }) => {
 
   const extname = (p) => path.extname(p).substring(1)
 
@@ -33,7 +33,7 @@ module.exports = ({ request , getConfig, cache, base64 }) => {
             type:$1.indexOf('folder') >=0 ? 'folder' : 'file',
             filename:$2,
             lastmod:$3,
-            size:$4,
+            size:retrieveSize($4),
           })
         }
       })

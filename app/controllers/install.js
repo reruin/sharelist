@@ -12,7 +12,7 @@ module.exports = {
       ctx.redirect('/')
     }
     else{
-      await ctx.render('install' , {vendors:getVendors()})
+      await ctx.renderSkin('install' , {vendors:getVendors()})
     }
   }
   ,
@@ -33,7 +33,7 @@ module.exports = {
     }else{
       result.status = -1
       result.message = 'error'
-      await ctx.render('install',result)
+      await ctx.renderSkin('install',result)
     }
   }
 

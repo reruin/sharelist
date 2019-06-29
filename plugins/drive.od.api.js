@@ -219,6 +219,7 @@ module.exports = ({ request, cache, getConfig, querystring, getLocation , base64
           'Content-Type': 'application/json'
         },json:true})
 
+        const ts = Date.now()
         if(resp.body){
           let children = resp.body.value.map(i=>({
             id: (fid+'/'+i.name).replace(/\/{2,}/g,'/')+'->'+key,
@@ -230,10 +231,11 @@ module.exports = ({ request, cache, getConfig, querystring, getLocation , base64
             updated_at: i.lastModifiedDateTime,
             ext: extname(i.name),
             url:i['@microsoft.graph.downloadUrl'],
-            type: i.folder ? 'folder' : 'other'
+            type: i.folder ? 'folder' : 'other',
+            $cached_at:ts
           }))
 
-          result.$cached_at = Date.now()
+          result.$cached_at = ts
           result.children = children
 
           cache.set(resid,result)
@@ -315,7 +317,9 @@ module.exports = ({ request, cache, getConfig, querystring, getLocation , base64
     // console.log(id , data)
     if(
       data && 
-      data.url 
+      data.url &&
+      data.$cached_at && 
+      ( Date.now() - data.$cached_at < onedrive_max_age_dir)
     ){
       console.log('get od download url from cache')
       return data

@@ -82,8 +82,9 @@ const retrieveByte = (v) => {
   if(/[\d\.]+\s*(B|KB|MB|GB|TB|PB|EB|K|M|G|T|P|E)/.test(v)){
     let num = parseFloat(v)
     let unit = (v.match(/(B|KB|MB|GB|TB|PB|EB|K|M|G|T|P|E)/) || [''])[0]
+
     if(unit && num){
-      if(unit != 'B') unit += 'B'
+      if(!unit.endsWith('B')) unit += 'B'
       return num * (byteMap[unit] || 0)
     }
   }

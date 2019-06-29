@@ -98,10 +98,10 @@ module.exports = {
             if (act == 'export') {
                 ctx.body = JSON.stringify(config.getAllConfig())
             } else {
-                await ctx.render('manage', { access, message, config: config.getAllConfig(), vendors: getVendors() })
+                await ctx.renderSkin('manage', { access, message, config: config.getAllConfig(), vendors: getVendors() })
             }
         } else {
-            await ctx.render('manage', { access })
+            await ctx.renderSkin('manage', { access })
         }
 
     },

@@ -65,6 +65,7 @@ module.exports = ({ request , getConfig , datetime , cache }) => {
     }
 
     if( data ){
+      const ts = Date.now()
       let children = data ? data.map((i)=>{
         return {
           id:i.id,
@@ -77,13 +78,14 @@ module.exports = ({ request , getConfig , datetime , cache }) => {
           updated_at:datetime(i.modifiedDate),
           size:parseInt(i.fileSize),
           type : i.mimeType.includes('.folder') ? 'folder' : undefined,
+          $cached_at:ts,
         }
       }) : []
 
 
       //folder 额外保存 
       resp.children = children
-      resp.$cached_at = Date.now()
+      resp.$cached_at = ts
 
       cache.set(resid,resp)
       return resp

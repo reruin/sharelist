@@ -124,6 +124,14 @@ data:
 ```bash
 bash install.sh
 ```
+Netinstall
+```bash
+wget --no-check-certificate -qO-  https://raw.githubusercontent.com/reruin/sharelist/master/netinstall.sh | bash
+```
+Update
+```bash
+bash update.sh
+```  
 
 ### Docker support
 ```bash

@@ -5,14 +5,10 @@ ShareList 是一个易用的网盘工具，支持快速挂载 GoogleDrive、OneD
 ## 目录
 * [ShareList特性](#特性)  
 * [功能说明](#功能说明) 
-  * [挂载对象](#挂载对象) 
-  * [目录加密](#目录加密) 
-  * [虚拟目录](#虚拟目录) 
-  * [虚拟文件](#虚拟文件) 
-  * [WebDAV](#WebDAV) 
 * [插件](#插件) 
-  * [内置插件](#内置插件) 
-  * [常规插件](#常规插件) 
+  * [目录挂载类](#目录挂载类) 
+  * [目录加密类](#目录加密类) 
+  * [文件预览类](#文件预览类) 
   * [插件开发](#插件开发) 
 * [安装](#安装) 
 
@@ -30,7 +26,7 @@ ShareList 是一个易用的网盘工具，支持快速挂载 GoogleDrive、OneD
 系统内置了本地路径（FileSystem）挂载源。 
 
 ### 目录加密 
-在需加密目录内新建 ```.passwd``` 文件，```type```为验证方式，```data```为验证内容。  
+在需加密目录内新建 ```.passwd``` 文件，```type```为验证方式，```data```为验证内容。例如：    
 ```yaml
 type: basic 
 data: 
@@ -64,10 +60,8 @@ gd:0BwfTxffUGy_GNF9KQ25Xd0xxxxxxx
 windows挂载webdav可读取文件最大为50M，请[参考](https://answers.microsoft.com/en-us/ie/forum/all/error-0x800700df-the-file-size-exceeds-the-limit/d208bba6-920c-4639-bd45-f345f462934f)修改 
 
 ## 插件 
-插件可用于扩展挂载源、扩展加密方式。插件请置于plugins目录。 
-
-### 内置插件 
-内置插件位于[app/plugins](app/plugins) 
+插件可用于扩展挂载源、扩展加密方式、扩展文件预览。插件请置于plugins目录。 内置插件位于[app/plugins](app/plugins) 
+### 目录挂载类 
 #### HTTP/HTTPS（内置） 
 为指向HTTP(S)的虚拟文件提供访问支持。挂载标示```http/https```，实际url作为路径。  
 #### FileSystem（内置）
@@ -76,10 +70,6 @@ windows挂载webdav可读取文件最大为50M，请[参考](https://answers.mic
 ShareListDrive是ShareList内置的一种虚拟文件系统，使用yaml构建。以```sld```作为后缀保存。参考[example/ShareListDrive.sld](example)。 
 #### BasicAuth（内置） 
 提供基础文件夹加密方式。 
-
-
-### 常规插件 
-常用插件位于[plugins](plugins)  
 #### GoogleDrive 
 提供对GoogleDrive的访问。挂载标示：```gd```，分享文件夹ID作为路径。 
 #### OneDrive 
@@ -99,8 +89,6 @@ OneDrive API版挂载插件。挂载标示：```oda```。
 例如```https://username:password@webdavserver.com:1222/path```  
 若服务端不支持断点续传，请在路径后追加```acceptRanges=none```。  
 例如```https://username:password@webdavserver.com:1222/?acceptRanges=none```
-#### ~~OpenLoad~~
-~~提供对[OpenLoad](https://openload.co/)的访问支持。挂载标示openload，```ApiLogin:ApiKey@folderId```作为路径，省略@则从根目录开始列出文件。~~ 
 #### Lanzou蓝奏云 
 提供对[蓝奏云](https://www.lanzou.com/)的访问支持。挂载标示lanzou，```passwd@folderId```作为路径，无密码则直接使用```folderId```作为路径。```folderId```是分享链接中```bxxxxxx```部分。   
 插件为目录 以及 mp4/jpg等禁止上传的格式提供解析支持。     
@@ -109,6 +97,24 @@ OneDrive API版挂载插件。挂载标示：```oda```。
 #### h5ai(beta)
 用于访问h5ai目录程序。使用http url挂载即可。例如：     
 ```https://larsjung.de/h5ai/demo/```   
+
+### 目录加密类 
+#### 基础加密（内置） 
+使用用户名密码对进行简单判断。一个典型的加密```.passwd``` 文件的内容如下。
+```yaml
+type: basic 
+data: 
+  - user1:111111 
+  - user2:aaaaaa 
+``` 
+此例中可使用```user1```的密码为```111```，```user2```的密码为```aaaaaa```。请参考[example/SecretFolder/.passwd](example)。 
+
+### 文件预览类 
+#### 多媒体预览
+为图片、音频、视频提供在线预览。
+
+#### Torrent预览
+为种子文件提供在线预览。
 
 ### 插件开发 
 待完善   

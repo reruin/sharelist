@@ -78,7 +78,7 @@ const tokens = {}
 const clientMap = {}
 const driveMap = {}
 
-module.exports = ({ request, cache, getConfig, querystring, getLocation , base64 }) => {
+module.exports = ({ request, cache, getConfig, querystring , base64 }) => {
 
   /*
  access_token: 'ya29.Glt8Bk67Yfei-k1cRHDpydpA66xNVGFI1pHeL_8ece536BQDIg9aLn9a9r0OIhdjEwhTUOMdWHWC96evAb0GiXAIYNgLCfHSolij-_1-hQTZr-g_OetoAiwd0N8r',

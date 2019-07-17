@@ -6,7 +6,7 @@
   "license": "Apache-2.0",
   "scripts": {
     "start": "node app.js",
-    "dev": "./node_modules/.bin/nodemon app.js",
+    "dev": "./node_modules/.bin/nodemon app.js -i ./cache",
     "prd": "pm2 start app.js --name sharelist --env prod",
     "test": "echo \"Error: no test specified\" && exit 1"
   },

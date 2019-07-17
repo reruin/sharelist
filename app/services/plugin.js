@@ -18,6 +18,8 @@ let formatMap = new Map()
 
 let authMap = new Map()
 
+let previewMap = new Map()
+
 let resources = {}
 
 let resourcesCount = 0
@@ -56,6 +58,19 @@ const getStream = async (ctx , url ,type, protocol , data) => {
 
   return false
 }
+
+// 获取数据预览
+const getPreview = async (data) => {
+  let ext = data.ext
+  let name = previewMap.get(ext)
+  console.log(resources[name].preview[ext])
+  return name ? await resources[name].preview[ext](data , config.getRuntime('req')) : null
+}
+
+const isPreviewable = async (data) => {
+  return previewMap.has(data.ext)
+}
+
 const helper = {
   isArray : isArray,
   isObject: isObject,
@@ -67,7 +82,6 @@ const helper = {
   getSource: getSource,
   getConfig : config.getConfig,
   getRandomIP:getRandomIP,
-  getLocation : config.getLocation,
   retrieveSize : format.retrieveByte,
   saveDrive : config.saveDrive,
   getDrive : config.getDrive,
@@ -131,6 +145,12 @@ const load = (options) => {
         if(resource.format){
           for(let key in resource.format){
             formatMap.set(key , id)
+          }
+        }
+
+        if(resource.preview){
+          for(let key in resource.preview){
+            previewMap.set(key , id)
           }
         }
       }
@@ -294,4 +314,4 @@ const checkAuthority = async (d , user, passwd) => {
 
 }
 
-module.exports = { load , getDrive , getStream , getSource , updateFolder , updateFile , updateLnk , getVendors , getAuth}
+module.exports = { load , getDrive , getStream , getSource , updateFolder , updateFile , updateLnk , getVendors , getAuth , getPreview , isPreviewable}

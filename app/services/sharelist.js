@@ -4,7 +4,7 @@ const base = require('../utils/base')
 const cache = require('../utils/cache')
 const config = require('../config')
 const format = require('../utils/format')
-const { getDrive, getAuth, getStream , getSource, updateLnk, checkAuthority, updateFile, updateFolder } = require('./plugin')
+const { getDrive, getAuth, getStream , getSource, updateLnk, checkAuthority, updateFile, updateFolder , getPreview , isPreviewable } = require('./plugin')
 
 const access_check = (d) => {
   return d
@@ -137,9 +137,25 @@ class ShareList {
     }
   }
 
-  /* ctx , url , protocol , type , data */
+  /*
+   * 获取文件预览页面
+   */
+  async preview(data){
+    return await getPreview(data)
+  }
+
+  /*
+   * 根据文件ID和协议获取可读流
+   */
   async stream(ctx , id , type , protocol , data){
     return await getStream(ctx , id , type , protocol ,  data)
+  }
+
+  /*
+   * 检测文件是否支持预览
+   */
+  async isPreviewable(data){
+    return await isPreviewable(data)
   }
 
   mount() {

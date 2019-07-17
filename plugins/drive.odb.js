@@ -1,5 +1,6 @@
 /*
  * One Drive For Business
+ * 此插件限制展示30项
  * id: full path
  */
 

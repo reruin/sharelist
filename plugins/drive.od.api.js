@@ -139,7 +139,7 @@ class oauth2ForOnedrive {
 }
 
 
-module.exports = ({ request, cache, getConfig, querystring, getLocation , base64 , saveDrive , getDrive}) => {
+module.exports = ({ request, cache, getConfig, querystring, base64 , saveDrive , getDrive}) => {
 
   const oauth2 = new oauth2ForOnedrive(request)
 

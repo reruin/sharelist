@@ -17,12 +17,12 @@ const output = async (ctx , data)=>{
   if(isPreview){
     //代理 或者 文件系统
     await ctx.renderSkin('detail',{
-      data , url : isProxy ? ctx.path : url
+      data : await service.preview(data) , url : isProxy ? ctx.path : url
     })
   }
-  // file | redirect | url | stream
-  // ctx , url , protocol , type , data
   else{
+    // outputType = { file | redirect | url | stream }
+    // ctx , url , protocol , type , data
     if(data.outputType === 'file'){
       await service.stream(ctx , url , data.outputType , data.protocol)
     }
@@ -80,7 +80,7 @@ module.exports = {
       }else{
         let resp = []
         let preview_enable = config.getConfig('preview_enable')
-        data.children.forEach((i)=>{
+        for(let i of data.children){
           if(i.ext != 'passwd'){
             let href = ''
             if( i.url && isRelativePath(i.url) ){
@@ -89,14 +89,14 @@ module.exports = {
               href = pathNormalize(base_url + '/' + encodeURIComponent(i.name))
             }
 
-            if(enablePreview(i.type) && preview_enable){
+            if(await service.isPreviewable(i) && preview_enable){
               href += (href.indexOf('?')>=0 ? '&' : '?') + 'preview'
             }
 
             if(i.hidden !== true)
               resp.push( { href , type : i.type , size: i.displaySize , updated_at:i.updated_at , name:i.name})
           }
-        })
+        }
 
         if( !ctx.webdav ){
           await ctx.renderSkin('index',{

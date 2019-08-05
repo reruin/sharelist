@@ -85,6 +85,7 @@ const helper = {
   retrieveSize : format.retrieveByte,
   saveDrive : config.saveDrive,
   getDrive : config.getDrive,
+  getRuntime:config.getRuntime
 }
 
 const setPrivateConfig = (name) => ( path ) => {

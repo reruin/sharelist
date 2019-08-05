@@ -98,6 +98,11 @@ OneDrive API版挂载插件。挂载标示：```oda```。
 用于访问h5ai目录程序。使用http url挂载即可。例如：     
 ```https://larsjung.de/h5ai/demo/```   
 
+#### GitHub
+用于访问GitHub代码库。使用有以下两种挂载方式。     
+```github:username```   
+```github:username/repo```   
+
 ### 目录加密类 
 #### 基础加密（内置） 
 使用用户名密码对进行简单判断。一个典型的加密```.passwd``` 文件的内容如下。

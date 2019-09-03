@@ -50,7 +50,7 @@ const setRuntime = (key , value) => {
 }
 
 const saveDrive = (value) => {
-  const name = runtime.req.path.replace(/^\//g,'')
+  const name = decodeURIComponent(runtime.req.path.replace(/^\//g,''))
   const path = getPath()
   console.log('save' , name , value)
   let hit = path.find( i => i.name == name)
@@ -61,8 +61,8 @@ const saveDrive = (value) => {
 }
 
 const getDrive = () => {
-  const name = runtime.req.path.replace(/^\//g,'')
   const path = getPath()
+  const name = decodeURIComponent(runtime.req.path.replace(/^\//g,''))
   const hit = path.find( i => i.name == name)
   if(hit){
     return hit.path

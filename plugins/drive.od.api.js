@@ -39,6 +39,8 @@ const isSecretUrl = (url) => {
   return !(url.includes('://localhost') == false && url.startsWith('https') == false)
 }
 
+const encodeSerect = (v) => v.replace(/\|/g,'%7C')
+
 class oauth2ForOnedrive {
   constructor(request){
     this.request = request
@@ -71,7 +73,8 @@ class oauth2ForOnedrive {
       redirect_uri = proxy_uri
     }
 
-    this.pathAppMap[baseUrl] = {client_id , client_secret , redirect_uri , create_time:Date.now()}
+    // issue #54 #59
+    this.pathAppMap[baseUrl] = {client_id , client_secret:client_secret , redirect_uri , create_time:Date.now()}
 
     return link; 
   }
@@ -89,7 +92,7 @@ class oauth2ForOnedrive {
       }
       if(resp.body && !resp.body.error){
         let { refresh_token , expires_in , access_token } = resp.body
-        let clientId = [client_id , client_secret , redirect_uri , refresh_token].join("|")
+        let clientId = [client_id , encodeURIComponent(client_secret) , redirect_uri , refresh_token].join("|")
         this.clientMap[clientId] = {client_id , client_secret , redirect_uri , refresh_token, expires_in, access_token}
         delete this.pathAppMap[key]
         return clientId
@@ -111,7 +114,8 @@ class oauth2ForOnedrive {
           return this.clientMap[key]
         }
       }
-      return await this.refreshToken({client_id, client_secret , redirect_uri ,refresh_token})
+
+      return await this.refreshToken({client_id, client_secret:decodeURIComponent(client_secret) , redirect_uri ,refresh_token})
     }
     else {
       return false
@@ -125,7 +129,7 @@ class oauth2ForOnedrive {
         let resp = await this.request.post(apis.oauthUrl , params , {json:true})
         let { refresh_token:refresh_token_new , expires_in , access_token } = resp.body
         if( access_token ){
-          let key = [client_id, client_secret , redirect_uri , refresh_token].join('|');
+          let key = [client_id, encodeURIComponent(client_secret) , redirect_uri , refresh_token].join('|');
           this.clientMap[key] = { client_id, client_secret, redirect_uri, refresh_token, access_token , expires_in , update_time:Date.now() }
           return this.clientMap[key]
         }
@@ -201,7 +205,6 @@ module.exports = ({ request, cache, getConfig, querystring, base64 , saveDrive ,
 
     if(key){
       let accessConfig = await oauth2.get(key)
-
       //安装指引 1: 跳转到安装页面
       if(accessConfig == false){
         return {

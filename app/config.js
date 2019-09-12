@@ -13,7 +13,7 @@ const db = createFiledb(configPath , {raw:true} , {
   preview_enable : 1,
 
   webdav_path : '/webdav/',
-  //目录刷新时间 15分钟
+  //目录刷新时间 15分钟getDrive
   max_age_dir: 15 * 60 * 1000,
   //外链 10分钟
   max_age_file: 5 * 60 * 1000,
@@ -49,10 +49,10 @@ const setRuntime = (key , value) => {
   runtime[key] = value
 }
 
-const saveDrive = (value) => {
-  const name = decodeURIComponent(runtime.req.path.replace(/^\//g,''))
+const saveDrive = (value , name) => {
+  if(!name) name = decodeURIComponent(runtime.req.path.replace(/^\//g,''))
+  
   const path = getPath()
-  console.log('save' , name , value)
   let hit = path.find( i => i.name == name)
   if(hit){
     hit.path = value
@@ -60,9 +60,10 @@ const saveDrive = (value) => {
   }
 }
 
+//获取当前路径drive
 const getDrive = () => {
   const path = getPath()
-  const name = decodeURIComponent(runtime.req.path.replace(/^\//g,''))
+  const name = decodeURIComponent(runtime.req.path.replace(/^\//g,'').split('/')[0])
   const hit = path.find( i => i.name == name)
   if(hit){
     return hit.path
@@ -71,4 +72,10 @@ const getDrive = () => {
   }
 }
 
-module.exports = { getConfig , getAllConfig, save , installed , getPath , setRuntime , getRuntime , saveDrive , getDrive , getSkin }
+//获取使用特定协议的drive
+const getDrives = (protocols) => {
+  const path = getPath()
+  return path.filter(i => protocols.includes(i.path.split(':')[0]))
+}
+
+module.exports = { getConfig , getAllConfig, save , installed , getPath , setRuntime , getRuntime , saveDrive , getDrive , getSkin , getDrives }

@@ -10,20 +10,39 @@ const { sendFile , sendHTTPFile ,sendStream, getFile, getHTTPFile } = require('.
 
 const assign = (...rest) => Object.assign(...rest)
 
-let driveMap = new Map()
+const driveMap = new Map()
 
-let driveMountableMap = new Map()
+const driveMountableMap = new Map()
 
-let formatMap = new Map()
+const formatMap = new Map()
 
-let authMap = new Map()
+const authMap = new Map()
 
-let previewMap = new Map()
+const previewMap = new Map()
 
-let resources = {}
+const resources = {}
 
-let resourcesCount = 0
+const whenReadyHandlers = []
 
+const whenReady = (handler) => {
+  if(ready) {
+    return Promise.resolve(handler())
+  }else{
+    return new Promise((resolve,reject) => {
+      whenReadyHandlers.push( () => {
+        resolve(handler())
+      })
+    })
+  }
+}
+
+var ready = false
+
+var resourcesCount = 0
+
+/*
+ * 根据文件id获取详情
+ */
 const getSource = async (id , driverName) => {
   if(driveMap.has(driverName)){
     let vendor = getDrive(driverName)
@@ -42,24 +61,29 @@ const getSource = async (id , driverName) => {
 }
 
 //和getSource类似 file | stream | url
-const getStream = async (ctx , url ,type, protocol , data) => {
+/*
+ * 根据文件id获取详情
+ */
+const getStream = async (ctx , id ,type, protocol , data) => {
   if(type === 'file'){
-    return await sendFile(ctx , url)
+    return await sendFile(ctx , id)
   }
   else if(type === 'stream'){
     let vendor = getDrive(protocol)
     if(vendor && vendor.stream){
-      return await sendStream(ctx , url , vendor.stream , data);
+      return await sendStream(ctx , id , vendor.stream , data);
     }
   }
   else{
-    return await sendHTTPFile(ctx , url , data)
+    return await sendHTTPFile(ctx , id , data)
   }
-
   return false
 }
 
-// 获取数据预览
+/*
+ * 获取文件可预览数据 
+ * @params data { name , ext , url }
+ */
 const getPreview = async (data) => {
   let ext = data.ext
   let name = previewMap.get(ext)
@@ -71,29 +95,56 @@ const isPreviewable = async (data) => {
   return previewMap.has(data.ext)
 }
 
-const helper = {
-  isArray : isArray,
-  isObject: isObject,
-  datetime:format.datetime,
-  request:http, 
-  querystring:querystring,
-  base64:base64,
-  cache:cache,
-  getSource: getSource,
-  getConfig : config.getConfig,
-  getRandomIP:getRandomIP,
-  retrieveSize : format.retrieveByte,
-  saveDrive : config.saveDrive,
-  getDrive : config.getDrive,
-  getRuntime:config.getRuntime
+const sandboxCache = (id) => {
+  return {
+    get(key , ...rest){
+      return cache.get(`@${id}_${key}` , ...rest)
+    },
+    set(key , ...rest){
+      cache.set(`@${id}_${key}` , ...rest)
+    }
+  }
 }
 
-const setPrivateConfig = (name) => ( path ) => {
-  
-} 
+const getHelpers = (id) => {
+  return  {
+    isArray : isArray,
+    isObject: isObject,
+    datetime:format.datetime,
+    request:http, 
+    querystring:querystring,
+    base64:base64,
+    cache:sandboxCache(id),
+    getSource: getSource,
+    getConfig : config.getConfig,
+    getRandomIP:getRandomIP,
+    retrieveSize : format.retrieveByte,
+    getDrive : config.getDrive,
+    getRuntime:config.getRuntime,
 
+    saveDrive : (path , name) => {
+      let resource = resources[id]
+      if( resource && resource.drive && resource.drive.protocols){
+        let drives = config.getDrives(resource.drive.protocols).map(i => i.name)
+        if( drives.includes(name) ) config.saveDrive(path , name)
+      }
+    },
+
+    getDrives : () => {
+      return  whenReady( () => {
+        let resource = resources[id]
+        if( resource && resource.drive && resource.drive.protocols){
+          return ( config.getDrives(resource.drive.protocols) )
+        }
+      })
+    }
+  }
+}
+
+/**
+ * 加载插件
+ */
 const load = (options) => {
-
   const dir = options.dir
   const dirs = options.dirs
 
@@ -119,12 +170,10 @@ const load = (options) => {
 
         const pluginName = name.split('.').slice(0,-1).join('.')
         const type = name.split('.')[0]
-
-        const resource = require(filepath)(helper)
+        const id = 'plugin_' + pluginName
+        const resource = require(filepath)(getHelpers(id))
 
         console.log('Load Plugins: ',pluginName)
-
-        const id = 'plugin_' + resourcesCount++
 
         resources[id] = resource
 
@@ -158,20 +207,32 @@ const load = (options) => {
     }
   }
 
+  for(let i = whenReadyHandlers.length ; i-- ; ){
+     whenReadyHandlers[i].call()
+     whenReadyHandlers.splice(i,1)
+  }
+  ready = true
 }
 
-
+/**
+ * 根据扩展名获取可处理的驱动
+ */
 const getDrive = (ext) => {
   let id = driveMap.get(ext)
   return resources[id].drive
 }
 
+/**
+ * 根据扩展名获取格式化工具
+ */
 const getFormater = (ext) => {
   let name = formatMap.get(ext)
   return name ? resources[name].format[ext] : null
 }
 
-//更新文件详情数据
+/**
+ * 更新文件详情数据
+ */
 const updateFile = async (file) => {
   if(file.type != 'folder'){
     file.type = getFileType(file.ext)
@@ -187,7 +248,9 @@ const updateFile = async (file) => {
   return file
 }
 
-// 用于更新目录数据
+/**
+ * 更新文件目录数据
+ */
 const updateFolder = (folder) => {
   let parentType = folder.protocol
   if(!folder.children) return folder
@@ -253,6 +316,7 @@ const updateFolder = (folder) => {
 
   return folder
 } 
+
 
 
 /*

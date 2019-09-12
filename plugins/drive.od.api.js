@@ -97,7 +97,7 @@ class oauth2ForOnedrive {
         delete this.pathAppMap[key]
         return clientId
       }else{
-        return { error: true , msg:resp.body.error_description }
+        return { error: true , msg:resp.body ? resp.body.error_description : 'unknow error' }
       }
     }else{
       return { error: true , msg:'没有匹配到app_id' }

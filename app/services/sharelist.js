@@ -114,7 +114,7 @@ class ShareList {
       }
       // file  /a/b/c.jpg
       else {
-        resp = await vendor.file(hit.id, hit)
+        resp = await vendor.file(hit.id, { query, req : config.getRuntime('req') ,paths: diff(paths, full_paths), data: hit })
         // console.log( resp )
         // 最终输出时更新文件操作
         await updateFile(resp)

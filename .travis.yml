@@ -8,7 +8,11 @@ node_js:
 cache:
   directories:
     - node_modules
-script:
-  - npm run lint
-  - npm run test-cov
-  - npm run bench
+install:
+  - npm install
+before_script:
+ - npm install -g pm2
+# script:
+#   - npm run lint
+#   - npm run test-cov
+#   - npm run bench

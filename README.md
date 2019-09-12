@@ -67,18 +67,30 @@ windows挂载webdav可读取文件最大为50M，请[参考](https://answers.mic
 #### FileSystem（内置）
 提供对本地文件系统的访问。挂载标示```fs```，id为 文件路径，统一使用linux的路径，例如 windows D盘 为 ```/d/```。 
 #### ShareListDrive（内置）
-ShareListDrive是ShareList内置的一种虚拟文件系统，使用yaml构建。以```sld```作为后缀保存。参考[example/ShareListDrive.sld](example)。 
+ShareListDrive是ShareList内置的一种虚拟文件系统，使用yaml构建。以```sld```作为后缀保存。参考[example/ShareListDrive.sld](example/ShareListDrive.sld)。 
 #### BasicAuth（内置） 
 提供基础文件夹加密方式。 
 #### GoogleDrive 
 提供对GoogleDrive的访问。挂载标示：```gd```，分享文件夹ID作为路径。 
+#### GoogleDrive API 
+GoogleDrive API版挂载插件。挂载标示：```gda```。   
+支持的挂载标示：  
+```文件(夹)id->应用ID|应用机钥|refresh_token```   
+```文件(夹)id->应用ID|应用机钥```    
+```文件(夹)id```   
+```/```
+
+ShareList会根据填写的标识，自动开启挂载向导，按指示操作即可。  
+
+特别提示：若不填写应用ID|应用机钥，向导将使用 [QuickStart](https://developers.google.com/drive/api/v3/quickstart/nodejs) 生成匿名应用，在授权验证过程中会出现```This app isn't verified.```，请以此点击```Advanced > Go to {Project Name} (unsafe).```即可出现正常的交互问询页面。
+
 #### OneDrive 
 提供对OneDrive的访问。挂载标示```od```，分享文件夹ID作为路径。 
 #### ~~OneDrive For Business~~ 
 ~~提供对OneDrive Business的访问。挂载标示odb，分享的url作为路径。~~ 
 #### OneDrive API 
 OneDrive API版挂载插件。挂载标示：```oda```。   
-路径比较复杂： ```OneDrive路径->应用ID|应用机钥|回调地址|refresh_token```  
+挂载标示： ```OneDrive路径->应用ID|应用机钥|回调地址|refresh_token```  
 如果没有能力组织以上标示，也没关系，只需要录入```路径```，ShareList将会在首次访对应地址时，开启挂载向导，按指示操作即可。  
 例如，需要挂载onedrive的 /abc/123目录，只需输入 ```/abc/123``` 即可。  
 

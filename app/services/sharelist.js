@@ -43,7 +43,7 @@ class ShareList {
     //1. path -> target , 需要处理缓存时长
     const content = cache.get(pl, true)
     if (content) {
-      console.log(`Get Cahce For Path(${pl})`)
+      console.log(`path${pl}) -> fileid -> cahce`)
       return updateFolder(content)
     }
 

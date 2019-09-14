@@ -5,7 +5,7 @@
  * Deprecated 无法实现图片验证码识别
  */
 
-const name = 'Openload(Deprecated)'
+const name = '(Deprecated)Openload'
 
 const version = '1.0'
 

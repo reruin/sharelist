@@ -160,7 +160,7 @@ module.exports = ({ request , getConfig , datetime , cache , retrieveSize }) => 
     url = base + url
     data.url = url
     data.$cached_at = Date.now()
-    cache.save()
+    // cache.save()
     return data
   }
 

@@ -97,7 +97,7 @@ module.exports = ({ request , getConfig , datetime , cache }) => {
   /**
    * 获取文件实际路径
    */
-  const file = async(id , data = {}) =>{
+  const file = async(id , { data = {} }) =>{
     if(
       data && 
       data.$cached_at && 
@@ -129,7 +129,7 @@ module.exports = ({ request , getConfig , datetime , cache }) => {
 
     //强制保存 ， data 是指向 父级 的引用
     let resid = `${defaultProtocol}:${data.parent}`
-    cache.save()
+    // cache.save()
     return data
   }
 

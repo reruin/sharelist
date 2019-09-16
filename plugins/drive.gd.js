@@ -97,7 +97,7 @@ module.exports = ({ request , getConfig , datetime , cache }) => {
   /**
    * 获取文件实际路径
    */
-  const file = async(id , { data = {} }) =>{
+  const file = async(id , { data = {} } = {}) =>{
     if(
       data && 
       data.$cached_at && 

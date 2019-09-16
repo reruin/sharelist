@@ -336,6 +336,7 @@ module.exports = ({ request, cache, getConfig, querystring, base64, saveDrive, g
       ext: data.ext,
       protocol: defaultProtocol,
       proxy: true,
+      size:data.size,
       // outputType: stream,
       headers: {
         'Authorization': `Bearer ${credentials.access_token}`,

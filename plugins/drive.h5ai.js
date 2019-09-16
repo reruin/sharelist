@@ -72,7 +72,7 @@ module.exports = ({ request , getConfig, cache, base64 , retrieveSize }) => {
     return resp
   }
 
-  const file = async (id , data = {}) => {
+  const file = async (id , { data = {} } = {}) => {
     
     data.url = id
     // data.outputType = 'stream'

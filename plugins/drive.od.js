@@ -172,7 +172,7 @@ module.exports = ({ request , cache , getConfig , querystring}) => {
     return resp
   }
 
-  const file = async (id, data) => {
+  const file = async (id, { data = {} } = {}) => {
     if (
       data &&
       data.$cached_at &&

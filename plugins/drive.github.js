@@ -102,8 +102,7 @@ module.exports = ({ request , getConfig, base64 , getRuntime}) => {
     return resp
   }
 
-  const file = async (id , data = {}) => {
-    console.log(data)
+  const file = async (id , { data = {} } = {}) => {
     if( data && data.download_url ){
       data.url = data.download_url
     }else{

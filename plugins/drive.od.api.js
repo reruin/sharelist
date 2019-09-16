@@ -315,7 +315,7 @@ module.exports = ({ request, cache, getConfig, querystring, base64 , saveDrive ,
 
   }
 
-  const file = async (id , data = {}) => {
+  const file = async (id , { data = {} } = {}) => {
     //data.url = data.downloadUrl
     // console.log(id , data)
     if(

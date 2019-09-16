@@ -114,7 +114,6 @@ module.exports = ({ request , getConfig , datetime , cache , retrieveSize }) => 
           let children = []
           res.body.text.forEach( i => {
             let name = filterExt(i.name_all)//.replace(/\.ct$/,'')
-            console.log(i)
 
             children.push(updateFile({
               id:i.id,
@@ -144,22 +143,27 @@ module.exports = ({ request , getConfig , datetime , cache , retrieveSize }) => 
   /**
    * 获取文件实际路径
    */
-  const file = async(id , data = {}) =>{
+  const file = async(id , { data = {} } = {}) =>{
     
     let { body }  = await request.get(`${host}/tp/${id}` , {headers:{'User-Agent':'Mozilla/5.0 (Linux; Android 6.0; 1503-M02 Build/MRA58K) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/37.0.0.0 Mobile MQQBrowser/6.2 TBS/036558 Safari/537.36 MicroMessenger/6.3.25.861 NetType/WIFI Language/zh_CN'}})
-    let url , base
 
-    url = (body.match(/(?<=link[^\=]*=\s*')[^']+/) || [false])[0]
-    base = (body.match(/(?<=urlp[^\=]*=\s*')[^']+/)|| [false])[0]
+    let url = (body.match(/(?<=dpost\s*\+\s*["']\?)[^"']+/) || [false])[0]
+    let base = (body.match(/(?<=urlp[^\=]*=\s*')[^']+/)|| [false])[0]
+
     if(url == false){
       url = (body.match(/(?<=urlp[^\"\']*[\"\']\s*)\?[^'"]+/)|| [false])[0]
       if( url == false){
         return false
       }
     }
-    url = base + url
+    let name = (body.match(/(?<="md">)[^<]+/) || [''])[0].replace(/\s*$/,'')
+
+    url = base + '?' + url
     data.url = url
+    data.name = filterExt(name)
     data.$cached_at = Date.now()
+
+    // console.log(data)
     // cache.save()
     return data
   }

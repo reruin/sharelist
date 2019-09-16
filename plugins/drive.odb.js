@@ -27,12 +27,19 @@ module.exports = ({ request, cache, getConfig }) => {
       return [cookies[rootId]]
     } else {
       let res = await request.get(rootId, { followRedirect: false })
-      // let cookie = resp.headers['set-cookie'].join('; ')
+      let cookie = ''
+      if(res.headers && res.headers['set-cookie']){
+        cookie = res.headers['set-cookie'].join('; ')
+
+        cookies[rootId] = cookie
+
+        return [cookie, res.headers.location]
+      }
       let accessUrl = res.headers.location
 
-      res = await request.get(accessUrl, { followRedirect: false })
-
-      let cookie = res.headers['set-cookie'].join('; ')
+      res = await request.get(accessUrl, { headers:{cookie}, followRedirect: false })
+      console.log( res.headers )
+      cookie = res.headers['set-cookie'].join('; ')
 
       cookies[rootId] = cookie
 
@@ -70,8 +77,10 @@ module.exports = ({ request, cache, getConfig }) => {
     let url = baseUrl + encodeURI(path)
 
     if (directUrl) {
-      url = baseUrl + directUrl
+      url = baseUrl + directUrl.replace(baseUrl,'')
     }
+
+    console.log('>>>url',url)
 
     let res = await request.get(url, { headers: { 'Cookie': cookie } })
     let code = (res.body.match(/g_listData\s*=\s*([\w\W]+)(?=;if)/) || ['', ''])[1]
@@ -112,7 +121,7 @@ module.exports = ({ request, cache, getConfig }) => {
   /**
    * 必须使用cookie才能下载，故此只能使用中转模式
    */
-  const file = async (id, data) => {
+  const file = async (id, { data = {} } = {}) => {
 
     const [rootId, path] = parse(id)
     const [cookie, _] = await getCookie(rootId)

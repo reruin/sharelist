@@ -83,7 +83,7 @@ module.exports = {
         let resp = []
         let preview_enable = config.getConfig('preview_enable')
         for(let i of data.children){
-          if(!ignoreexts.includes(i.ext) || !ignorefiles.includes(i.name)){
+          if(!ignoreexts.includes(i.ext) && !ignorefiles.includes(i.name)){
             let href = ''
             if( i.url && isRelativePath(i.url) ){
               href = pathNormalize(base_url + '/' + i.url)
@@ -109,7 +109,7 @@ module.exports = {
       }
       
     }else{
-      if( !ignoreexts.includes(data.ext) || !ignorefiles.includes(data.name) ){
+      if( ignoreexts.includes(data.ext) || ignorefiles.includes(data.name) ){
         ctx.status = 404
       }else{
         await output(ctx , data)

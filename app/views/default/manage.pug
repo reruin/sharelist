@@ -50,6 +50,11 @@ block content
                   label= __('webdav_path')
                 .col-sm-3
                   input.form-control(type='text', name='webdav_path' , value=config.webdav_path,required)
+              .form-group
+                .col-sm-6
+                  label= __('ignore_file_extensions')
+                .col-sm-3
+                  input.form-control(type='text', name='ignore_file_extensions' , value=config.ignore_file_extensions,placeholder=__('ignore_file_extensions_placeholder'))
               .form-group.text-center
                 button.btn.btn-default(type='submit')= __('save')
             form.form-horizontal(method='post',action="/manage/api")

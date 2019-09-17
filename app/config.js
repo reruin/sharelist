@@ -18,7 +18,10 @@ const db = createFiledb(configPath , {raw:true} , {
   //外链 10分钟
   max_age_file: 5 * 60 * 1000,
 
-  skin:'default'
+  skin:'default',
+
+  //忽略文件（扩展名）
+  ignore_file_extensions:'passwd'
 });
 
 if(process.env.PORT){

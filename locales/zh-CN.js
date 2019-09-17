@@ -28,5 +28,7 @@ module.exports = {
   "max_age_file":"链接缓存时长(秒)",
   "virtual_path":"虚拟路径",
   "general":"常规",
-  "webdav_path":"WebDAV路径"
+  "webdav_path":"WebDAV路径",
+  "ignore_file_extensions":"忽略文件类型",
+  "ignore_file_extensions_placeholder":"文件扩展名，多个用逗号分隔。如 docx,pptx",
 }

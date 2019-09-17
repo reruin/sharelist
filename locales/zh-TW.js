@@ -28,5 +28,7 @@ module.exports = {
   "max_age_file":"檔案快取周期(秒)",
   "virtual_path":"虛擬路徑",
   "general":"通用設定",
-  "webdav_path":"WebDAV路徑"
+  "webdav_path":"WebDAV路徑",
+  "ignore_file_extensions":"忽略文件類型",
+  "ignore_file_extensions_placeholder":"文件擴展名，多個用逗號分隔",
 }

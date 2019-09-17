@@ -1,7 +1,7 @@
 const fs = require('fs')
 const path = require('path')
 const querystring = require('querystring')
-const {getFileType , getMIME , isArray , isObject , params , base64 , getRandomIP , retrieveSize } = require('../utils/base')
+const {getFileType , getMIME , isArray , isObject , params , base64 , getRandomIP , retrieveSize , extname } = require('../utils/base')
 const format = require('../utils/format')
 const cache = require('../utils/cache')
 const http = require('../utils/http')
@@ -121,6 +121,7 @@ const getHelpers = (id) => {
     retrieveSize : format.retrieveByte,
     getDrive : config.getDrive,
     getRuntime:config.getRuntime,
+    extname:extname,
 
     saveDrive : (path , name) => {
       let resource = resources[id]

@@ -24,9 +24,7 @@ const realpath = (p) => (isWinOS ? l2w(p) : p)
 
 const normalize = (p) => p.replace(/\/{2,}/g,'/').replace(/(?<=.+)\/+$/,'')
 
-const extname = (p) => path.extname(p).substring(1)
-
-module.exports = ({datetime}) => {
+module.exports = ({datetime , extname}) => {
 
   const folder = async(id) => {
     let dir = normalize(id) , resp = { id : dir , type:'folder', protocol:defaultProtocol}

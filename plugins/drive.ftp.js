@@ -20,9 +20,7 @@ const { PassThrough } = require('stream')
 
 const clientMap = {}
 
-module.exports = ({ getConfig, cache }) => {
-
-  const extname = (p) => path.extname(p).substring(1)
+module.exports = ({ getConfig, cache, extname }) => {
 
   const getClient = async (url, cd = false) => {
     let key = (url.match(/ftp\:\/\/[\w\W]+?\//) || [''])[0];

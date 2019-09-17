@@ -49,7 +49,7 @@ const handlers = async (a , body) => {
         cache.clear()
         result.message = 'Success'
     } else if (a == 'cfg') {
-        let { proxy_enable, preview_enable, max_age_dir, max_age_file, webdav_path } = body
+        let { proxy_enable, preview_enable, max_age_dir, max_age_file, webdav_path , ignore_file_extensions } = body
         let opts = {}
         if (max_age_dir !== undefined) {
             max_age_dir = parseInt(max_age_dir)
@@ -78,6 +78,8 @@ const handlers = async (a , body) => {
         if (webdav_path) {
             opts.webdav_path = webdav_path
         }
+
+        opts.ignore_file_extensions = ignore_file_extensions
 
         await config.save(opts)
         result.message = 'Success'

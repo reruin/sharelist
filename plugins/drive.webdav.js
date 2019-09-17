@@ -22,9 +22,7 @@ const { Writable } = require('stream')
 
 const clientMap = {}
 
-module.exports = ({ getConfig, cache, base64 }) => {
-
-  const extname = (p) => path.extname(p).substring(1)
+module.exports = ({ getConfig, cache, base64, extname }) => {
 
   const getClient = async (url, cd = false) => {
     let { protocol , username, password, host, port, pathname , searchParams } = new URL(url);

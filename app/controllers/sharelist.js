@@ -50,6 +50,8 @@ module.exports = {
     let data = await service.path(ctx.paths , ctx.query , ctx.paths , ctx.method)
     let base_url = ctx.path == '/' ? '' : ctx.path
     let parent = ctx.paths.length ? ('/' + ctx.paths.slice(0,-1).join('/')) : ''
+    let ignore = (config.getConfig('ignore_file_extensions') || '').split(',').concat('passwd')
+    
     //data is readonly
     if( data === false){
       ctx.status = 404
@@ -81,7 +83,7 @@ module.exports = {
         let resp = []
         let preview_enable = config.getConfig('preview_enable')
         for(let i of data.children){
-          if(i.ext != 'passwd'){
+          if(!ignore.includes(i.ext)){
             let href = ''
             if( i.url && isRelativePath(i.url) ){
               href = pathNormalize(base_url + '/' + i.url)
@@ -107,7 +109,11 @@ module.exports = {
       }
       
     }else{
-      await output(ctx , data)
+      if( data.ext && ignore.includes(data.ext)){
+        ctx.status = 404
+      }else{
+        await output(ctx , data)
+      }
     }
     
   },
@@ -116,6 +122,7 @@ module.exports = {
     const { paths , query } = ctx
     let data = await service.path(paths , query , paths)
     let parent = paths.length ? ('/' + paths.slice(0,-1).join('/')) : ''
+    let ignore = (config.getConfig('ignore_file_extensions') || '').split(',').concat('passwd')
 
     //data is readonly
     if( data === false){
@@ -128,7 +135,9 @@ module.exports = {
     else if(data.type == 'folder'){
       let ret = { ...data }
       ret.auth = requireAuth(data)
-      ret.children = data.children.map(i => {
+      ret.children = data.children
+      .filter(i => (i.ext && !ignore.includes(i.ext)))
+      .map(i => {
         let obj = { ...i }
         if( i.url && isRelativePath(i.url) ){
           obj.href = pathNormalize(base_path + '/' + i.url)

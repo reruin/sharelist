@@ -143,11 +143,9 @@ class oauth2ForOnedrive {
 }
 
 
-module.exports = ({ request, cache, getConfig, querystring, base64 , saveDrive , getDrive}) => {
+module.exports = ({ request, cache, getConfig, querystring, base64 , saveDrive , getDrive, extname}) => {
 
   const oauth2 = new oauth2ForOnedrive(request)
-
-  const extname = (p) => path.extname(p).substring(1)
 
   const install = async (redirect_uri , proxy_uri) => {
     let authUrl = await oauth2.createAppLink(redirect_uri , proxy_uri)

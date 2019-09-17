@@ -23,9 +23,7 @@ const { Writable } = require('stream')
 
 const clientMap = {}
 
-module.exports = ({ request , getConfig, base64 , getRuntime}) => {
-
-  const extname = (p) => path.extname(p).substring(1)
+module.exports = ({ request , getConfig, base64 , extname }) => {
 
   const getContent = async (id) => {
     let p = id.split('/')

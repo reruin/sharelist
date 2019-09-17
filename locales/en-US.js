@@ -28,5 +28,7 @@ module.exports = {
   "max_age_file":"File max age(second)",
   "virtual_path":"Virtual path",
   "general":"General",
-  "webdav_path":"WebDAV Path"
+  "webdav_path":"WebDAV Path",
+  "ignore_file_extensions":"Ignore File Extensions",
+  "ignore_file_extensions_placeholder":"e.g. docx,pptx"
 }

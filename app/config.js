@@ -21,7 +21,10 @@ const db = createFiledb(configPath , {raw:true} , {
   skin:'default',
 
   //忽略文件（扩展名）
-  ignore_file_extensions:'passwd'
+  ignore_file_extensions:'',
+
+  ignore_files:'.passwd',
+
 });
 
 if(process.env.PORT){

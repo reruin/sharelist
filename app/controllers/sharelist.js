@@ -50,8 +50,8 @@ module.exports = {
     let data = await service.path(ctx.paths , ctx.query , ctx.paths , ctx.method)
     let base_url = ctx.path == '/' ? '' : ctx.path
     let parent = ctx.paths.length ? ('/' + ctx.paths.slice(0,-1).join('/')) : ''
-    let ignore = (config.getConfig('ignore_file_extensions') || '').split(',').concat('passwd')
-    
+    let ignoreexts = (config.getConfig('ignore_file_extensions') || '').split(',')
+    let ignorefiles = (config.getConfig('ignore_files') || '').split(',')
     //data is readonly
     if( data === false){
       ctx.status = 404
@@ -83,7 +83,7 @@ module.exports = {
         let resp = []
         let preview_enable = config.getConfig('preview_enable')
         for(let i of data.children){
-          if(!ignore.includes(i.ext)){
+          if(!ignoreexts.includes(i.ext) || !ignorefiles.includes(i.name)){
             let href = ''
             if( i.url && isRelativePath(i.url) ){
               href = pathNormalize(base_url + '/' + i.url)
@@ -109,7 +109,7 @@ module.exports = {
       }
       
     }else{
-      if( data.ext && ignore.includes(data.ext)){
+      if( !ignoreexts.includes(data.ext) || !ignorefiles.includes(data.name) ){
         ctx.status = 404
       }else{
         await output(ctx , data)
@@ -122,8 +122,9 @@ module.exports = {
     const { paths , query } = ctx
     let data = await service.path(paths , query , paths)
     let parent = paths.length ? ('/' + paths.slice(0,-1).join('/')) : ''
-    let ignore = (config.getConfig('ignore_file_extensions') || '').split(',').concat('passwd')
-
+    let ignoreexts = (config.getConfig('ignore_file_extensions') || '').split(',')
+    let ignorefiles = (config.getConfig('ignore_files') || '').split(',')
+   
     //data is readonly
     if( data === false){
       return { status : 404 }
@@ -136,7 +137,7 @@ module.exports = {
       let ret = { ...data }
       ret.auth = requireAuth(data)
       ret.children = data.children
-      .filter(i => (i.ext && !ignore.includes(i.ext)))
+      .filter(i => (i.ext && !ignoreexts.includes(i.ext)))
       .map(i => {
         let obj = { ...i }
         if( i.url && isRelativePath(i.url) ){

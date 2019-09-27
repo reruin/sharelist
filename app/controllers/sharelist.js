@@ -2,7 +2,7 @@ const service = require('../services/sharelist')
 const config = require('../config')
 
 // const { sendFile , sendHTTPFile } = require('../utils/sendfile')
-const { parsePath , pathNormalize , enablePreview, enableRange , isRelativePath} = require('../utils/base')
+const { parsePath , pathNormalize , enablePreview, enableRange , isRelativePath , markdownParse} = require('../utils/base')
 
 const requireAuth = (data) => !!(data.children && data.children.find(i=>(i.name == '.passwd')))
 
@@ -80,8 +80,10 @@ module.exports = {
         })
         
       }else{
-        let resp = []
+        let ret = { base_url , parent , data:[] }
+
         let preview_enable = config.getConfig('preview_enable')
+
         for(let i of data.children){
           if(!ignoreexts.includes(i.ext) && !ignorefiles.includes(i.name)){
             let href = ''
@@ -96,14 +98,20 @@ module.exports = {
             }
 
             if(i.hidden !== true)
-              resp.push( { href , type : i.type , size: i.displaySize , updated_at:i.updated_at , name:i.name})
+              ret.data.push( { href , type : i.type , size: i.displaySize , updated_at:i.updated_at , name:i.name})
           }
         }
 
+        let readme_enable = !!config.getConfig('readme_enable')
+        if( readme_enable ){
+          let readmeFile = data.children.find(i => i.name.toLocaleUpperCase() == 'README.MD')
+          if(readmeFile){
+            ret.readme = markdownParse(await service.source(readmeFile.id , readmeFile.protocol))
+          }
+        }
+        
         if( !ctx.webdav ){
-          await ctx.renderSkin('index',{
-            data:resp , base_url , parent
-          })
+          await ctx.renderSkin('index',ret)
         }
 
       }

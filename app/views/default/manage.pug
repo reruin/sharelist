@@ -55,6 +55,13 @@ block content
                   label= __('ignore_file_extensions')
                 .col-sm-3
                   input.form-control(type='text', name='ignore_file_extensions' , value=config.ignore_file_extensions,placeholder=__('ignore_file_extensions_placeholder'))
+              .form-group
+                .col-sm-6
+                  label= __('readme_enable')
+                .col-sm-3
+                  select.form-control(name='readme_enable',value=config.readme_enable,required)
+                    option(value='1', selected=config.readme_enable==1 ? 'selected' : null)= __('enable')
+                    option(value='0', selected=config.readme_enable==0 ? 'selected' : null)= __('disable')
               .form-group.text-center
                 button.btn.btn-default(type='submit')= __('save')
             form.form-horizontal(method='post',action="/manage/api")

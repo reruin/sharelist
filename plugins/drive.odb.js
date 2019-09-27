@@ -126,7 +126,6 @@ module.exports = ({ request, cache, getConfig }) => {
    * 必须使用cookie才能下载，故此只能使用中转模式
    */
   const file = async (id, { data = {} } = {}) => {
-
     const [rootId, path] = parse(id)
     const [cookie, _] = await getClient(rootId)
 
@@ -134,6 +133,7 @@ module.exports = ({ request, cache, getConfig }) => {
 
     let url = baseUrl + encodeURI(path)
     return {
+      id,
       url: url,
       name: data.name,
       ext: data.ext,

@@ -25,7 +25,11 @@ block content
                 | #{i.size}
               span.file-modified.col-md-3.col-sm-4.hidden-xs.text-right
                 | #{i.updated_at}
-      
+  -if(readme)
+    link(rel='stylesheet', type='text/css', href='https://cdn.bootcss.com/github-markdown-css/3.0.1/github-markdown.min.css')
+    section.wrap(style="margin-top:64px;border-top:1px solid #eee;")
+      article.markdown-body(style="padding:32px;")
+        | !{readme}
   include partial/footer
 
 

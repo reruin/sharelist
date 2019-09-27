@@ -151,6 +151,10 @@ class ShareList {
     return await getStream(ctx , id , type , protocol ,  data)
   }
 
+  async source(id , protocol){
+    return await getSource(id , protocol)
+  }
+
   /*
    * 检测文件是否支持预览
    */

@@ -24,6 +24,7 @@ module.exports = {
   "input_token":"输入口令",
   "proxy_enable":"中转（包括预览）",
   "preview_enable":"详情预览",
+  "readme_enable":"显示README.md内容",
   "max_age_dir":"目录缓存时长(秒)",
   "max_age_file":"链接缓存时长(秒)",
   "virtual_path":"虚拟路径",

@@ -2,6 +2,8 @@ const mime = require('mime')
 
 const path = require('path')
 
+const md = require('markdown-it')()
+
 const rnd = (min, max) => Math.floor(min + Math.random() * (max - min))
 
 const isType = (type) => (obj) => (Object.prototype.toString.call(obj) === `[object ${type}]`)
@@ -115,6 +117,8 @@ const isRelativePath = (v) => !/^http/.test(v)
 
 const extname = (p) => p.split('.').pop()
 
+const markdownParse = (v) => md.render(v)
+
 module.exports = {
   parsePath,
   getFileType,
@@ -136,7 +140,7 @@ module.exports = {
   search,
   base64,
   extname,
-
+  markdownParse,
   params(url) {
     url = url.split('?')[1]
     let reg = /(?:&)?([^=]+)=([^&]*)/ig,

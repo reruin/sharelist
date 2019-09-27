@@ -24,6 +24,8 @@ const db = createFiledb(configPath , {raw:true} , {
   ignore_file_extensions:'',
 
   ignore_files:'.passwd',
+
+  readme_enable:1
 });
 
 if(process.env.PORT){

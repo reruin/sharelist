@@ -24,6 +24,7 @@ module.exports = {
   "input_token":"Please enter password",
   "proxy_enable":"Proxy",
   "preview_enable":"Preview",
+  "readme_enable":"Display README content",
   "max_age_dir":"Folder max age(second)",
   "max_age_file":"File max age(second)",
   "virtual_path":"Virtual path",

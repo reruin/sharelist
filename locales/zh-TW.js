@@ -24,6 +24,7 @@ module.exports = {
   "input_token":"請輸入您的登入令牌",
   "proxy_enable":"網址代理",
   "preview_enable":"預覽",
+  "readme_enable":"顯示README.md",
   "max_age_dir":"資料夾快取周期(秒)",
   "max_age_file":"檔案快取周期(秒)",
   "virtual_path":"虛擬路徑",

@@ -4,7 +4,7 @@
  * id: full path
  */
 
-const name = '(Deprecated)OneDriveForBusiness'
+const name = 'OneDriveForBusiness'
 
 const version = '1.0'
 
@@ -15,40 +15,46 @@ const defaultProtocol = 'odb'
 
 module.exports = ({ request, cache, getConfig }) => {
 
-  var cookies = {}
+  const clientMap = {}
 
   const parse = (id) => {
     let tmp = id.split('@')
     return [tmp[0], tmp.slice(1).join('@')]
   }
 
-  const getCookie = async (rootId) => {
-    if (cookies[rootId]) {
-      return [cookies[rootId]]
-    } else {
-      let res = await request.get(rootId, { followRedirect: false })
-      let cookie = ''
-      if(res.headers && res.headers['set-cookie']){
-        cookie = res.headers['set-cookie'].join('; ')
-
-        cookies[rootId] = cookie
-
-        return [cookie, res.headers.location]
-      }
-      let accessUrl = res.headers.location
-
-      res = await request.get(accessUrl, { headers:{cookie}, followRedirect: false })
-      console.log( res.headers )
+  const getClient = async (rootId) => {
+    if (
+      clientMap[rootId]  && 
+      ( Date.now() - clientMap[rootId][2] < 30 * 60 * 1000 )
+    ){
+      return clientMap[rootId]
+    }
+   
+    let res = await request.get(rootId, { followRedirect: false })
+    let cookie = ''
+    if(res.headers && res.headers['set-cookie']){
       cookie = res.headers['set-cookie'].join('; ')
 
-      cookies[rootId] = cookie
+      clientMap[rootId] = [cookie, res.headers.location , Date.now()]
 
-      return [cookie, res.headers.location]
+      return clientMap[rootId]
     }
+
+    let accessUrl = res.headers.location
+
+    res = await request.get(accessUrl, { headers:{cookie}, followRedirect: false })
+
+    cookie = res.headers['set-cookie'].join('; ')
+
+    clientMap[rootId] = [cookie, res.headers.location, Date.now()]
+
+    return clientMap[rootId]
+    
   }
 
   // folder => files
   const folder = async (id) => {
+
     const resid = `${defaultProtocol}:${id}`
 
     let resp = { id, type: 'folder', protocol: defaultProtocol }
@@ -71,16 +77,14 @@ module.exports = ({ request, cache, getConfig }) => {
 
     const baseUrl = id.split('/').slice(0, 3).join('/')
 
-    const [cookie, directUrl] = await getCookie(rootId)
+    const [cookie, directUrl] = await getClient(rootId)
 
-    //字符转义
+
     let url = baseUrl + encodeURI(path)
 
     if (directUrl) {
       url = baseUrl + directUrl.replace(baseUrl,'')
     }
-
-    console.log('>>>url',url)
 
     let res = await request.get(url, { headers: { 'Cookie': cookie } })
     let code = (res.body.match(/g_listData\s*=\s*([\w\W]+)(?=;if)/) || ['', ''])[1]
@@ -124,7 +128,7 @@ module.exports = ({ request, cache, getConfig }) => {
   const file = async (id, { data = {} } = {}) => {
 
     const [rootId, path] = parse(id)
-    const [cookie, _] = await getCookie(rootId)
+    const [cookie, _] = await getClient(rootId)
 
     const baseUrl = id.split('/').slice(0, 3).join('/')
 

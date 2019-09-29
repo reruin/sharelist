@@ -85,7 +85,7 @@ module.exports = {
         let preview_enable = config.getConfig('preview_enable')
 
         for(let i of data.children){
-          if(!ignoreexts.includes(i.ext) && !ignorefiles.includes(i.name)){
+          if(i.type == 'folder' || (i.type != 'folder' && !ignoreexts.includes(i.ext) && !ignorefiles.includes(i.name))){
             let href = ''
             if( i.url && isRelativePath(i.url) ){
               href = pathNormalize(base_url + '/' + i.url)
@@ -96,7 +96,6 @@ module.exports = {
             if(await service.isPreviewable(i) && preview_enable){
               href += (href.indexOf('?')>=0 ? '&' : '?') + 'preview'
             }
-
             if(i.hidden !== true)
               ret.data.push( { href , type : i.type , size: i.displaySize , updated_at:i.updated_at , name:i.name})
           }

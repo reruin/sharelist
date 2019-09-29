@@ -143,9 +143,11 @@ class oauth2ForOnedrive {
 }
 
 
-module.exports = ({ request, cache, getConfig, querystring, base64 , saveDrive , getDrive, extname}) => {
+module.exports = ({ request, cache, getConfig, querystring, base64 , saveDrive , getDrive}) => {
 
   const oauth2 = new oauth2ForOnedrive(request)
+
+  const extname = (p) => path.extname(p).substring(1)
 
   const install = async (redirect_uri , proxy_uri) => {
     let authUrl = await oauth2.createAppLink(redirect_uri , proxy_uri)
@@ -238,7 +240,6 @@ module.exports = ({ request, cache, getConfig, querystring, base64 , saveDrive ,
 
           result.$cached_at = ts
           result.children = children
-
           cache.set(resid,result)
 
           return result
@@ -281,7 +282,7 @@ module.exports = ({ request, cache, getConfig, querystring, base64 , saveDrive ,
       else {
         const currentDrive = getDrive()
         let [prefix] = currentDrive.split('->')
-        saveDrive(prefix+'->'+tokenResult)
+        saveDrive(prefix+'->'+tokenResult , req.path.replace(/^\//g,''))
         // 刷新页面 
         return {
           id,
@@ -313,7 +314,7 @@ module.exports = ({ request, cache, getConfig, querystring, base64 , saveDrive ,
 
   }
 
-  const file = async (id , { data = {} } = {}) => {
+  const file = async (id , data = {}) => {
     //data.url = data.downloadUrl
     // console.log(id , data)
     if(

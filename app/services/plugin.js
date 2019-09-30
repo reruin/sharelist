@@ -46,7 +46,7 @@ var resourcesCount = 0
 const getSource = async (id , driverName) => {
   if(driveMap.has(driverName)){
     let vendor = getDrive(driverName)
-    let d = await vendor.file(id)
+    let d = await vendor.file(id , { req: config.getRuntime('req') } )
     if(d.outputType === 'file'){
       return await getFile(d.url)
     }
@@ -122,12 +122,13 @@ const getHelpers = (id) => {
     getDrive : config.getDrive,
     getRuntime:config.getRuntime,
     extname:extname,
-
     saveDrive : (path , name) => {
       let resource = resources[id]
       if( resource && resource.drive && resource.drive.protocols){
-        let drives = config.getDrives(resource.drive.protocols).map(i => i.name)
-        if( drives.includes(name) ) config.saveDrive(path , name)
+        let protocol = path.split(':')[0]
+        if(resource.drive.protocols.includes(protocol)){
+          config.saveDrive(path , name)
+        }
       }
     },
 

@@ -46,7 +46,7 @@ ShareList 是一个易用的网盘工具，支持快速挂载 GoogleDrive、OneD
 ```
 挂载标示：gda  
 挂载内容：  
-  文件(夹)id->应用ID|应用机钥|refresh_token   
+  文件(夹)id->应用ID|应用机钥|回调地址|refresh_token   
   文件(夹)id->应用ID|应用机钥    
   文件(夹)id   
   /

@@ -25,8 +25,8 @@ class oauth2ForGD {
     this.pathAppMap = {}
 
     this.SCOPES = ['https://www.googleapis.com/auth/drive'];
-    this.GOOGLE_OAUTH2_AUTH_BASE_URL = "https://accounts.google.com/o/oauth2/v2/auth"
-    this.GOOGLE_OAUTH2_TOKEN_URL = "https://oauth2.googleapis.com/token"
+    this.OAUTH2_AUTH_BASE_URL = "https://accounts.google.com/o/oauth2/v2/auth"
+    this.OAUTH2_TOKEN_URL = "https://oauth2.googleapis.com/token"
   }
 
   init(data) {
@@ -56,7 +56,7 @@ class oauth2ForGD {
 
     this.pathAppMap[redirect_uri] = { client_id, client_secret, redirect_uri, create_time: Date.now() }
 
-    return `${this.GOOGLE_OAUTH2_AUTH_BASE_URL}?${this.qs.stringify(opts)}`;
+    return `${this.OAUTH2_AUTH_BASE_URL}?${this.qs.stringify(opts)}`;
   }
 
   //验证code 并获取 credentials
@@ -76,7 +76,7 @@ class oauth2ForGD {
 
     let resp
     try {
-      resp = await this.request.post(this.GOOGLE_OAUTH2_TOKEN_URL, params, { json: true })
+      resp = await this.request.post(this.OAUTH2_TOKEN_URL, params, { json: true })
     } catch (e) {
       resp = e
     }
@@ -86,9 +86,6 @@ class oauth2ForGD {
 
       this.clientMap[client_id] = { client_id, client_secret, redirect_uri, refresh_token, expires_in, access_token , update_time:Date.now() }
       delete this.pathAppMap[key]
-
-      console.log('get token success')
-
       await this.handleUpdate(this.clientMap[client_id])
 
       return this.clientMap[client_id]
@@ -126,7 +123,7 @@ class oauth2ForGD {
       }
 
       try {
-        let resp = await this.request.post(this.GOOGLE_OAUTH2_TOKEN_URL, params, { json: true })
+        let resp = await this.request.post(this.OAUTH2_TOKEN_URL, params, { json: true })
         let body = resp.body
         if (body.access_token) {
           credentials.access_token = body.access_token
@@ -140,14 +137,12 @@ class oauth2ForGD {
           return credentials
         }
       } catch (e) {
-        return false
+        return {error:true , msg:e.body ? e.body.error_description:'挂载失败'}
       }
     }
-    return false
+    return {error:true , msg:'refreshAccessToken 失败，缺少参数'}
   }
 }
-
-
 
 const error = async (msg, href) => {
   return `
@@ -201,7 +196,7 @@ const install = async (client_id, client_secret, redirect_uri) => {
 
 const parseCredentials = ({name,path}) => {
   let [rootPath, cstr = ''] = path.split('->')
-  let [client_id, client_secret, refresh_token, redirect_uri] = cstr.split('|')
+  let [client_id, client_secret, redirect_uri, refresh_token] = cstr.split('|')
   return {
     name,
     protocol:rootPath.split(':')[0],
@@ -215,17 +210,26 @@ const parseCredentials = ({name,path}) => {
   }
 }
 // fileid->app_credentials
-module.exports = ({ request, cache, getConfig, querystring, base64, saveDrive, getDrive, getDrives }) => {
+module.exports = ({ request, cache, getConfig, querystring, base64, saveDrive, getDrive, getDrives , getRuntime}) => {
 
   const oauth2 = new oauth2ForGD(request, querystring , async (c) => {
     let paths = await getDrives()
-    paths
+    let data = paths
       .map(i => parseCredentials(i))
-      .filter(i => i.credentials.client_id == c.client_id)
-      .forEach(i => {
-        let key = `${i.protocol}:${i.path}->${c.client_id}|${c.client_secret}|${c.refresh_token}|${c.redirect_uri}`
-        saveDrive(key , i.name)
-      })
+
+    //是否有其他配置参数
+    let hit = data.filter(i => i.credentials.client_id == c.client_id)
+
+    //无配置参数匹配路径名
+    if( hit.length == 0 ){
+      const name = decodeURIComponent(getRuntime('req').path.replace(/^\//g,''))
+      hit = data.filter(i => i.name == name)
+    }
+    
+    hit.forEach(i => {
+      let key = `${i.protocol}:${i.path}->${c.client_id}|${encodeURIComponent(c.client_secret)}|${c.redirect_uri}|${c.refresh_token}`
+      saveDrive(key , i.name)
+    })
   })
 
   //获取所有相关根目录，并创建凭证
@@ -238,68 +242,80 @@ module.exports = ({ request, cache, getConfig, querystring, base64, saveDrive, g
     // TODO 待解决嵌套情形
     // /app1/app1_path/app2/app2_path/app2_file
     // app2_file->app2_credentials
-    let [fid, client_id] = id.split('->')
-    client_id = client_id.split('|')[0]
-    if (client_id) {
-      let credentials = await oauth2.getCredentials(client_id)
-      if (credentials) {
-        return [fid, credentials]
-      }
+    let [path, client] = id.split('->')
+    let ret = { path }
+    if (client) {
+      client_id = client.split('|')[0]
+      ret.credentials = await oauth2.getCredentials(client_id)
     }
-    return [fid]
+    return ret
   }
 
-  const prepare = async (id, { req }) => {
+  const prepare = async (id) => {
+    const req = getRuntime('req')
+
     let baseUrl = req.origin + req.path
 
-    let [path, credentials] = await getCredentials(id)
-    //credentials有效
-    if (credentials) {
-      if( credentials.refresh_token )
-        return { path, credentials }
-    }
-    // 挂载验证
-    if (req.body && req.body.act && req.body.act == 'install') {
-      let { client_id, client_secret } = req.body
-      if (client_id && client_secret) {
-        return {
-          id,
-          type: 'folder',
-          protocol: defaultProtocol,
-          redirect: await oauth2.generateAuthUrl({ client_id, client_secret, redirect_uri: baseUrl })
+    let { path, credentials } = await getCredentials(id)
+
+    // 无credentials
+    if(!credentials){
+      if (req.body && req.body.act && req.body.act == 'install') {
+        let { client_id, client_secret, proxy_url } = req.body
+        if (client_id && client_secret) {
+          return {
+            id,
+            type: 'folder',
+            protocol: defaultProtocol,
+            redirect: await oauth2.generateAuthUrl({ client_id, client_secret, redirect_uri: baseUrl })
+          }
         }
       }
 
-      return await error()
+      // 挂载验证回调
+      if (req.query.code) {
+        let credentials = await oauth2.getToken(baseUrl, req.query.code)
+        if (credentials.error) {
+          return {
+            id,
+            type: 'folder',
+            protocol: defaultProtocol,
+            body: await error(credentials.msg, baseUrl)
+          }
+        } else {
+          return {
+            id,
+            type: 'folder',
+            protocol: defaultProtocol,
+            redirect: baseUrl
+          }
+        }
+      }
     }
-
-    // 挂载验证回调
-    if (req.query.code) {
-      let credentials = await oauth2.getToken(baseUrl, req.query.code)
-      if (credentials.error) {
+    // 存在无credentials
+    else{
+      //credentials验证过程出错
+      if (credentials.error){
         return {
           id,
           type: 'folder',
           protocol: defaultProtocol,
           body: await error(credentials.msg, baseUrl)
         }
-      } else {
-        return {
-          id,
-          type: 'folder',
-          protocol: defaultProtocol,
-          redirect: baseUrl
-        }
       }
-    }
-
-    // 
-    if (credentials && credentials.client_id) {
-      return {
-        id,
-        type: 'folder',
-        protocol: defaultProtocol,
-        redirect: await oauth2.generateAuthUrl({ ...credentials, redirect_uri: baseUrl })
+      if (credentials.client_id && credentials.client_secret) {
+        if (credentials.refresh_token) {
+          return { path, credentials }
+        }
+        // 缺少 refresh_token 跳转至验证页面
+        else{
+          return {
+            id,
+            type: 'folder',
+            protocol: defaultProtocol,
+            redirect: await oauth2.generateAuthUrl({ ...credentials, redirect_uri: baseUrl })
+          }
+        }
       }
     }
     //挂载提示
@@ -311,42 +327,9 @@ module.exports = ({ request, cache, getConfig, querystring, base64, saveDrive, g
     }
   }
 
-  // 无临时链接 强制中转
-  const file = async (id, options) => {
-    let predata = await prepare(id, options)
-
-    if (!predata.credentials) return predata
-
-    let { path, credentials } = predata
-
-    let data = options.data
-
-    let api = `https://www.googleapis.com/drive/v3/files/${path}?alt=media`
-
-    /*let resp = await request.get(api, {
-      headers: {
-        'Authorization': `Bearer ${accessConfig.access_token}`,
-      }
-    })*/
-
-    // let url = baseUrl + encodeURI(path)
-    return {
-      url: api,
-      name: data.name,
-      ext: data.ext,
-      protocol: defaultProtocol,
-      proxy: true,
-      size:data.size,
-      // outputType: stream,
-      headers: {
-        'Authorization': `Bearer ${credentials.access_token}`,
-      }
-    }
-  }
-
   const folder = async (id, options) => {
-    console.log('-->',id)
-    let predata = await prepare(id, options)
+
+    let predata = await prepare(id)
 
     if (!predata.credentials) return predata
 
@@ -414,6 +397,32 @@ module.exports = ({ request, cache, getConfig, querystring, base64, saveDrive, g
     cache.set(resid, result)
 
     return result
+  }
+
+  // 无临时链接 强制中转
+  const file = async (id, options) => {
+    let predata = await prepare(id)
+
+    if (!predata.credentials) return predata
+
+    let { path, credentials } = predata
+
+    let data = options.data || {}
+
+    let api = `https://www.googleapis.com/drive/v3/files/${path}?alt=media`
+
+    return {
+      url: api,
+      name: data.name,
+      ext: data.ext,
+      protocol: defaultProtocol,
+      proxy: true,
+      size:data.size,
+      // outputType: stream,
+      headers: {
+        'Authorization': `Bearer ${credentials.access_token}`,
+      }
+    }
   }
 
   return { name, version, drive: { protocols, folder, file } }

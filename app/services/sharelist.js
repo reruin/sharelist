@@ -4,7 +4,7 @@ const base = require('../utils/base')
 const cache = require('../utils/cache')
 const config = require('../config')
 const format = require('../utils/format')
-const { getDrive, getAuth, getStream , getSource, updateLnk, checkAuthority, updateFile, updateFolder , getPreview , isPreviewable } = require('./plugin')
+const { getDrive, getAuth, getStream , getSource, updateLnk, checkAuthority, updateFile, updateFolder , getPreview , isPreviewable , command } = require('./plugin')
 
 const access_check = (d) => {
   return d
@@ -32,97 +32,10 @@ const diff = (a, b) => {
 class ShareList {
   constructor(root) {
 
-    //{gd , od , xd , ld , remote}
   }
 
   async path(paths, query, full_paths , method) {
-    let pl = paths.join('/'),
-      hit, resp = false,
-      miss
-
-    //1. path -> target , 需要处理缓存时长
-    const content = cache.get(pl, true)
-    if (content) {
-      console.log(`path${pl}) -> fileid -> cahce`)
-      return updateFolder(content)
-    }
-
-    if (pl == '') {
-      hit = this.mount()
-    } else {
-      let parent = await this.path(paths.slice(0, -1), query, full_paths , method)
-      let curname = decodeURIComponent(paths[paths.length - 1])
-      //父目录必然是 folder
-      if (parent) {
-        // if( parent.auth ) {
-        //   hit = {auth:true , ...parent}
-        // }else{
-        let children = parent.children || []
-        let index = base.search(children, 'name', curname)
-        if (index != -1) {
-          hit = children[index]
-          //只为目录做缓存
-          if (hit.type == 'folder' && hit.id){
-            cache.set(pl, hit.protocol + ':' + hit.id)
-          }
-        } else {
-          return false
-        }
-        // }
-
-      }
-      //无法完成匹配
-      else {
-        return false
-      }
-    }
-
-    //2. 根据对象属性 做下一步操作
-    if (hit.protocol == 'root') {
-      return hit
-    }
-
-    let vendor = getDrive(hit.protocol)
-    if (vendor) {
-
-      //处理快捷方式
-
-      if (hit.lnk) {
-        let originId = hit.protocol + ':' + hit.id
-        await updateLnk(hit)
-        //更新 driver
-        vendor = getDrive(hit.protocol)
-
-        //缓存 快捷方式 的实际链接
-        cache.set(originId, hit.protocol + ':' + hit.id)
-      }
-
-      // folder /a/b/c
-      if (hit.type == 'folder') {
-
-        resp = await vendor.folder(hit.id, { query, req : config.getRuntime('req') ,paths: diff(paths, full_paths), content: hit.content })
-        if (resp) updateFolder(resp)
-        //let passwd = base.checkPasswd(resp)
-        //resp.auth = passwd !== false
-
-        //存在 id 变化 ，例如 OneDrive 的shareid <-> resid, ln 的链接
-        //重新缓存 path -> resid
-        if (hit.id != resp.id) {
-          cache.set(pl, hit.protocol + ':' + resp.id)
-        }
-
-      }
-      // file  /a/b/c.jpg
-      else {
-        resp = await vendor.file(hit.id, { query, req : config.getRuntime('req') ,paths: diff(paths, full_paths), data: hit })
-        // console.log( resp )
-        // 最终输出时更新文件操作
-        await updateFile(resp)
-      }
-    }
-
-    // console.log('path return ' , resp)
-    return resp
+    return await command('ls' , paths.join('/') , [ query, full_paths , method ] )
   }
 
   async auth(data, user, passwd) {
@@ -153,6 +66,12 @@ class ShareList {
 
   async source(id , protocol){
     return await getSource(id , protocol)
+  }
+
+  async exec(v , path){
+    // TODO yargs
+    let [cmd , ...options] = v.split(/\s+/)
+    return await command(cmd , path , options , true) 
   }
 
   /*

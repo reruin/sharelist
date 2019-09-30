@@ -1,7 +1,7 @@
 const fs = require('fs')
 const path = require('path')
 const querystring = require('querystring')
-const {getFileType , getMIME , isArray , isObject , params , base64 , getRandomIP , retrieveSize , extname } = require('../utils/base')
+const {getFileType , getMIME , isArray , isObject , params , base64 , getRandomIP , retrieveSize , extname , pathNormalize } = require('../utils/base')
 const format = require('../utils/format')
 const cache = require('../utils/cache')
 const http = require('../utils/http')
@@ -19,6 +19,12 @@ const formatMap = new Map()
 const authMap = new Map()
 
 const previewMap = new Map()
+
+const cmdMap = new Map()
+
+const readstreamMap = new Map()
+
+const writestreamMap = new Map()
 
 const resources = {}
 
@@ -122,6 +128,14 @@ const getHelpers = (id) => {
     getDrive : config.getDrive,
     getRuntime:config.getRuntime,
     extname:extname,
+    updateFolder,
+    updateFile,
+    updateLnk,
+    getVendor:getDrive,
+    createReadStream,
+    createWriteStream,
+    pathNormalize,
+    command,
     saveDrive : (path , name) => {
       let resource = resources[id]
       if( resource && resource.drive && resource.drive.protocols){
@@ -173,7 +187,8 @@ const load = (options) => {
         const pluginName = name.split('.').slice(0,-1).join('.')
         const type = name.split('.')[0]
         const id = 'plugin_' + pluginName
-        const resource = require(filepath)(getHelpers(id))
+        const helpers = getHelpers(id)
+        const resource = require(filepath).call(helpers,helpers)
 
         console.log('Load Plugins: ',pluginName)
 
@@ -192,6 +207,18 @@ const load = (options) => {
             driveMap.set(protocol,id)
             if(mountable) driveMountableMap.set(protocol , id)
           })
+
+          if( resource.drive.createReadStream ){
+            protocols.forEach( protocol => {
+              readstreamMap.set(protocol , resource.drive.createReadStream)
+            })
+          }
+
+          if( resource.drive.createWriteStream ){
+            protocols.forEach( protocol => {
+              writestreamMap.set(protocol , resource.drive.createWriteStream)
+            })
+          }
         }
         
         if(resource.format){
@@ -203,6 +230,12 @@ const load = (options) => {
         if(resource.preview){
           for(let key in resource.preview){
             previewMap.set(key , id)
+          }
+        }
+
+        if(resource.cmd){
+          for(let key in resource.cmd){
+            cmdMap.set(key , id)
           }
         }
       }
@@ -381,4 +414,24 @@ const checkAuthority = async (d , user, passwd) => {
 
 }
 
-module.exports = { load , getDrive , getStream , getSource , updateFolder , updateFile , updateLnk , getVendors , getAuth , getPreview , isPreviewable}
+const command = async (cmd , ...rest) => {
+  if(cmdMap.has(cmd)){
+    return resources[ cmdMap.get(cmd) ].cmd[cmd](...rest)
+  }
+}
+
+const createReadStream = async (options) => {
+  let { id , protocol } = options
+  if( readstreamMap.has(protocol) ){
+    return await readstreamMap.get(protocol)(options)
+  }
+}
+
+const createWriteStream = async (options) => {
+  let { id , protocol } = options
+  if( writestreamMap.has(protocol) ){
+    return await writestreamMap.get(protocol)(options)
+  }
+}
+
+module.exports = { load , getDrive , getStream , getSource , updateFolder , updateFile , updateLnk , getVendors , getAuth , getPreview , isPreviewable , command}

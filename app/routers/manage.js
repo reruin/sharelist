@@ -11,6 +11,9 @@ const routers = router
   .post('/api' , manage.api)
   .post('/api/:token', manage.api_token)
   .get('/api/:token', manage.api_token)
+  .get('/shell', manage.shell)
+  .post('/shell', manage.shell_exec)
+
   // .post('/:token', manage.update)
 
  

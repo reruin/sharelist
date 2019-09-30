@@ -3,6 +3,7 @@ const request = require('request')
 const config = require('../config')
 const cache = require('../utils/cache')
 const { getVendors } = require('../services/plugin')
+const service = require('../services/sharelist')
 
 const handlers = async (a, body) => {
   let result = { status: 0, message: 'Success', data: '', a }
@@ -159,6 +160,18 @@ module.exports = {
     }
     ctx.body = result
 
-  }
+  },
 
+  async shell(ctx){
+    await ctx.renderSkin('shell')
+  },
+
+  async shell_exec(ctx){
+    let body = ctx.request.body
+    let { command , path = '/' } = body
+    if(command){
+      let ret = await service.exec(command , path)
+      ctx.body = ret
+    }
+  }
 }

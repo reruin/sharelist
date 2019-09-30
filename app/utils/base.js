@@ -87,18 +87,25 @@ const search = (ret, key, value) => {
   return -1
 }
 
-const pathNormalize = (path) => {
+const pathNormalize = (path , basepath = '') => {
   // see https://github.com/seajs/seajs/blob/master/src/util-path.js
-  let DOUBLE_DOT_RE = /\/[^\/]+\/\.\.\//,
-    basepath = ''
+  let DOUBLE_DOT_RE = /\/[^\/]+\/\.\.\/?/
+
+  if( path.charCodeAt(0) != 47 && basepath){
+    path = basepath + '/' +path
+  }
 
   path = path
-    .replace(/\/\.\//g, "/") // /./ => /
-    .replace(/([^:\/])\/+\//g, "$1/"); //  a//b/c ==> a/b/c
+      .replace(/\/\.\//g, "/") // /./ => /
+      .replace(/\/+/g,"/") //  // ==> /
   // a/b/c/../../d  ==>  a/b/../d  ==>  a/d
   while (path.match(DOUBLE_DOT_RE)) {
     path = path.replace(DOUBLE_DOT_RE, "/");
   }
+
+  path = path.replace(/\/\.+/g,'/')
+  path = path == '/' ? path : path.replace(/\/$/,'')
+
   return path;
 }
 

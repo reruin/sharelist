@@ -24,7 +24,7 @@ const realpath = (p) => (isWinOS ? l2w(p) : p)
 
 const normalize = (p) => p.replace(/\/{2,}/g,'/').replace(/(?<=.+)\/+$/,'')
 
-module.exports = ({datetime , extname}) => {
+module.exports = ({datetime , extname , pathNormalize}) => {
 
   const folder = async(id) => {
     let dir = normalize(id) , resp = { id : dir , type:'folder', protocol:defaultProtocol}
@@ -80,5 +80,24 @@ module.exports = ({datetime , extname}) => {
     }
   }
 
-  return { name , version , drive:{ protocols , folder , file } }
+  const createReadStream = ({id , options = {}} = {}) => {
+    return fs.createReadStream(realpath(id) , options)
+  }
+
+  const mkdir = (p) => {
+    if (fs.existsSync(p) == false) {
+      mkdir(path.dirname(p));
+      fs.mkdirSync(p);
+    }
+  };
+
+
+  const createWriteStream = async ({ id , options = {} , nextPath = ''} = {}) => {
+    let fullpath = pathNormalize(id +'/' + nextPath)
+    let parent = (fullpath.split('/').slice(0,-1).join('/') + '/').replace(/\/+$/g,'/')
+    mkdir(parent)
+    return fs.createWriteStream(realpath(fullpath) , options)
+  }
+
+  return { name , version , drive:{ protocols , folder , file , createReadStream , createWriteStream } }
 }

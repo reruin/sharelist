@@ -1,0 +1,224 @@
+doctype html
+html
+  head
+    title Root shell
+    meta(charset='utf-8')
+    meta(name='viewport', content='width=device-width, initial-scale=1.0')
+    style(type='text/css').
+      * {
+      margin: 0;
+      padding: 0;
+      }
+      body {
+      padding: 10px;
+      background: #FFFFFF;
+      color: #333333;
+      font-family: 'Lucida Console', Monaco, monospace;
+      font-size: 16px;
+      }
+      a {
+      padding: 3px;
+      background: #FFFFFF;
+      color: #333333;
+      font-family: 'Lucida Console', Monaco, monospace;
+      font-weight: bold;
+      font-size: 16px;
+      }
+      form {
+      display: table;
+      width: 100%;
+      white-space: nowrap;
+      }
+      form div {
+      display: table-cell;
+      width: auto;
+      }
+      form #command {
+      width: 100%;
+      }
+      input {
+      border: none;
+      outline: none;
+      background: transparent;
+      width: 100%;
+      }
+      input:focus {
+      outline: none;
+      }
+      pre, form, input {
+      color: inherit;
+      font-family: inherit;
+      font-size: inherit;
+      }
+      pre {
+      white-space: pre;
+      }
+      code {
+      color: blue;
+      font-family: inherit;
+      font-size: inherit;
+      }
+      strong {
+      font-weight: bolder;
+      font-family: Tahoma, Geneva, sans-serif
+      }
+      .error {
+      color: red;
+      }
+      .diff-header {
+      color: #333;
+      font-weight: bold;
+      }
+      .diff-sub-header {
+      color: #33a;
+      }
+      .diff-added {
+      color: #3a3;
+      }
+      .diff-deleted {
+      color: #a33;
+      }
+    style(type='text/css').
+      body {
+      color: #FFFFFF;
+      background-color: #000000;
+      font-family: monospace;
+      }
+      code {
+      color: #898989;
+      }
+      .diff-header {
+      color: #FFF;
+      }
+    script(type='text/javascript', src='https://cdn.bootcss.com/jquery/3.4.1/jquery.min.js')
+    script(type='text/javascript').
+      function escapeHtml(text) {
+          return text
+              .replace(/&/g, "&amp;")
+              .replace(/</g, "&lt;")
+              .replace(/>/g, "&gt;")
+              .replace(/"/g, "&quot;")
+              .replace(/'/g, "&#039;");
+      }
+      /**
+       *  History of commands.
+       */
+      (function($) {
+          var maxHistory = 100;
+          var position = -1;
+          var currentCommand = '';
+          var addCommand = function(command) {
+              var ls = localStorage['commands'];
+              var commands = ls ? JSON.parse(ls) : [];
+              if (commands.length > maxHistory) {
+                  commands.shift();
+              }
+              commands.push(command);
+              localStorage['commands'] = JSON.stringify(commands);
+          };
+          var getCommand = function(at) {
+              var ls = localStorage['commands'];
+              var commands = ls ? JSON.parse(ls) : [];
+              if (at < 0) {
+                  position = at = -1;
+                  return currentCommand;
+              }
+              if (at >= commands.length) {
+                  position = at = commands.length - 1;
+              }
+              return commands[commands.length - at - 1];
+          };
+          $.fn.history = function() {
+              var input = $(this);
+              input.keydown(function(e) {
+                  var code = (e.keyCode ? e.keyCode : e.which);
+                  if (code == 38) { // Up
+                      if (position == -1) {
+                          currentCommand = input.val();
+                      }
+                      input.val(getCommand(++position));
+                      return false;
+                  } else if (code == 40) { // Down
+                      input.val(getCommand(--position));
+                      return false;
+                  } else {
+                      position = -1;
+                  }
+              });
+              return input;
+          };
+          $.fn.addHistory = function(command) {
+              addCommand(command);
+          };
+      })(jQuery);
+      /**
+       * Windows variables.
+       */
+      window.currentDir = '/';
+      window.currentDirName = window.currentDir.split('/').pop();
+      if (window.currentDirName == '') {
+          window.currentDirName = '/';
+      }
+      window.currentDirName = window.currentDirName + "]# ";
+      window.currentUser = 'root';
+      /**
+       * Init console.
+       */
+      $(function() {
+          var screen = $('pre');
+          var input = $('input').focus();
+          var form = $('form');
+          var scroll = function() {
+              window.scrollTo(0, document.body.scrollHeight);
+          };
+          input.history();
+          form.submit(function() {
+              var command = $.trim(input.val());
+              $("<code>[" + window.currentUser + "&nbsp;" + window.currentDirName + escapeHtml(command) + "</code><br>").appendTo(screen);
+              scroll();
+              if (command == '') {
+                  return false;
+              }
+              input.val('');
+              form.hide();
+              input.addHistory(command);
+              $.post('', { 'command': command, 'path': window.currentDir }, function(output) {
+                if(output.cd){
+                  window.currentDir = output.cd;
+                  //window.currentDirName = window.currentDir.split('/').pop();
+                  window.currentDirName = window.currentDir;
+                  if (window.currentDirName == '') {
+                      window.currentDirName = '/';
+                  }
+                  window.currentDirName = window.currentDirName + "]#&nbsp;";
+                  $('#currentDirName').text("");
+                  $('#currentDirName').append(window.currentDirName);
+                }else if(output.cls){
+                  screen.text("");
+                }else {
+                  screen.append(output.result+'<br>');
+                }
+            }, 'json')
+            .fail(function() {
+                screen.append("<span class='error'>Command transmission error.</span>\n");
+            })
+            .always(function() {
+                form.show();
+                scroll();
+            });
+            return false;
+          });
+          $(document).keydown(function(e) {
+              var keyCode = (e.which ? e.which : e.keyCode);
+              if (!e.ctrlKey) {
+                  input.focus();
+              }
+          });
+      });
+  body
+    pre.
+    form
+      div [root 
+      #currentDirName /]# 
+      #command
+        input(type='text', value='')

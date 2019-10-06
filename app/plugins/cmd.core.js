@@ -28,7 +28,17 @@ const diff = (a, b) => {
 
 module.exports = ({ cache , getVendor , getConfig , getRuntime , updateFolder , updateLnk , updateFile , pathNormalize , createReadStream , createWriteStream }) => {  
   const ls = async (p , [query, full_paths = [], method] = [] , iscmd) => {
-    let resp = await process(p , {query , full_paths , method})
+
+    let vp = p.split(':')
+    if(vp.length){
+      let protocol = vp[0] , id = vp.slice(1).join(':')
+      let vendor = getVendor(protocol)
+      if( vendor ){
+        return await vendor.file(id)
+      }
+    }
+
+    let resp = await process(p , {query , method})
     if( iscmd ){
       if( resp.children ){
         resp = { result: resp.children.map(i => i.name).join('\n') }
@@ -76,10 +86,13 @@ module.exports = ({ cache , getVendor , getConfig , getRuntime , updateFolder , 
   }
 
 
-  const process = async(p, { query, full_paths = [], method }) => {
+  const process = async(p, { query, full_paths , method }) => {
     let hit, resp = false,
       miss
     let paths = p.replace(/^\//,'').split('/')
+
+    if( !full_paths ) full_paths = paths
+
     let pl = paths.join('/')
     //1. path -> target , 需要处理缓存时长
     const content = cache.get(pl, true)
@@ -100,6 +113,7 @@ module.exports = ({ cache , getVendor , getConfig , getRuntime , updateFolder , 
         // }else{
         let children = parent.children || []
         let index = search(children, 'name', curname)
+
         if (index != -1) {
           hit = children[index]
           //只为目录做缓存

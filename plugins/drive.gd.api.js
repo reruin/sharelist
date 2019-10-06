@@ -210,7 +210,7 @@ const parseCredentials = ({name,path}) => {
   }
 }
 // fileid->app_credentials
-module.exports = ({ request, cache, getConfig, querystring, base64, saveDrive, getDrive, getDrives , getRuntime}) => {
+module.exports = ({ request, cache, getConfig, querystring, base64, saveDrive, getDrive, getDrives , getRuntime , wrapReadableStream}) => {
 
   const oauth2 = new oauth2ForGD(request, querystring , async (c) => {
     let paths = await getDrives()
@@ -425,5 +425,25 @@ module.exports = ({ request, cache, getConfig, querystring, base64, saveDrive, g
     }
   }
 
-  return { name, version, drive: { protocols, folder, file } }
+  const createReadStream = async ({id , size , options = {}} = {}) => {
+    let predata = await prepare(id)
+
+    if (!predata.credentials) return null
+
+    let { path, credentials } = predata
+
+    let url = `https://www.googleapis.com/drive/v3/files/${path}?alt=media`
+
+    let readstream = request({
+      url,
+      method:'get' , 
+      headers: {
+        'Authorization': `Bearer ${credentials.access_token}`
+      }
+    })
+
+    return wrapReadableStream(readstream , { size: size } )
+  }
+
+  return { name, version, drive: { protocols, folder, file , createReadStream } }
 }

@@ -15,7 +15,11 @@ const fs = require('fs')
 
 const path = require('path')
 
+const { PassThrough } = require('stream')
+
 const onedrive_max_age_dir = 3600 * 1000 * 0.9
+
+
 
 const isSecretUrl = (url) => {
   return !(url.includes('://localhost') == false && url.startsWith('https') == false)
@@ -85,7 +89,6 @@ class oauth2ForOD {
       code,
       grant_type: 'authorization_code'
     }
-    console.log('check code' , params)
 
     let resp
     try {
@@ -140,7 +143,6 @@ class oauth2ForOD {
       try {
         let resp = await this.request.post(this.OAUTH2_TOKEN_URL, params, { json: true })
         let body = resp.body
-        console.log(body)
         if (body.access_token) {
           credentials.access_token = body.access_token
           credentials.expires_in = body.expires_in
@@ -219,7 +221,7 @@ const parseCredentials = ({name,path}) => {
   }
 }
 
-module.exports = ({ request, cache, getConfig, querystring, base64 , saveDrive , getDrive,getDrives, extname , getRuntime}) => {
+module.exports = ({ request, cache, getConfig, querystring, base64 , saveDrive , getDrive,getDrives, extname , getRuntime , pathNormalize}) => {
 
   const oauth2 = new oauth2ForOD(request, querystring , async (c) => {
     let paths = await getDrives()
@@ -402,7 +404,7 @@ module.exports = ({ request, cache, getConfig, querystring, base64 , saveDrive ,
       }
     })
 
-    let result = { path, type: 'folder', protocol: defaultProtocol }
+    let result = { id:path + '->' + credentials.client_id, path, type: 'folder', protocol: defaultProtocol }
     result.$cached_at = Date.now()
     result.children = children
     cache.set(resid, result)
@@ -431,7 +433,7 @@ module.exports = ({ request, cache, getConfig, querystring, base64 , saveDrive ,
     let api = `https://graph.microsoft.com/v1.0/me/drive/root:${encodeURIComponent(path).replace(/\/+$/g,'/')}:/`
 
     let resp = await request.get(api , {headers:{
-      'Authorization':`bearer ${accessConfig.access_token}`,
+      'Authorization':`bearer ${credentials.access_token}`,
       'Content-Type': 'application/json'
     },json:true})
 
@@ -454,5 +456,212 @@ module.exports = ({ request, cache, getConfig, querystring, base64 , saveDrive ,
     return false
   }
 
-  return { name, version, drive: { protocols, folder, file } }
+  const mkdir = async (path , target, credentials) => {
+    
+    let children = target.replace(/(^\/|\/$)/g,'').split('/')
+
+    //无需创建
+    if(children.length <=1 ) return true
+
+    //递归创建
+    for(let i = 0; i < children.length - 1; i++){
+      let p = path + children.slice(0,i)
+      let npath = (!p || p == '/') ? '/me/drive/root/children' : `/me/drive/items/root:${encodeURIComponent(p).replace(/\/+$/g,'/')}:/children`
+
+      ///me/drive/root/children
+
+      // https://graph.microsoft.com/v1.0/me/drive/root/children
+      let api = 'https://graph.microsoft.com/v1.0' + npath
+      let resp = {}
+      
+      try{
+        resp = await request.post(api,{
+          "name":children[i],
+          "folder":{},
+          "@microsoft.graph.conflictBehavior": "fail"
+        },{
+          headers:{
+            'Authorization':`bearer ${credentials.access_token}`,
+          }, 
+          json:true,
+          is_body:true
+        })
+      }catch(e){
+        resp = e.body
+      }
+      
+      // 409 文件夹已存在
+      if(resp && resp.error){
+        console.log('info:',resp.error.message)
+        //return false
+      }else{
+        console.log(resp)
+      }
+    }
+
+    return true
+
+  }
+
+
+  const request_fix = (...rest) => {
+    let req = request(...rest)
+    // request 作为 writestream 时不会emit finish
+    req.on('end' ,function(){
+      this.emit('finish')
+    })
+    return req
+  }
+
+  const createChunkStream = ( url , size , offset = 0, chunkSize) => {
+    let currentChunkSize = ( size - offset < chunkSize ) ? (size - offset) : chunkSize
+    //console.log('create' , currentChunkSize,`bytes ${offset}-${offset+currentChunkSize-1}/${size}`)
+    let req = request({
+      url:url, 
+      method:'put' , 
+      headers:{
+        'Content-Length':currentChunkSize,
+        'Content-Range':`bytes ${offset}-${offset+currentChunkSize-1}/${size}`,
+        'Content-Type': 'application/json'
+      },
+    },function(error, response, body){
+      //console.log(body,error)
+      if(error) {
+        this.emit('finish' , {error:true , req_error:true , detail:error})
+      }
+      else {
+        this.emit('finish' , body)
+      }
+    })
+    return req
+  }
+
+  const createRangeStream = ({url , chunkSize , size}) => {
+    let passThroughtStream = new PassThrough()
+    let offset = 0
+    let req = createChunkStream(url , size , offset , chunkSize)
+    let cache = []
+
+    passThroughtStream.on('data' , (chunk) => {
+      offset += chunk.length
+
+      if( offset % chunkSize == 0 ){
+        passThroughtStream.unpipe()
+        req.on('finish' , (data) => {
+          //console.log('finish',data)
+          if(data.error){
+            //无法重试
+            if( data.req_error ){
+              console.log('offset error at:',offset)
+            }else{
+              //req = createChunkStream(url , size , offset - chunk.length , chunkSize)
+              //passThroughtStream.pipe( req )
+            }
+            
+          }else{
+            //console.log('chunk from',data , offset)
+            if(data.id){
+              passThroughtStream.end()
+            }else{
+              //console.log('switch')
+              req = createChunkStream(url , size , offset , chunkSize)
+              passThroughtStream.pipe( req )
+            }
+          }
+        })
+      }
+    })
+
+    passThroughtStream.pipe( req )
+
+    return passThroughtStream
+  }
+
+  const uploadLargeFile = async (path , size , credentials) => {
+    let p = path.split('/')
+
+    let name = decodeURIComponent( p.pop() )
+
+    let api = 'https://graph.microsoft.com/v1.0' + ((!path || path == '/') ? `/me/drive/root/` : `/me/drive/items/root:${encodeURIComponent(path).replace(/\/+$/g,'/')}:/`) + 'createUploadSession'
+
+    console.log('createUploadSession success')
+    let resp
+    try{
+      resp = await request.post(api , {
+        // 同名重命名
+        "item": {"name": name, "@microsoft.graph.conflictBehavior": "rename"}
+      },{headers:{
+        'Authorization':`bearer ${credentials.access_token}`,
+        'Content-Type': 'application/json'
+      },json:true})
+    }catch(e){
+      console.log(e)
+      resp = e.body || e
+    }
+    
+    if( resp.error ){
+      console.log('error',resp.error)
+    }
+
+    if(resp.body && resp.body.uploadUrl){
+      console.log('Get uploadUrl success')
+      // chunkSize = 327680 10485760
+      return createRangeStream({url : resp.body.uploadUrl , chunkSize:10485760 , size})
+    }
+  }
+
+  const createReadStream = async ({id , options = {}} = {}) => {
+    let predata = await prepare(id)
+
+    if (!predata.credentials) return predata
+
+    let { path, credentials } = predata
+
+    let api = `https://graph.microsoft.com/v1.0/me/drive/root:${encodeURIComponent(path).replace(/\/+$/g,'/')}:/`
+
+    let resp = await request.get(api , {headers:{
+      'Authorization':`bearer ${credentials.access_token}`,
+      'Content-Type': 'application/json'
+    },json:true})
+
+    if(resp.body){
+      let downloadUrl = resp.body['@microsoft.graph.downloadUrl']
+      return request({url:downloadUrl , method:'get'})
+    }
+  }
+
+  // >= 10485760
+  const upload = async (path , credentials) => {
+    let api = 'https://graph.microsoft.com/v1.0' + ((!path || path == '/') ? `/me/drive/root/` : `/me/drive/items/root:${encodeURIComponent(path).replace(/\/+$/g,'/')}:/`) + 'content'
+
+    let req = request_fix({
+      url:api , 
+      method:'put',
+      headers:{
+        'Authorization':`bearer ${credentials.access_token}`,
+      }
+    })
+    return req
+    //passThroughtStream.pipe(req)
+  }
+  // id 当前有效路径
+  // target 后续实际路径
+  const createWriteStream = async ({ id , options = {} , size , target = ''} = {}) => {
+    let predata = await prepare(id)
+    if (!predata.credentials) return null
+    let { path, credentials } = predata
+
+    let fullpath = pathNormalize(path +'/' + target)
+    //为path 创建目的地目录
+    await mkdir(path , target , credentials)
+    if( size ){
+      if( size <= 4194304 ){
+        return await upload(fullpath , credentials)
+      }else{
+        return await uploadLargeFile(fullpath , size , credentials)
+      }
+    }
+  }
+
+  return { name, version, drive: { protocols, folder, file , createReadStream , createWriteStream } }
 }

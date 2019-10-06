@@ -13,7 +13,7 @@ const defaultProtocol = 'gd'
 
 const host = 'https://drive.google.com'
 
-module.exports = ({ request , getConfig , datetime , cache }) => {
+module.exports = ({ request , getConfig , datetime , cache , wrapReadableStream }) => {
 
   const createFetchParams = (id , key , maxResults = 99999) => {
     return `openDrive=true&reason=102&syncType=0&errorRecovery=false&q=trashed%20%3D%20false%20and%20%27${id}%27%20in%20parents&fields=kind%2CnextPageToken%2Citems(kind%2CmodifiedDate%2CmodifiedByMeDate%2ClastViewedByMeDate%2CfileSize%2Cowners(kind%2CpermissionId%2CdisplayName%2Cpicture)%2ClastModifyingUser(kind%2CpermissionId%2CdisplayName%2Cpicture)%2ChasThumbnail%2CthumbnailVersion%2Ctitle%2Cid%2Cshared%2CsharedWithMeDate%2CuserPermission(role)%2CexplicitlyTrashed%2CmimeType%2CquotaBytesUsed%2Cshareable%2Ccopyable%2CfileExtension%2CsharingUser(kind%2CpermissionId%2CdisplayName%2Cpicture)%2Cspaces%2Ceditable%2Cversion%2CteamDriveId%2ChasAugmentedPermissions%2CcreatedDate%2CtrashingUser(kind%2CpermissionId%2CdisplayName%2Cpicture)%2CtrashedDate%2Cparents(id)%2Ccapabilities(canCopy%2CcanDownload%2CcanEdit%2CcanAddChildren%2CcanDelete%2CcanRemoveChildren%2CcanShare%2CcanTrash%2CcanRename%2CcanReadTeamDrive%2CcanMoveTeamDriveItem)%2Clabels(starred%2Chidden%2Ctrashed%2Crestricted%2Cviewed))%2CincompleteSearch&appDataFilter=NO_APP_DATA&spaces=drive&maxResults=${maxResults}&orderBy=folder%2Ctitle_natural%20asc&key=${key}`
@@ -97,7 +97,7 @@ module.exports = ({ request , getConfig , datetime , cache }) => {
   /**
    * 获取文件实际路径
    */
-  const file = async(id , { data = {} } = {}) =>{
+  const file = async(id , { data = {} , requireSize = false } = {}) =>{
     if(
       data && 
       data.$cached_at && 
@@ -109,22 +109,50 @@ module.exports = ({ request , getConfig , datetime , cache }) => {
       return data
     }
 
+    if( requireSize && !data.size ){
+      let resp = await request.get(`${host}/file/d/${id}/view`)
+      if(resp.body.indexOf('errorMessage') == -1 ) {
+        let code = (resp.body.match(/viewerData\s*=\s*(\{[\w\W]+?\});<\/script>/) || ['',''])[1]
+        let preview_url = ''
+        code = code.replace(/[\r\n]/g,'').replace(/'/g,'"')
+          .replace('config','"config"')
+          .replace('configJson','"configJson"')
+          .replace('itemJson','"itemJson"')
+          .replace(/,\}/g,'}')
+          .replace(/\\x22/g,'"')
+          .replace(/\\x27/g,"'")
+          .replace(/\\x5b/g,'[')
+          .replace(/\\x5d/g,']')
+          .replace(/\\(r|n)/g,'')
+          .replace(/\\\\u/g,'\\u').toString(16)
 
-    let reallink = ''
-    let { body , headers }  = await request.get(host + '/uc?id='+id+'&export=download',{followRedirect : false})
-    if(headers && headers.location){
-      reallink = headers.location
-    }else{
-      let url = (body.match(/\/uc\?export=download[^"']+/i) || [''])[0]
-      url = url.replace(/&amp;/g,'&')
-      let cookie = headers['set-cookie'].join('; ')
-      let resp = await request.get(host + url , {headers:{'Cookie':cookie} , followRedirect : false})
-      if(resp.headers && resp.headers.location){
-        reallink = resp.headers.location
+        if(code){
+          try{
+            code = JSON.parse(code)
+            data.size = parseInt(code.itemJson[25][2])
+          }catch(e){
+            //console.log(e)
+          }
+        }
       }
     }
 
-    data.url = reallink
+    let downloadUrl = ''
+    let { body , headers }  = await request.get(host + '/uc?id='+id+'&export=download',{followRedirect : false})
+    if(headers && headers.location){
+      downloadUrl = headers.location
+    }else{
+      if(body && body.indexOf('Too many users') == -1){
+        let url = (body.match(/\/uc\?export=download[^"']+/i) || [''])[0]
+        let cookie = headers['set-cookie'].join('; ')
+        let resp = await request.get(host + url.replace(/&amp;/g,'&') , {headers:{'Cookie':cookie} , followRedirect : false})
+        if(resp.headers && resp.headers.location){
+          downloadUrl = resp.headers.location
+        }
+      }
+    }
+
+    data.url = downloadUrl
     data.$cached_at = Date.now()
 
     //强制保存 ， data 是指向 父级 的引用
@@ -133,5 +161,15 @@ module.exports = ({ request , getConfig , datetime , cache }) => {
     return data
   }
 
-  return { name , version, drive:{ protocols, folder , file } }
+  const createReadStream = async ({id , options = {}} = {}) => {
+    let r = await file(id , { requireSize: true })
+    if(r){
+      let readstream = request({url:r.url, method:'get'})
+      // let passThroughtStream = new PassThrough()
+      // let ret = readstream.pipe(passThroughtStream)
+      return wrapReadableStream(readstream , { size: r.size } )
+    }
+  }
+
+  return { name , version, drive:{ protocols, folder , file , createReadStream } }
 }

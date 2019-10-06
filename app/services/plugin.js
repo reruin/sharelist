@@ -7,6 +7,8 @@ const cache = require('../utils/cache')
 const http = require('../utils/http')
 const config = require('../config')
 const { sendFile , sendHTTPFile ,sendStream, getFile, getHTTPFile } = require('../utils/sendfile')
+const wrapReadableStream = require('../utils/wrapReadableStream')
+
 
 const assign = (...rest) => Object.assign(...rest)
 
@@ -125,6 +127,7 @@ const getHelpers = (id) => {
     getConfig : config.getConfig,
     getRandomIP:getRandomIP,
     retrieveSize : format.retrieveByte,
+    byte:format.byte,
     getDrive : config.getDrive,
     getRuntime:config.getRuntime,
     extname:extname,
@@ -136,6 +139,7 @@ const getHelpers = (id) => {
     createWriteStream,
     pathNormalize,
     command,
+    wrapReadableStream,
     saveDrive : (path , name) => {
       let resource = resources[id]
       if( resource && resource.drive && resource.drive.protocols){
@@ -252,9 +256,11 @@ const load = (options) => {
 /**
  * 根据扩展名获取可处理的驱动
  */
-const getDrive = (ext) => {
-  let id = driveMap.get(ext)
-  return resources[id].drive
+const getDrive = (protocol) => {
+  if( driveMap.has(protocol)){
+    let id = driveMap.get(protocol)
+    return resources[id].drive
+  }
 }
 
 /**
@@ -417,10 +423,13 @@ const checkAuthority = async (d , user, passwd) => {
 const command = async (cmd , ...rest) => {
   if(cmdMap.has(cmd)){
     return resources[ cmdMap.get(cmd) ].cmd[cmd](...rest)
+  }else{
+    return {result:'unknow command'}
   }
 }
 
 const createReadStream = async (options) => {
+  //默认使用 file 获取
   let { id , protocol } = options
   if( readstreamMap.has(protocol) ){
     return await readstreamMap.get(protocol)(options)

@@ -34,8 +34,8 @@ class ShareList {
 
   }
 
-  async path(paths, query, full_paths , method) {
-    return await command('ls' , paths.join('/') , [ query, full_paths , method ] )
+  async path(paths, query , method) {
+    return await command('ls' , paths.join('/') , [ query , method ] )
   }
 
   async auth(data, user, passwd) {

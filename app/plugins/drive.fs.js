@@ -47,13 +47,12 @@ module.exports = ({datetime , extname , pathNormalize}) => {
         }
 
         if(stat){
-          let isFolder = stat.isDirectory()
           obj.created_at = datetime(stat.ctime)
           obj.updated_at = datetime(stat.mtime)
-          if(isFolder){
+          if(stat.isDirectory()){
             obj.type = 'folder'
           }
-          if(stat.isFile()){
+          else if(stat.isFile()){
             obj.ext = extname(filename)
             obj.size = stat.size
           }
@@ -69,11 +68,18 @@ module.exports = ({datetime , extname , pathNormalize}) => {
   }
 
   const file = async(id)=>{
+    let realdir = realpath(normalize(id))
+    let stat = {}
+    try{
+      stat = fs.statSync(realpath(realdir))
+    }catch(e){}
+
     return {
       id,
       name: path.basename(id),
       ext: extname(id),
       url: realpath(id),
+      size:stat.size,
       protocol:defaultProtocol,
       outputType:'file',
       proxy:true
@@ -92,8 +98,8 @@ module.exports = ({datetime , extname , pathNormalize}) => {
   };
 
 
-  const createWriteStream = async ({ id , options = {} , nextPath = ''} = {}) => {
-    let fullpath = pathNormalize(id +'/' + nextPath)
+  const createWriteStream = async ({ id , options = {} , target = ''} = {}) => {
+    let fullpath = pathNormalize(id +'/' + target)
     let parent = (fullpath.split('/').slice(0,-1).join('/') + '/').replace(/\/+$/g,'/')
     mkdir(parent)
     return fs.createWriteStream(realpath(fullpath) , options)

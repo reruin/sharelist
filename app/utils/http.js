@@ -6,9 +6,9 @@ const headers = {
   'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_12_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/64.0.3282.167 Safari/537.36'
 }
 
-const http = (opts) => {
+const http = (opts,...rest) => {
   if (debug) opts.proxy = 'http://127.0.0.1:1087'
-  return request(opts)
+  return request(opts,...rest)
 }
 
 http.header = (url, opts) => {
@@ -52,7 +52,11 @@ http.post = (url, form, opts) => {
   let params = { ...opts }
   params.headers = Object.assign({}, headers, params.headers || {})
   params.url = url
-  params.form = form
+  if(opts.is_body){
+    params.body = form
+  }else{
+    params.form = form
+  }
   params.method = 'POST'
   if (debug) {
     params.proxy = 'http://127.0.0.1:1087'

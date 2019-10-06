@@ -163,7 +163,12 @@ module.exports = {
   },
 
   async shell(ctx){
-    await ctx.renderSkin('shell')
+    let access = !!ctx.session.admin
+    if(access){
+      await ctx.renderSkin('shell')
+    }else{
+      ctx.redirect('/manage')
+    }
   },
 
   async shell_exec(ctx){

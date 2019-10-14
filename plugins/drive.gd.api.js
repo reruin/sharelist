@@ -66,6 +66,11 @@ class oauth2ForGD {
     if (!appConfig) return { error: true, msg: '没有匹配到app_id' }
 
     let { client_id, client_secret, redirect_uri } = appConfig
+
+    return await authToken({ client_id, client_secret, redirect_uri , code },key)
+  }
+
+  async authToken({client_id, client_secret, redirect_uri , code} , key){
     let params = {
       client_id,
       client_secret,
@@ -73,7 +78,6 @@ class oauth2ForGD {
       code,
       grant_type: 'authorization_code'
     }
-
     let resp
     try {
       resp = await this.request.post(this.OAUTH2_TOKEN_URL, params, { json: true })
@@ -85,7 +89,7 @@ class oauth2ForGD {
       let { refresh_token, expires_in, access_token } = resp.body
 
       this.clientMap[client_id] = { client_id, client_secret, redirect_uri, refresh_token, expires_in, access_token , update_time:Date.now() }
-      delete this.pathAppMap[key]
+      if(key) delete this.pathAppMap[key]
       await this.handleUpdate(this.clientMap[client_id])
 
       return this.clientMap[client_id]
@@ -158,18 +162,21 @@ const install = async (client_id, client_secret, redirect_uri) => {
   return `
     <div class="auth">
       <h3>挂载GoogleDrive</h3>
-      <p style="font-size:12px;"><a target="_blank" style="font-size:12px;margin-right:5px;color:#337ab7;" href="https://developers.google.com/drive/api/v3/quickstart/nodejs">访问此链接</a>创建应用，获取 应用机密 和 应用ID。</p>
+      <p style="font-size:12px;">1. <a target="_blank" style="font-size:12px;margin-right:5px;color:#337ab7;" href="https://developers.google.com/drive/api/v3/quickstart/nodejs">访问此链接</a>点击 [Enable the Drive API] 按钮，获取 credentials.json。如果你已有凭证请从第二步开开始。</p>
 
-      <p style="font-size:12px;">或者 上传json凭证。 <input type="file" onchange="readFile(this)" /></p>
+      <p style="font-size:12px;">2. 上传json凭证。 <input type="file" onchange="readFile(this)" /></p>
+      <p style="font-size:12px;">3. <a target="_blank" style="font-size:12px;margin-right:5px;color:#337ab7;" id="j_code_link"  onclick="directToCodeUrl(this)"> 获取验证code</a>。 </p>
 
       <form class="form-horizontal" method="post">
-        <input type="hidden" name="act" value="install" />
-        <input type="hidden" name="redirect_uri" value="${redirect_uri}" />
+        <input type="hidden" name="act" value="quick_install" />
+        <input type="hidden" name="redirect_uri" id="j_direct_uri" value="${redirect_uri}" />
         <div class="form-group"><input id="j_client_secret" class="sl-input" type="text" name="client_secret" placeholder="应用机密 / client_secret" /></div>
         <div class="form-group"><input id="j_client_id" class="sl-input" type="text" name="client_id" placeholder="应用ID / client_id" /></div>
+        <div class="form-group"><input id="j_code" class="sl-input" type="text" name="code" placeholder="验证code" /></div>
         <button class="sl-button btn-primary" id="signin" type="submit">验证</button>
       </form>
       <script>
+        var codeUrl;
         function readFile(input){
           if (window.FileReader) {
             var file = input.files[0];
@@ -178,15 +185,38 @@ const install = async (client_id, client_secret, redirect_uri) => {
             reader.onload = function() {
               try{
                 var d = JSON.parse( this.result );
-                var client_id = d.installed.client_id;
-                var client_secret = d.installed.client_secret;
+                var data = Object.values(d)[0]
+                var client_id = data.client_id;
+                var client_secret = data.client_secret;
+                var redirect_uris = data.redirect_uris;
+
+                var hit = redirect_uris.find(function(i){
+                  return  i.indexOf('urn:ietf') == 0
+                })
+
                 document.querySelector('#j_client_id').value = client_id;
                 document.querySelector('#j_client_secret').value = client_secret;
+
+                if(hit){
+                  codeUrl = "https://accounts.google.com/o/oauth2/auth?client_id="+client_id+"&redirect_uri="+hit+"&response_type=code&access_type=offline&scope=https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fdrive&approval_prompt=auto";
+
+                  document.querySelector('#j_direct_uri').value = hit;
+                }
+                
               }catch(e){
+                console.log(e)
                 alert('文件无效')
               }
             }
             reader.readAsText(file,"UTF-8");
+          }
+        }
+
+        function directToCodeUrl(el){
+          if(codeUrl){
+            window.open(codeUrl)
+          }else{
+            alert('请上传凭证')
           }
         }
       </script>
@@ -260,6 +290,30 @@ module.exports = ({ request, cache, getConfig, querystring, base64, saveDrive, g
 
     // 无credentials
     if(!credentials){
+
+      //使用 client_id, client_secret, code , redirect_uri 快速挂载
+      if( req.body && req.body.act && req.body.act == 'quick_install'){
+        let { client_id, client_secret, code , redirect_uri } = req.body
+        if (client_id && client_secret && code && redirect_uri) {
+          let credentials = await oauth2.authToken({client_id, client_secret, code , redirect_uri})
+          if (credentials.error) {
+            return {
+              id,
+              type: 'folder',
+              protocol: defaultProtocol,
+              body: await error(credentials.msg, baseUrl)
+            }
+          } else {
+            return {
+              id,
+              type: 'folder',
+              protocol: defaultProtocol,
+              redirect: baseUrl
+            }
+          }
+        }
+      }
+
       if (req.body && req.body.act && req.body.act == 'install') {
         let { client_id, client_secret, proxy_url } = req.body
         if (client_id && client_secret) {
@@ -309,11 +363,14 @@ module.exports = ({ request, cache, getConfig, querystring, base64, saveDrive, g
         }
         // 缺少 refresh_token 跳转至验证页面
         else{
-          return {
-            id,
-            type: 'folder',
-            protocol: defaultProtocol,
-            redirect: await oauth2.generateAuthUrl({ ...credentials, redirect_uri: baseUrl })
+          //校验redirect_uri 与当前连接是否一致
+          if( credentials.redirect_uri == baseUrl ){
+            return {
+              id,
+              type: 'folder',
+              protocol: defaultProtocol,
+              redirect: await oauth2.generateAuthUrl({ ...credentials, redirect_uri: baseUrl })
+            }
           }
         }
       }

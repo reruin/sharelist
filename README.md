@@ -46,14 +46,11 @@ ShareList 是一个易用的网盘工具，支持快速挂载 GoogleDrive、OneD
 ```
 挂载标示：gda  
 挂载内容：  
-  文件(夹)id->应用ID|应用机钥|回调地址|refresh_token   
-  文件(夹)id->应用ID|应用机钥    
+  文件(夹)id->应用ID|应用机钥|回调地址|refresh_token     
   文件(夹)id   
   /
 ```
 ShareList会根据填写的挂载内容的不同形式，自动开启挂载向导，按指示操作即可。  
-
-特别提示：若不填写应用ID|应用机钥，向导将使用 [QuickStart](https://developers.google.com/drive/api/v3/quickstart/nodejs) 生成匿名应用，在授权验证过程中会出现```This app isn't verified.```，请以此点击```Advanced > Go to {Project Name} (unsafe).```即可出现正常的交互问询页面。
 
 ### 挂载OneDrive 
 #### 1. 使用分享ID挂载

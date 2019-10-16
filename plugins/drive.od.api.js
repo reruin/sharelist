@@ -437,7 +437,7 @@ module.exports = ({ request, cache, getConfig, querystring, base64 , saveDrive ,
     let api = `https://graph.microsoft.com/v1.0/me/drive/root:${encodeURIComponent(path).replace(/\/+$/g,'/')}:/`
 
     let resp = await request.get(api , {headers:{
-      'Authorization':`bearer ${accessConfig.access_token}`,
+      'Authorization':`bearer ${credentials.access_token}`,
       'Content-Type': 'application/json'
     },json:true})
 

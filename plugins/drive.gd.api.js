@@ -247,6 +247,7 @@ module.exports = ({ request, cache, getConfig, querystring, base64, saveDrive, g
     let data = paths
       .map(i => parseCredentials(i))
 
+
     //是否有其他配置参数
     let hit = data.filter(i => i.credentials.client_id == c.client_id)
 
@@ -254,6 +255,14 @@ module.exports = ({ request, cache, getConfig, querystring, base64, saveDrive, g
     if( hit.length == 0 ){
       const name = decodeURIComponent(getRuntime('req').path.replace(/^\//g,''))
       hit = data.filter(i => i.name == name)
+    }
+    
+    //路径也无法匹配
+    if( hit.length == 0 ){
+      //仅有一个可用挂载源
+      if(data.length == 1 && paths.length == 1 && paths[0].root){
+        hit = data
+      }
     }
     
     hit.forEach(i => {

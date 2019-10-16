@@ -234,7 +234,13 @@ module.exports = ({ request, cache, getConfig, querystring, base64 , saveDrive ,
       const name = decodeURIComponent(getRuntime('req').path.replace(/^\//g,''))
       hit = data.filter(i => i.name == name)
     }
-    
+    //路径也无法匹配
+    if( hit.length == 0 ){
+      //仅有一个可用挂载源
+      if(data.length == 1 && paths.length == 1 && paths[0].root){
+        hit = data
+      }
+    }
     hit.forEach(i => {
       let key = `${i.protocol}:${i.path}->${c.client_id}|${encodeURIComponent(c.client_secret)}|${c.redirect_uri}|${c.refresh_token}`
       saveDrive(key , i.name)

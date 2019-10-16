@@ -82,7 +82,15 @@ const getDrive = () => {
 //获取使用特定协议的drive
 const getDrives = (protocols) => {
   const path = getPath()
-  return path.filter(i => protocols.includes(i.path.split(':')[0]))
+  let ret = path.filter(i => protocols.includes(i.path.split(':')[0]))
+  // issue:68
+  // 如果只有一个目录则直接列出，导致挂载路径不一致 更新失败。
+  if(path.length == 1){
+    if(ret.length){
+      ret[0] = {...ret[0] , root:true}
+    } 
+  }
+  return ret
 }
 
 module.exports = { getConfig , getAllConfig, save , installed , getPath , setRuntime , getRuntime , saveDrive , getDrive , getSkin , getDrives }

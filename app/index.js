@@ -62,6 +62,7 @@ app.use(less(__dirname + '/public' , { dest: os.tmpdir() + '/sharelist'}))
 
 // 配置静态资源加载中间件
 app.use(koaStatic(__dirname + '/public'))
+app.use(koaStatic(os.tmpdir()+'/sharelist'))
 
 app.use(async (ctx , next) => {
   ctx.state.__ = ctx.__.bind(ctx)

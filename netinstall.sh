@@ -40,7 +40,7 @@ echo -e "|\n|  Install Dependents ... "
 npm install >/dev/null 2>&1
 npm install pm2 -g >/dev/null 2>&1
 
-pm2 start app.js >/dev/null 2>&1
+pm2 start app.js --name sharelist --env prod >/dev/null 2>&1
 pm2 save >/dev/null 2>&1
 pm2 startup >/dev/null 2>&1
 

@@ -14,7 +14,7 @@ module.exports = ({ getSource }) => {
     //<iframe style="width:auto;height:auto;"></iframe><script>document.querySelector("iframe").contentWindow.document.write(`'+html+'`);</script>
     return {
       ...data,
-      body: '<link href="https://cdn.bootcss.com/github-markdown-css/3.0.1/github-markdown.min.css" rel="stylesheet"><article class="markdown-body" style="text-align:left;" itemprop="text">'+html+'</article>'
+      body: '<link href="https://cdn.bootcss.com/github-markdown-css/3.0.1/github-markdown.min.css" rel="stylesheet"><article class="markdown-body" style="text-align:left;padding:16px;" itemprop="text">'+html+'</article>'
     }
   }
 

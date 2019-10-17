@@ -8,29 +8,27 @@
     "start": "node app.js",
     "dev": "./node_modules/.bin/nodemon app.js -i ./cache",
     "prd": "pm2 start app.js --name sharelist --env prod",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "build": "pkg . -t node10-win-x64 --output build/nrop_windows_amd64.exe && pkg . -t node10-macos-x64 --output build/nrop_macos_amd64 && pkg . -t node10-linux-x64 --output build/nrop_linux_amd64"
   },
   "dependencies": {
     "@koa/cors": "^2.2.1",
-    "basic-ftp": "^3.4.4",
-    "googleapis": "^35.0.0",
     "koa": "^2.2.0",
     "koa-bodyparser": "^3.2.0",
     "koa-i18n": "^2.1.0",
     "koa-json": "^2.0.2",
-    "koa-locale": "^1.3.0",
     "koa-locales": "^1.8.0",
     "koa-logger": "^2.0.1",
     "koa-onerror": "^1.2.1",
     "koa-router": "^7.1.1",
     "koa-session-minimal": "^3.0.4",
     "koa-static": "^3.0.0",
-    "koa-views": "^5.2.1",
+    "koa-views": "^6.2.1",
     "less-middleware": "^2.2.1",
     "lowdb": "^1.0.0",
     "markdown-it": "^10.0.0",
     "mime": "^2.4.2",
-    "pug": "^2.0.0-rc.1",
+    "pug": "^2.0.4",
     "webdav": "^2.6.0",
     "write-file-atomic": "^2.4.2",
     "xml2js": "^0.4.19",
@@ -38,6 +36,18 @@
   },
   "devDependencies": {
     "nodemon": "^1.18.4",
+    "pkg": "^4.4.0",
     "pm2": "^2.10.1"
+  },
+  "pkg": {
+    "scripts": [
+      "./app/plugins/**/*",
+      "./plugins/*",
+      "./locales/*"
+    ],
+    "assets": [
+      "./app/views/**/*",
+      "./app/public/**/*"
+    ]
   }
 }

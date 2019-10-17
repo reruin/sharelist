@@ -22,9 +22,9 @@ const l2w = (p) => p.replace(/^\/([^\/]+?)/,'$1:\\').replace(/\//g,'\\').replace
 
 const realpath = (p) => (isWinOS ? l2w(p) : p)
 
-const normalize = (p) => p.replace(/\/{2,}/g,'/').replace(/(?<=.+)\/+$/,'')
+module.exports = ({datetime , extname , pathNormalize}) => {
 
-module.exports = ({datetime , extname}) => {
+  const normalize = (p) => pathNormalize(p).replace(/^\.\//,process.cwd()+'/')
 
   const folder = async(id) => {
     let dir = normalize(id) , resp = { id : dir , type:'folder', protocol:defaultProtocol}

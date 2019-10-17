@@ -478,6 +478,7 @@ module.exports = ({ request, cache, getConfig, querystring, base64, saveDrive, g
     let api = `https://www.googleapis.com/drive/v3/files/${path}?alt=media`
 
     return {
+      id,
       url: api,
       name: data.name,
       ext: data.ext,

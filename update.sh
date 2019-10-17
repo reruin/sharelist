@@ -27,7 +27,8 @@ echo -e "|\n|  Download ShareList Package ... "
 wget -O sharelist-master.zip https://github.com/reruin/sharelist/archive/master.zip >/dev/null 2>&1
 
 unzip -q -o sharelist-master.zip -d ./
-
+rm -rf ./plugins
+rm -rf ./app/plugins
 cp -rf sharelist-master/* ./
 rm -rf sharelist-master*
 

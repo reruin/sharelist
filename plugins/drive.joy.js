@@ -1,7 +1,7 @@
 /*
  * joy
  */
-
+const { PassThrough } = require('stream')
 const name = 'joy'
 
 const version = '1.0'
@@ -14,7 +14,7 @@ const host = Buffer.from('aHR0cDovL3d3dy45MXBvcm4uY29t', 'base64').toString('bin
 
 const cache = {}
 
-module.exports = ({request , getConfig , getSource , getRandomIP }) => {
+module.exports = ({request , getConfig , getSource , getRandomIP , wrapReadableStream }) => {
   
   let last_update = Date.now()
 
@@ -60,7 +60,7 @@ module.exports = ({request , getConfig , getSource , getRandomIP }) => {
     return cats
   }
 
-  const decodeUrl = async (body) => {
+  const decodeUrl = async (body , retry = true) => {
     if(!decode){
       let scrs = await request.get(`${host}/js/md5.js`)
       if(scrs.body) decode = scrs.body
@@ -70,16 +70,21 @@ module.exports = ({request , getConfig , getSource , getRandomIP }) => {
     
     let url = ''
 
+    let flag = false
     if(code){
-      let fn = new Function(`${decode};return ${code};`);
       try{
+        let fn = new Function(`${decode};return ${code};`);
         let source = fn()
         if(source){
           url = (source.match(/src\s*=\s*["']([^"']+)/) || ['',''])[1]
         }
       }catch(e){
-
+        flag = true
       }
+    }
+
+    if(flag && retry) {
+      return await decodeUrl(body , false)
     }
     return url;
   }
@@ -278,7 +283,6 @@ module.exports = ({request , getConfig , getSource , getRandomIP }) => {
     ///const data = decode(id)
 
     const lv = id == '/' ? 0 : id.substring(1).split('/').length
-
     const direct = paths.length == 0
 
     const len = paths.length
@@ -355,18 +359,17 @@ module.exports = ({request , getConfig , getSource , getRandomIP }) => {
   }
 
   /**
-   * /f/viewkey
+   * /f/viewkey , endWith '/f'
    */
   const file = async(id) =>{
+    id = id.replace(/\/f$/,'')
     if( cache[id] && cache[id].$cached_at && ( Date.now() - cache[id].$cached_at < getConfig('max_age_file')) ){
       return cache[id]
     }
-
-    let viewkey = id.split('/').slice(-2,-1)
-    if(viewkey[0]){
-      let resp = await getDetail( viewkey[0] )
+    let viewkey = id.split('/').pop()
+    if(viewkey){
+      let resp = await getDetail( viewkey )
       resp.headers = createHeaders()
-
       let size = await getFileSize(resp.url , resp.headers)
       if(size){
         resp.size = size
@@ -378,5 +381,15 @@ module.exports = ({request , getConfig , getSource , getRandomIP }) => {
     }
   }
 
-  return { name , version, drive : { protocols, folder , file } }
+  const createReadStream = async ({id , options = {}} = {}) => {
+    let r = await file(id)
+    if(r){
+      let readstream = request({url:r.url ,headers:r.headers, method:'get'})
+      // let passThroughtStream = new PassThrough()
+      // let ret = readstream.pipe(passThroughtStream)
+      return wrapReadableStream(readstream , { size: r.size } )
+    }
+  }
+
+  return { name , version, drive : { protocols, folder , file , createReadStream } }
 }

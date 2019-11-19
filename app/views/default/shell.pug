@@ -1,0 +1,320 @@
+doctype html
+html
+  head
+    title Root shell
+    meta(charset='utf-8')
+    meta(name='viewport', content='width=device-width, initial-scale=1.0')
+    style(type='text/css').
+      * {
+      margin: 0;
+      padding: 0;
+      }
+      body {
+      padding: 10px;
+      background: #FFFFFF;
+      color: #333333;
+      font-family: 'Lucida Console', Monaco, monospace;
+      font-size: 12px;
+      }
+      html,body{
+        position:relative;
+        height:100%;
+        box-sizing: border-box;
+      }
+      a {
+      padding: 3px;
+      background: #FFFFFF;
+      color: #333333;
+      font-family: 'Lucida Console', Monaco, monospace;
+      font-weight: bold;
+      font-size: 16px;
+      }
+      form {
+      display: table;
+      width: 100%;
+      white-space: nowrap;
+      }
+      form div {
+      display: table-cell;
+      width: auto;
+      }
+      form #command {
+      width: 100%;
+      }
+      input {
+      border: none;
+      outline: none;
+      background: transparent;
+      width: 100%;
+      }
+      input:focus {
+      outline: none;
+      }
+      pre, form, input {
+      color: inherit;
+      font-family: inherit;
+      font-size: inherit;
+      }
+      pre {
+      white-space: pre;
+      }
+      code {
+      color: blue;
+      font-family: inherit;
+      font-size: inherit;
+      }
+      strong {
+      font-weight: bolder;
+      font-family: Tahoma, Geneva, sans-serif
+      }
+      .error {
+      color: red;
+      }
+      .diff-header {
+      color: #333;
+      font-weight: bold;
+      }
+      .diff-sub-header {
+      color: #33a;
+      }
+      .diff-added {
+      color: #3a3;
+      }
+      .diff-deleted {
+      color: #a33;
+      }
+    style(type='text/css').
+      body {
+      color: #FFFFFF;
+      background-color: #000000;
+      font-family: monospace;
+      }
+      code {
+      color: #898989;
+      }
+      .diff-header {
+      color: #FFF;
+      }
+      .sh-result{
+        margin-bottom:1em;
+      }
+    script(type='text/javascript', src='https://cdn.bootcss.com/jquery/3.4.1/jquery.min.js')
+    script(type='text/javascript').
+      function escapeHtml(text) {
+          return text
+              .replace(/&/g, "&amp;")
+              .replace(/</g, "&lt;")
+              .replace(/>/g, "&gt;")
+              .replace(/"/g, "&quot;")
+              .replace(/'/g, "&#039;");
+      }
+      /**
+       *  History of commands.
+       */
+
+      var commandHistory = (function(){
+        var maxHistory = 100;
+        var position = -1;
+        var currentCommand = '';
+        var addCommand = function(command) {
+          var ls = localStorage['commands'];
+          var commands = ls ? JSON.parse(ls) : [];
+          if (commands.length > maxHistory) {
+              commands.shift();
+          }
+          commands.push(command);
+          localStorage['commands'] = JSON.stringify(commands);
+        };
+        var getCommand = function(at) {
+          var ls = localStorage['commands'];
+          var commands = ls ? JSON.parse(ls) : [];
+          if (at < 0) {
+              position = at = -1;
+              return currentCommand;
+          }
+          if (at >= commands.length) {
+              position = at = commands.length - 1;
+          }
+          return commands[commands.length - at - 1];
+        };
+
+        var nextCommand = function(){
+          return getCommand(++position)
+        }
+
+        var prevCommand = function(){
+          return getCommand(--position)
+        }
+
+        var resetCommand = function(){
+          position = -1
+        }
+
+        return {
+          add:addCommand , 
+          get:getCommand ,
+          next:nextCommand,
+          prev:prevCommand,
+          reset:resetCommand,
+          position:function(){
+            return position
+          }
+        }
+      }());
+
+      var stopWatch = false;
+
+      (function($) {
+          $.fn.history = function() {
+              var input = $(this);
+              input.keydown(function(e) {
+                  var code = (e.keyCode ? e.keyCode : e.which);
+                  if (code == 38) { // Up
+                      if (commandHistory.position() == -1) {
+                          currentCommand = input.val();
+                      }
+                      input.val(commandHistory.next());
+                      return false;
+                  } else if (code == 40) { // Down
+                    input.val(commandHistory.prev());
+                    return false;
+                  } else {
+                    commandHistory.reset()
+                  }
+              });
+              return input;
+          };
+
+      })(jQuery);
+      /**
+       * Windows variables.
+       */
+      window.currentDir = '/';
+      window.currentDirName = window.currentDir.split('/').pop();
+      if (window.currentDirName == '') {
+          window.currentDirName = '/';
+      }
+      window.currentDirName = window.currentDirName + "]# ";
+      window.currentUser = 'root';
+
+      function exec(command , w){
+
+        var screen = $('pre');
+        var form = $('form');
+        if(!w) {
+          $("<code>[" + window.currentUser + "&nbsp;" + window.currentDirName + escapeHtml(command) + "</code><br>").appendTo(screen);
+        }
+        scroll();
+        if (command == '') {
+          return false;
+        }
+
+        if( command == 'cls' ){
+          screen.text("");
+          return 
+        }
+        form.hide();
+
+        if(!w) commandHistory.add(command);
+        $.post('', { 'command': command, 'path': window.currentDir }, function(output) {
+          if(stopWatch) {
+            stopWatch = false
+            form.show();
+            return;
+          }
+
+          if(output.cd){
+            window.currentDir = output.cd;
+            //window.currentDirName = window.currentDir.split('/').pop();
+            window.currentDirName = window.currentDir;
+            if (window.currentDirName == '') {
+              window.currentDirName = '/';
+            }
+            window.currentDirName = window.currentDirName + "]#&nbsp;";
+            $('#currentDirName').text("");
+            $('#currentDirName').append(window.currentDirName);
+          }else if(output.cls){
+            screen.text("");
+          }else {
+            //轮询此命令
+            if( output.watch ){
+
+              if(w){
+                $('.sh-result:last').html( output.result )
+              }else{
+                screen.append('<div class="sh-result">'+output.result+'</div>');
+                w = true
+              }
+
+              setTimeout(function(){
+                exec(command , true)
+              } , 1000)
+              
+            }else{
+              screen.append('<div class="sh-result">'+output.result+'</div>');
+            }
+          }
+        }, 'json').fail(function() {
+          screen.append("<span class='error'>Command transmission error.</span>\n");
+        }).always(function() {
+          if(!w){
+            form.show();
+          }
+          scroll();
+        });
+      }
+      /**
+       * Init console.
+       */
+      $(function() {
+          var screen = $('pre');
+          var input = $('input').focus();
+          var form = $('form');
+          var scroll = function() {
+              window.scrollTo(0, document.body.scrollHeight);
+          };
+          input.history();
+          form.submit(function() {
+            var input = $('input').focus();
+            var command = $.trim(input.val());
+            exec(command)
+            input.val('');
+            return false
+          });
+
+          $(document).keydown(function(e) {
+            var keyCode = (e.which ? e.which : e.keyCode);
+            if (!e.ctrlKey) {
+              input.focus();
+            }
+          });
+
+          var ctrlDown = false
+          // ctrl + c
+          $(document).keydown(function(e) {
+            if (e.keyCode == 17 ) ctrlDown = true;
+          }).keyup(function(e) {
+            if (e.keyCode == 17) ctrlDown = false;
+          });
+
+          $(document).keydown(function(e) {
+            // ctrl + C
+            if (ctrlDown && (e.keyCode == 67)) {
+              stopWatch = true
+              $("form").show();
+              return false;
+            }
+            // ctrl + L
+            else if(ctrlDown && e.keyCode == 76){
+              screen.text("");
+              return false
+            }
+          });
+      });
+  body
+    pre.
+    form
+      div [root 
+      #currentDirName /]# 
+      #command
+        input(type='text', value='')

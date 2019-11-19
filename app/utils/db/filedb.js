@@ -101,7 +101,9 @@ class Filedb {
       this.data[key] = value;
     }
 
-    this.save()
+    setImmediate(()=>{
+      this.save()
+    })
   }
 
   clear(key) {

@@ -240,7 +240,7 @@ const parseCredentials = ({name,path}) => {
   }
 }
 // fileid->app_credentials
-module.exports = ({ request, cache, getConfig, querystring, base64, saveDrive, getDrive, getDrives , getRuntime}) => {
+module.exports = ({ request, cache, getConfig, querystring, base64, saveDrive, getDrive, getDrives , getRuntime , wrapReadableStream}) => {
 
   const oauth2 = new oauth2ForGD(request, querystring , async (c) => {
     let paths = await getDrives()
@@ -256,7 +256,7 @@ module.exports = ({ request, cache, getConfig, querystring, base64, saveDrive, g
       const name = decodeURIComponent(getRuntime('req').path.replace(/^\//g,''))
       hit = data.filter(i => i.name == name)
     }
-    
+
     //路径也无法匹配
     if( hit.length == 0 ){
       //仅有一个可用挂载源
@@ -264,7 +264,7 @@ module.exports = ({ request, cache, getConfig, querystring, base64, saveDrive, g
         hit = data
       }
     }
-    
+
     hit.forEach(i => {
       let key = `${i.protocol}:${i.path}->${c.client_id}|${encodeURIComponent(c.client_secret)}|${c.redirect_uri}|${c.refresh_token}`
       saveDrive(key , i.name)
@@ -299,7 +299,6 @@ module.exports = ({ request, cache, getConfig, querystring, base64, saveDrive, g
 
     // 无credentials
     if(!credentials){
-
       //使用 client_id, client_secret, code , redirect_uri 快速挂载
       if( req.body && req.body.act && req.body.act == 'quick_install'){
         let { client_id, client_secret, code , redirect_uri } = req.body
@@ -492,5 +491,25 @@ module.exports = ({ request, cache, getConfig, querystring, base64, saveDrive, g
     }
   }
 
-  return { name, version, drive: { protocols, folder, file } }
+  const createReadStream = async ({id , size , options = {}} = {}) => {
+    let predata = await prepare(id)
+
+    if (!predata.credentials) return null
+
+    let { path, credentials } = predata
+
+    let url = `https://www.googleapis.com/drive/v3/files/${path}?alt=media`
+
+    let readstream = request({
+      url,
+      method:'get' , 
+      headers: {
+        'Authorization': `Bearer ${credentials.access_token}`
+      }
+    })
+
+    return wrapReadableStream(readstream , { size: size } )
+  }
+
+  return { name, version, drive: { protocols, folder, file , createReadStream } }
 }

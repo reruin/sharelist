@@ -3,6 +3,7 @@ const request = require('request')
 const config = require('../config')
 const cache = require('../utils/cache')
 const { getVendors } = require('../services/plugin')
+const service = require('../services/sharelist')
 
 const handlers = async (a, body) => {
   let result = { status: 0, message: 'Success', data: '', a }
@@ -159,6 +160,23 @@ module.exports = {
     }
     ctx.body = result
 
-  }
+  },
 
+  async shell(ctx){
+    let access = !!ctx.session.admin
+    if(access){
+      await ctx.renderSkin('shell')
+    }else{
+      ctx.redirect('/manage')
+    }
+  },
+
+  async shell_exec(ctx){
+    let body = ctx.request.body
+    let { command , path = '/' } = body
+    if(command){
+      let ret = await service.exec(command , path)
+      ctx.body = ret
+    }
+  }
 }

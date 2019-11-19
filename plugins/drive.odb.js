@@ -54,7 +54,6 @@ module.exports = ({ request, cache, getConfig }) => {
 
   // folder => files
   const folder = async (id) => {
-
     const resid = `${defaultProtocol}:${id}`
 
     let resp = { id, type: 'folder', protocol: defaultProtocol }
@@ -80,12 +79,15 @@ module.exports = ({ request, cache, getConfig }) => {
     const [cookie, directUrl] = await getClient(rootId)
 
 
-    let url = baseUrl + encodeURI(path)
-
-    if (directUrl) {
-      url = baseUrl + directUrl.replace(baseUrl,'')
+    let url
+    if( path ){
+      url = baseUrl + encodeURI(path)
+    }else{
+      if (directUrl) {
+        url = baseUrl + directUrl.replace(baseUrl,'')
+      }
     }
-
+    
     let res = await request.get(url, { headers: { 'Cookie': cookie } })
     let code = (res.body.match(/g_listData\s*=\s*([\w\W]+)(?=;if)/) || ['', ''])[1]
     let data = code.toString(16)
@@ -99,6 +101,7 @@ module.exports = ({ request, cache, getConfig }) => {
         data = []
       }
     }
+    console.log('result',data.length )
 
     let children = data ? data.map((i) => {
       return {
@@ -112,7 +115,6 @@ module.exports = ({ request, cache, getConfig }) => {
         type: i.FSObjType == '1' ? 'folder' : undefined,
       }
     }) : []
-
 
     //folder 额外保存 
     resp.children = children

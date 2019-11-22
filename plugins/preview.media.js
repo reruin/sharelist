@@ -5,7 +5,8 @@ const name = 'mediaParse'
 
 const version = '1.0'
 
-module.exports = ({getSource}) => {
+module.exports = ({getSource , getPluginOption , setPluginOption}) => {
+
 
   const video = async (data , req) => {
     return {
@@ -38,8 +39,16 @@ module.exports = ({getSource}) => {
 
 
   const preview = {};
+  let videoKey = 'video_previewable_formats'
+  let videoOptions = getPluginOption(videoKey) || {};
+  let videoFormats = 'mp4,ogg,webm,mpeg,m4v'
+  if( videoOptions.value ){
+    videoFormats = videoOptions.value
+  }else{
+    setPluginOption(videoKey,{value:videoFormats , label:'支持预览的视频后缀','placeholder':'文件扩展名，多个用逗号分隔'})
+  }
 
-  ['mp4','ogg','webm','mpeg','m4v'].forEach( ext => {
+  videoFormats.split(',').forEach( ext => {
     preview[ext] = video
   });
 

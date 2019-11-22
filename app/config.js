@@ -25,7 +25,9 @@ const db = createFiledb(configPath , {raw:true} , {
 
   ignore_files:'.passwd',
 
-  readme_enable:1
+  readme_enable:1,
+
+  plugin_option:[]
 });
 
 if(process.env.PORT){
@@ -52,6 +54,23 @@ const getSkin = (key) => {
   return db.get('skin') || 'default'
 }
 
+const getPluginOption = (key) => {
+  let p = db.get('plugin_option') || []
+  let hit = p.find(i => i.key == key )
+  return hit ? hit.value : null
+}
+
+const setPluginOption = (key , value) => {
+  let p = db.get('plugin_option') || []
+  let hit = p.find(i => i.key == key )
+  if( hit ){
+    hit.value = value
+  }else{
+    p.push({ key , value})
+  }
+  db.save()
+}
+
 const setRuntime = (key , value) => {
   runtime[key] = value
 }
@@ -63,7 +82,7 @@ const saveDrive = (value , name) => {
   let hit = path.find( i => i.name == name)
   if(hit){
     hit.path = value
-    db.save(path)
+    db.save()
   }
 }
 
@@ -93,4 +112,4 @@ const getDrives = (protocols) => {
   return ret
 }
 
-module.exports = { getConfig , getAllConfig, save , installed , getPath , setRuntime , getRuntime , saveDrive , getDrive , getSkin , getDrives }
+module.exports = { getConfig , getAllConfig, save , installed , getPath , setRuntime , getRuntime , saveDrive , getDrive , getSkin , getDrives , getPluginOption , setPluginOption }

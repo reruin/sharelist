@@ -2,7 +2,7 @@ const base = require('../utils/base')
 const request = require('request')
 const config = require('../config')
 const cache = require('../utils/cache')
-const { getVendors } = require('../services/plugin')
+const { getVendors , reload } = require('../services/plugin')
 const service = require('../services/sharelist')
 
 const handlers = async (a, body) => {
@@ -27,6 +27,17 @@ const handlers = async (a, body) => {
     } else {
       result.message = 'Invalid Arguments'
     }
+  } else if(a == 'plugin_option'){
+    console.log(body)
+    for(let i in body){
+      if(i!=='a'){
+        let value = config.getPluginOption(i)
+        console.log(value)
+        value.value = body[i]
+        config.setPluginOption(i , value)
+      }
+    }
+
   } else if (a == 'token') {
     let newtoken = body.token
     if (newtoken) {
@@ -37,6 +48,9 @@ const handlers = async (a, body) => {
       result.status = -1
       result.message = 'Invalid password'
     }
+  } else if(a == 'reboot'){
+    reload()
+    result.message = 'Success'
   } else if (a == 'title') {
     let title = body.title
     if (title) {

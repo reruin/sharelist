@@ -89,7 +89,7 @@ class oauth2ForOD {
       code,
       grant_type: 'authorization_code'
     }
-
+    console.log('getToken',params)
     let resp
     try {
       resp = await this.request.post(this.OAUTH2_TOKEN_URL, params, { json: true })

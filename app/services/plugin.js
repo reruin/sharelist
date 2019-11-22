@@ -140,6 +140,17 @@ const getHelpers = (id) => {
     pathNormalize,
     command,
     wrapReadableStream,
+    getOption:()=>{
+
+    },
+    getPluginOption:(key)=>{
+      let p = id + '___' + key
+      return config.getPluginOption(p)
+    },
+    setPluginOption:(key , value)=>{
+      let p = id + '___' + key
+      config.setPluginOption(p , value)
+    },
     saveDrive : (path , name) => {
       let resource = resources[id]
       if( resource && resource.drive && resource.drive.protocols){
@@ -164,7 +175,9 @@ const getHelpers = (id) => {
 /**
  * 加载插件
  */
+var loadOptions = []
 const load = (options) => {
+  loadOptions = options
   const dir = options.dir
   const dirs = options.dirs
 
@@ -190,7 +203,7 @@ const load = (options) => {
 
         const pluginName = name.split('.').slice(0,-1).join('.')
         const type = name.split('.')[0]
-        const id = 'plugin_' + pluginName
+        const id = 'plugin_' + pluginName.replace(/\./g,'_')
         const helpers = getHelpers(id)
         const resource = require(filepath).call(helpers,helpers)
 
@@ -253,6 +266,9 @@ const load = (options) => {
   ready = true
 }
 
+const reload = () => {
+  load(loadOptions)
+}
 /**
  * 根据扩展名获取可处理的驱动
  */
@@ -443,4 +459,4 @@ const createWriteStream = async (options) => {
   }
 }
 
-module.exports = { load , getDrive , getStream , getSource , updateFolder , updateFile , updateLnk , getVendors , getAuth , getPreview , isPreviewable , command}
+module.exports = { load , reload , getDrive , getStream , getSource , updateFolder , updateFile , updateLnk , getVendors , getAuth , getPreview , isPreviewable , command}

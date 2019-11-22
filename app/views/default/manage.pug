@@ -16,6 +16,9 @@ block content
         .form-group
           a.btn.btn-success(href='?a=export',target='_blank')= __('export')
           a.btn.btn-success(href='/manage/shell',target='_blank') Shell
+          form.form-horizontal(style="display:inline-block;",method='post',action="/manage/api")
+                  input(type='hidden',name='a',value='reboot')
+                  button.btn.btn-danger= __('reboot')
         .panel.panel-default
           .panel-heading
             span= __("general")
@@ -23,42 +26,42 @@ block content
             form.form-horizontal(method='post',action="/manage/api")
               input(type='hidden',name='a',value='cfg')
               .form-group
-                .col-sm-6
+                .col-sm-4
                   label= __('proxy_enable')
-                .col-sm-3
+                .col-sm-8
                   select.form-control(name='proxy_enable',value=config.proxy_enable,required)
                     option(value='1', selected=config.proxy_enable==1 ? 'selected' : null)= __('enable')
                     option(value='0', selected=config.proxy_enable==0 ? 'selected' : null)= __('disable')
-                .col-sm-6
+                .col-sm-4
                   label= __('preview_enable')
-                .col-sm-3
+                .col-sm-8
                   select.form-control(name='preview_enable',value=config.preview_enable,required)
                     option(value='1', selected=config.preview_enable==1 ? 'selected' : null)= __('enable')
                     option(value='0', selected=config.preview_enable==0 ? 'selected' : null)= __('disable')
               .form-group
-                .col-sm-6
+                .col-sm-4
                   label= __('max_age_dir')
-                .col-sm-3
+                .col-sm-8
                   input.form-control(type='text', name='max_age_dir' , value=config.max_age_dir / 1000,required)
               .form-group
-                .col-sm-6
+                .col-sm-4
                   label= __('max_age_file')
-                .col-sm-3
+                .col-sm-8
                   input.form-control(type='text', name='max_age_file' , value=config.max_age_file / 1000,required)
               .form-group
-                .col-sm-6
+                .col-sm-4
                   label= __('webdav_path')
-                .col-sm-3
+                .col-sm-8
                   input.form-control(type='text', name='webdav_path' , value=config.webdav_path,required)
               .form-group
-                .col-sm-6
+                .col-sm-4
                   label= __('ignore_file_extensions')
-                .col-sm-3
+                .col-sm-8
                   input.form-control(type='text', name='ignore_file_extensions' , value=config.ignore_file_extensions,placeholder=__('ignore_file_extensions_placeholder'))
               .form-group
-                .col-sm-6
+                .col-sm-4
                   label= __('readme_enable')
-                .col-sm-3
+                .col-sm-8
                   select.form-control(name='readme_enable',value=config.readme_enable,required)
                     option(value='1', selected=config.readme_enable==1 ? 'selected' : null)= __('enable')
                     option(value='0', selected=config.readme_enable==0 ? 'selected' : null)= __('disable')
@@ -67,7 +70,20 @@ block content
             form.form-horizontal(method='post',action="/manage/api")
                   input(type='hidden',name='a',value='clear_cache')
                   button.btn.btn-danger= __('clear_cache')
-
+        .panel.panel-default
+          .panel-heading
+            span= __("plugin_option")
+          .panel-body
+            form.form-horizontal(method='post',action="/manage/api")
+              input(type='hidden',name='a',value='plugin_option')
+              each i in config.plugin_option
+                .form-group
+                  .col-sm-4
+                    label= i.value.label
+                  .col-sm-8
+                    input.form-control(type='text',placeholder=i.value.placeholder, name=i.key , value=i.value.value)
+              .form-group.text-center
+                button.btn.btn-default(type='submit')= __('save')
         .panel.panel-default
           .panel-heading= __('token')
           .panel-body

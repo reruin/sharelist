@@ -20,6 +20,7 @@ ShareList 是一个易用的网盘工具，支持快速挂载 GoogleDrive、OneD
   * [忽略文件类型](#忽略文件类型) 
   * [文件预览](#文件预览) 
   * [显示README](#显示README) 
+  * [Nginx/Caddy反代注意事项](#Nginx/Caddy反代注意事项) 
 * [插件开发](#插件开发) 
 
 
@@ -50,17 +51,17 @@ ShareList 是一个易用的网盘工具，支持快速挂载 GoogleDrive、OneD
   文件(夹)id   
   /
 ```
-ShareList会根据填写的挂载内容的不同形式，自动开启挂载向导，按指示操作即可。  
+ShareList会根据填写的挂载内容的不同形式，自动开启挂载向导，按指示操作即可。   
 
 ### 挂载OneDrive 
 #### 1. 使用分享ID挂载
-由[drive.od](plugins/drive.od.js)插件实现。  
+由[plugins/drive.od.js](plugins/drive.od.js)插件实现。  
 ```
 挂载标示：od  
 挂载内容：分享的文件ID。 
 ``` 
 #### 2. 使用官方API挂载
-由[drive.od.api](plugins/drive.od.api.js)插件实现。   
+由[plugins/drive.od.api.js](plugins/drive.od.api.js)插件实现。   
 ```
 挂载标示：oda
 挂载内容：   
@@ -69,16 +70,18 @@ ShareList会根据填写的挂载内容的不同形式，自动开启挂载向�
     /
 ```
 ShareList会根据填写的挂载内容，自动开启挂载向导，按指示操作即可。  
-对于不符合OneDrive安全要求的域名，将采用中转方式验证，[查看中转页面](https://github.com/reruin/reruin.github.io/blob/master/redirect/onedrive.html)。 
+对于不符合OneDrive安全要求的域名，将采用中转方式验证，[查看中转页面](https://github.com/reruin/reruin.github.io/blob/master/redirect/onedrive.html)。   
+**注意：由于onedrive修改了政策，个人Microsoft帐户已无法通过向导进行绑定。
+需前往 [Azure管理后台](https://portal.azure.com/#blade/Microsoft_AAD_RegisteredApps/ApplicationsListBlade) 注册应用并获取  app_id 和 app_secret 。**  
 #### 3. 挂载OneDrive For Business
-由[drive.odb](plugins/drive.odb.js)插件实现。  
+由[plugins/drive.odb.js](plugins/drive.odb.js)插件实现。  
 ```
 挂载标示：odb  
 挂载内容：分享的url
 ```
 
 ### 挂载本地文件
-由[drive.fs](app/plugins/drive.fs.js)插件实现。  
+由[drive.fs.js](app/plugins/drive.fs.js)插件实现。  
 ```
 挂载标示：fs   
 挂载内容：文件路径。
@@ -86,7 +89,7 @@ ShareList会根据填写的挂载内容，自动开启挂载向导，按指示�
 **注意：统一使用unix风格路径，例如 windows D盘 为 ```/d/```。**   
 
 ### 挂载GitHub
-由[drive.github](plugins/drive.github.js)插件实现。用于访问GitHub代码库。有以下两种挂载方式。    
+由[plugins/drive.github.js](plugins/drive.github.js)插件实现。用于访问GitHub代码库。有以下两种挂载方式。    
 ```
 挂载标示：github   
 挂载内容： 
@@ -108,7 +111,7 @@ ShareList会根据填写的挂载内容，自动开启挂载向导，按指示�
 插件为 ```mp4/jpg ```等禁止上传的格式提供解析支持，只需在文件名后附加```txt```后缀即可。以mp4为例，将```xxx.mp4```命名为```xxx.mp4.txt```后再上传，插件将自动解析为mp4文件。 
 
 ### 挂载h5ai
-由[drive.h5ai](plugins/drive.h5ai.js)插件实现，用于访问h5ai目录程序。  
+由[drive.h5ai.js](plugins/drive.h5ai.js)插件实现，用于访问h5ai目录程序。  
 ```
 挂载标示：h5ai   
 挂载路径：http地址
@@ -116,7 +119,7 @@ ShareList会根据填写的挂载内容，自动开启挂载向导，按指示�
 例如： ```h5ai:https://larsjung.de/h5ai/demo/```   
 
 ### 挂载WebDAV
-由[drive.webdav](plugins/drive.webdav.js)插件实现，用于访问WebDAV服务。  
+由[drive.webdav.js](plugins/drive.webdav.js)插件实现，用于访问WebDAV服务。  
 ```
 挂载标示：webdav  
 挂载路径：  
@@ -173,12 +176,28 @@ data:
 由[preview.document](plugins/drive.document.js)插件实现，可预览md、word、ppt、excel。
 
 #### 多媒体  
-由[preview.media](plugins/drive.media.js)插件实现，可预览图片、音频、视频提供。
+由[preview.media](plugins/drive.media.js)插件实现，可预览图片、音频、视频提供。  
+后台管理，插件设置，```支持预览的视频后缀```可定义可预览视频类型。  
 
 #### Torrent   
 由[preview.torrent](plugins/drive.torrent.js)插件实现，为种子文件提供在线预览。
 
-
+### Nginx/Caddy反代注意事项  
+使用反代时，请添加以下配置。  
+Nginx   
+```ini
+  proxy_set_header Host  $host;
+  proxy_set_header X-Real-IP $remote_addr;
+  proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+  proxy_set_header X-Forwarded-Proto $scheme;
+```   
+Caddy   
+```ini
+  header_upstream Host {host}
+  header_upstream X-Real-IP {remote}
+  header_upstream X-Forwarded-For {remote}
+  header_upstream X-Forwarded-Proto {scheme}
+```
 
 ## 插件开发 
 待完善   

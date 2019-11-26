@@ -25,6 +25,7 @@ const diff = (a, b) => {
   return ret
 }
 
+var nodeCache = {}
 
 module.exports = ({ cache , getVendor , getConfig , getRuntime , updateFolder , updateLnk , updateFile , pathNormalize , createReadStream , createWriteStream }) => {  
   const ls = async (p , [query, full_paths = [], method] = [] , iscmd) => {
@@ -48,6 +49,10 @@ module.exports = ({ cache , getVendor , getConfig , getRuntime , updateFolder , 
     }
 
     return resp
+  }
+
+  const cat = async (p) => {
+
   }
 
   const cd = async (basepath , [path = '/'] = []) => {
@@ -86,6 +91,105 @@ module.exports = ({ cache , getVendor , getConfig , getRuntime , updateFolder , 
   }
 
 
+  /*
+   * 1.缓存挂载节点 <-> sharelist路径
+   * 2.缓存passwd节点 <-> sharelist路径
+   * 3.正向查找
+   * 4.不再缓存 sharelist路径 <-> 数据 关系
+   */
+  const process_fast = async(p, { query, full_paths , method }) => {
+
+    if( p == '' || p == '/' ) return root()
+
+    let hit
+    
+    let paths = p.replace(/^\//,'').split('/')
+
+    if( !full_paths ) full_paths = paths
+
+    //逆向查询节点，理想情况是：直接匹配到最近的 挂载节点，且后续无节点
+    let idx = paths.length
+    while( idx > 0 ){
+      let cur = paths.slice(0,idx).join('/')
+      let content = nodeCache[cur]
+      if( content ){
+        hit = content
+        console.log('hit path',cur)
+        break
+      }else{
+        idx--
+      }
+    }
+
+    if( hit ){
+      let vendor = getVendor(hit.protocol)
+      hit = await vendor.folder(hit.id)
+    }else{
+      hit = root()
+    }
+    
+    //后续处理路径 ，正向
+    for( ; idx < paths.length ; idx++ ) {
+
+      let curname = decodeURIComponent(paths[idx])
+
+      let children = hit.children || []
+      let index = search(children, 'name', curname)
+
+      if( index == -1){
+        return false
+      }
+      //继续处理
+      else{ 
+        let data = children[index]
+
+        let vendor = getVendor(data.protocol)
+
+        if (data.lnk) {
+          let originId = data.protocol + ':' + data.id
+          await updateLnk(data)
+
+          vendor = getVendor(data.protocol)
+
+          //缓存 快捷方式 的实际链接
+          cache.set(originId, data.protocol + ':' + data.id)
+        }
+
+        if( vendor.cache !== false ){
+          nodeCache[paths.slice(0,idx+1).join('/')] = { protocol: data.protocol , id : data.id }
+        }
+
+        if( data.type == 'folder'){
+          let t = await vendor.folder(data.id)
+          
+          if( t ){
+            if( t.type == 'folder' ){
+              hit = await updateFolder(t)
+            }else{
+              hit = await updateFile(t)
+            }
+          }else{
+            return false
+          }
+        }else{
+          let t = await vendor.file(data.id, { query, req : getRuntime('req') ,paths: diff(paths, full_paths), data })
+          if( t ){
+             hit = await updateFile(t)
+             break
+          }else{
+            return false
+          }
+          
+        }
+        
+      }
+    }
+
+    return hit
+
+  }
+
+  //递归方案
   const process = async(p, { query, full_paths , method }) => {
     let hit, resp = false,
       miss

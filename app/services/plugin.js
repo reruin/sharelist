@@ -125,6 +125,7 @@ const getHelpers = (id) => {
     cache:sandboxCache(id),
     getSource: getSource,
     getConfig : config.getConfig,
+    setIgnorePaths : config.setIgnorePaths,
     getRandomIP:getRandomIP,
     retrieveSize : format.retrieveByte,
     byte:format.byte,

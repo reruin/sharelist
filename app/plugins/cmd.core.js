@@ -25,11 +25,13 @@ const diff = (a, b) => {
   return ret
 }
 
+const requireAuth = (data) => !!(data.children && data.children.find(i=>(i.name == '.passwd')))
+
 var nodeCache = {}
 
 module.exports = ({ cache , getVendor , getConfig , getRuntime , updateFolder , updateLnk , updateFile , pathNormalize , createReadStream , createWriteStream }) => {  
-  const ls = async (p , [query, full_paths = [], method] = [] , iscmd) => {
-
+  const ls = async (p , { query, method } = {} , iscmd) => {
+    //处理 协议路径 protocol:id
     let vp = p.split(':')
     if(vp.length){
       let protocol = vp[0] , id = vp.slice(1).join(':')
@@ -39,7 +41,8 @@ module.exports = ({ cache , getVendor , getConfig , getRuntime , updateFolder , 
       }
     }
 
-    let resp = await process(p , {query , method})
+    // 处理标准路径 path
+    let resp = await process_fast(p , {query , method})
     if( iscmd ){
       if( resp.children ){
         resp = { result: resp.children.map(i => i.name).join('\n') }
@@ -97,7 +100,7 @@ module.exports = ({ cache , getVendor , getConfig , getRuntime , updateFolder , 
    * 3.正向查找
    * 4.不再缓存 sharelist路径 <-> 数据 关系
    */
-  const process_fast = async(p, { query, full_paths , method }) => {
+  const process_fast = async(p, { query, method } = {}) => {
 
     if( p == '' || p == '/' ) return root()
 
@@ -105,9 +108,7 @@ module.exports = ({ cache , getVendor , getConfig , getRuntime , updateFolder , 
     
     let paths = p.replace(/^\//,'').split('/')
 
-    if( !full_paths ) full_paths = paths
-
-    //逆向查询节点，理想情况是：直接匹配到最近的 挂载节点，且后续无节点
+    //逆向查询节点，理想情况是：直接匹配到最近的 挂载节点
     let idx = paths.length
     while( idx > 0 ){
       let cur = paths.slice(0,idx).join('/')
@@ -132,7 +133,6 @@ module.exports = ({ cache , getVendor , getConfig , getRuntime , updateFolder , 
     for( ; idx < paths.length ; idx++ ) {
 
       let curname = decodeURIComponent(paths[idx])
-
       let children = hit.children || []
       let index = search(children, 'name', curname)
 
@@ -159,20 +159,27 @@ module.exports = ({ cache , getVendor , getConfig , getRuntime , updateFolder , 
           nodeCache[paths.slice(0,idx+1).join('/')] = { protocol: data.protocol , id : data.id }
         }
 
+
         if( data.type == 'folder'){
           let t = await vendor.folder(data.id)
           
           if( t ){
             if( t.type == 'folder' ){
               hit = await updateFolder(t)
-            }else{
+            }
+            else if(t.type == 'redir') {
+              hit = await process_fast(t.path)
+              //不再参与后续
+              break;
+            }
+            else{
               hit = await updateFile(t)
             }
           }else{
             return false
           }
         }else{
-          let t = await vendor.file(data.id, { query, req : getRuntime('req') ,paths: diff(paths, full_paths), data })
+          let t = await vendor.file(data.id, { query, req : getRuntime('req') ,paths: [], data })
           if( t ){
              hit = await updateFile(t)
              break
@@ -210,24 +217,21 @@ module.exports = ({ cache , getVendor , getConfig , getRuntime , updateFolder , 
     } else {
       let parent = await process(paths.slice(0, -1).join('/'), { query, full_paths , method })
       let curname = decodeURIComponent(paths[paths.length - 1])
-      //父目录必然是 folder
+      
+      //父目录中对比
       if (parent) {
-        // if( parent.auth ) {
-        //   hit = {auth:true , ...parent}
-        // }else{
         let children = parent.children || []
         let index = search(children, 'name', curname)
 
         if (index != -1) {
           hit = children[index]
-          //只为目录做缓存
+          //路径缓存
           if (hit.type == 'folder' && hit.id){
             cache.set(pl, hit.protocol + ':' + hit.id)
           }
         } else {
           return false
         }
-        // }
 
       }
       //无法完成匹配
@@ -266,6 +270,14 @@ module.exports = ({ cache , getVendor , getConfig , getRuntime , updateFolder , 
 
         if (hit.id != resp.id) {
           cache.set(pl, hit.protocol + ':' + resp.id)
+        }
+
+        if( resp.redir ){
+          lastName = resp.name
+          console.log('redir::'+resp.redir)
+          //重定向
+          resp = await ls(resp.redir.replace(/^\//,''))
+          resp.name = lastName
         }
 
       }

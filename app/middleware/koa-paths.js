@@ -40,15 +40,22 @@ module.exports = async(ctx, next) => {
   ctx.paths = paths
   ctx.paths_raw = paths_raw
 
-  setRuntime('req' , {
+  let runtime = {
     href:ctx.href,
     path:ctx.path,
     query:ctx.query,
     body:ctx.request.body,
+    method:ctx.method,
     host:ctx.host,
     origin:ctx.origin,
-    protocol:ctx.protocol
-  })
+    protocol:ctx.protocol,
+    paths:paths,
+    isAdmin:!!ctx.session.admin,
+    access:ctx.session.access
+  }
+
+  ctx.runtime = runtime
+  setRuntime('req' , runtime)
   /*
   setLocation({
     href:ctx.href,

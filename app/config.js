@@ -27,6 +27,8 @@ const db = createFiledb(configPath , {raw:true} , {
 
   readme_enable:1,
 
+  ignore_paths:{},
+
   plugin_option:[]
 });
 
@@ -41,6 +43,17 @@ const installed = () => {
 }
 
 const getConfig = (key) => db.get(key)
+
+const setIgnorePaths = (key , paths) => {
+  let p = db.get('ignore_paths')
+  p[key]  = paths
+  db.save()
+}
+
+const getIgnorePaths = (key , paths) => {
+  return [].concat(...Object.values(db.get('ignore_paths') || {}))
+}
+
 
 const getAllConfig = (key) => db.all
 
@@ -112,4 +125,4 @@ const getDrives = (protocols) => {
   return ret
 }
 
-module.exports = { getConfig , getAllConfig, save , installed , getPath , setRuntime , getRuntime , saveDrive , getDrive , getSkin , getDrives , getPluginOption , setPluginOption }
+module.exports = { getConfig, setIgnorePaths, getIgnorePaths, getAllConfig, save , installed , getPath , setRuntime , getRuntime , saveDrive , getDrive , getSkin , getDrives , getPluginOption , setPluginOption }

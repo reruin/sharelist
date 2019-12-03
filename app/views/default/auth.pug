@@ -21,8 +21,8 @@ block content
       let passwd = $('#j_passwd').val(), user = $('#j_user').val() , path = location.pathname
       $('button').addClass('loading')
       $.ajax({
-        url:'/api/access', dataType:'json', method:'POST',
-        data:{ path : path , user:user , passwd : passwd },
+        url:'', dataType:'json', method:'POST',
+        data:{ act:'auth' , path : path , user:user , passwd : passwd },
         success:function(resp){
           $('button').removeClass('loading')
           if(resp.status == 0){

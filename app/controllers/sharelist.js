@@ -47,11 +47,16 @@ const output = async (ctx , data)=>{
 
 module.exports = {
   async index(ctx){
-    let data = await service.path(ctx.paths , ctx.query , ctx.paths , ctx.method)
+    let data = await service.path(ctx.runtime)
+
     let base_url = ctx.path == '/' ? '' : ctx.path
     let parent = ctx.paths.length ? ('/' + ctx.paths.slice(0,-1).join('/')) : ''
     let ignoreexts = (config.getConfig('ignore_file_extensions') || '').split(',')
     let ignorefiles = (config.getConfig('ignore_files') || '').split(',')
+    let ignorepaths = config.getIgnorePaths()
+
+    let isAdmin = ctx.session.admin
+
     //data is readonly
     if( data === false){
       ctx.status = 404
@@ -69,53 +74,60 @@ module.exports = {
       return
     }
     else if(data.type == 'folder'){
+      let ret = { base_url , parent , data:[] }
 
-      let ra = requireAuth(data)
-      if( ra !== false && !ctx.session.access.has( data.id )){
-        //验证界面
-        await ctx.renderSkin('auth',{
-          parent , 
-          id:data.protocol+':'+data.id , 
-          name:decodeURIComponent(ctx.paths[ctx.paths.length-1] || '')
-        })
-        
-      }else{
-        let ret = { base_url , parent , data:[] }
+      let preview_enable = config.getConfig('preview_enable')
 
-        let preview_enable = config.getConfig('preview_enable')
-
-        for(let i of data.children){
-          if(i.type == 'folder' || (i.type != 'folder' && !ignoreexts.includes(i.ext) && !ignorefiles.includes(i.name))){
-            let href = ''
-            if( i.url && isRelativePath(i.url) ){
-              href = pathNormalize(base_url + '/' + i.url)
-            }else{
-              href = pathNormalize(base_url + '/' + encodeURIComponent(i.name))
-            }
-
-            if(await service.isPreviewable(i) && preview_enable){
-              href += (href.indexOf('?')>=0 ? '&' : '?') + 'preview'
-            }
-            if(i.hidden !== true)
-              ret.data.push( { href , type : i.type , size: i.displaySize , updated_at:i.updated_at , name:i.name})
+      for(let i of data.children){
+        if(
+          isAdmin || 
+          (i.type == 'folder' && !ignorepaths.includes(base_url + '/' + i.name)) || 
+          (i.type != 'folder' && !ignoreexts.includes(i.ext) && !ignorefiles.includes(i.name))){
+          let href = ''
+          if( i.url && isRelativePath(i.url) ){
+            href = pathNormalize(base_url + '/' + i.url)
+          }else{
+            href = pathNormalize(base_url + '/' + encodeURIComponent(i.name))
           }
-        }
 
-        let readme_enable = !!config.getConfig('readme_enable')
-        if( readme_enable ){
-          let readmeFile = data.children.find(i => i.name.toLocaleUpperCase() == 'README.MD')
-          if(readmeFile){
-            ret.readme = markdownParse(await service.source(readmeFile.id , readmeFile.protocol))
+          if(await service.isPreviewable(i) && preview_enable){
+            href += (href.indexOf('?')>=0 ? '&' : '?') + 'preview'
           }
+          if(i.hidden !== true)
+            ret.data.push( { href , type : i.type , size: i.displaySize , updated_at:i.updated_at , name:i.name})
         }
-        
-        if( !ctx.webdav ){
-          await ctx.renderSkin('index',ret)
-        }
+      }
 
+      let readme_enable = !!config.getConfig('readme_enable')
+      if( readme_enable ){
+        let readmeFile = data.children.find(i => i.name.toLocaleUpperCase() == 'README.MD')
+        if(readmeFile){
+          ret.readme = markdownParse(await service.source(readmeFile.id , readmeFile.protocol))
+        }
       }
       
-    }else{
+      if( !ctx.webdav ){
+        await ctx.renderSkin('index',ret)
+      }
+    
+    }
+    else if(data.type == 'auth'){
+      await ctx.renderSkin('auth',{
+        parent , 
+        id:data.protocol+':'+data.id , 
+        name:decodeURIComponent(ctx.paths[ctx.paths.length-1] || ''),
+        // target:data.target
+      })
+    }
+    else if(data.type == 'auth_response'){
+      let result = {status:0 , message:"success"}
+      if(!data.result){
+        result.status = 403
+        result.message = '验证失败'
+      }
+      ctx.body = result
+    }
+    else{
       if( ignoreexts.includes(data.ext) || ignorefiles.includes(data.name) ){
         ctx.status = 404
       }else{
@@ -161,29 +173,5 @@ module.exports = {
       return { ...data }
     }
     
-  },
-
-  async auth(ctx){
-    let { path , user , passwd } = ctx.request.body
-    let [paths , paths_raw] = parsePath(path.substring(1))
-
-    let data = await service.path(paths , ctx.query , paths_raw)
-    let result = { status : 0 , message:''}
-    let ra = requireAuth(data)
-
-    //需要验证
-    if( ra ){
-      let access = await service.auth(data , user , passwd)
-      if( access ){
-        ctx.session.access.add( data.id )
-      }else{
-        result.status = 403
-        result.message = '验证失败'
-      }
-    }else{
-      result.message = '此目录不需要验证'
-    }
-
-    ctx.body = result
   }
 }

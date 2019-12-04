@@ -6,15 +6,6 @@ const name = 'core'
 
 const version = '1.0'
 
-const search = (ret, key, value) => {
-  for (let i in ret) {
-    if (ret[i][key] == value) {
-      return i
-    }
-  }
-  return -1
-}
-
 const diff = (a, b) => {
   let ret = []
   b.forEach((v, i) => {
@@ -24,8 +15,6 @@ const diff = (a, b) => {
   })
   return ret
 }
-
-const requireAuth = (data) => !!(data.children && data.children.find(i=>(i.name == '.passwd')))
 
 var nodeCache = {}
 
@@ -70,27 +59,16 @@ module.exports = ({ cache , getVendor , getConfig , getRuntime , updateFolder , 
   const root = () => {
     let paths = getConfig('path'), key
 
-    // 如果只有一个目录 则直接列出
-    if (paths.length == 1) {
-      paths = paths[0].path
-      return {
-        id: paths.split(':').slice(1).join(':'),
-        protocol: paths.split(':')[0],
-        type: 'folder'
-      }
-    } else {
-      //根路径不判断缓存，防止添加路径路径时丢失
-      let disk = paths.map((i, index) => ({
-        id: i.path.split(':').slice(1).join(':'),
-        protocol: i.path.split(':')[0],
-        name: i.name,
-        size: '-',
-        updated_at: '-',
-        type: 'folder'
-      }))
+    let disk = paths.map((i, index) => ({
+      id: i.path.split(':').slice(1).join(':'),
+      protocol: i.path.split(':')[0],
+      name: i.name,
+      size: '-',
+      updated_at: '-',
+      type: 'folder'
+    }))
 
-      return { id: '$root', protocol: 'root', type: 'folder', children: disk }
-    }
+    return { id: '$root', protocol: 'root', cache:false , type: 'folder', children: disk }
   }
 
 
@@ -102,193 +80,97 @@ module.exports = ({ cache , getVendor , getConfig , getRuntime , updateFolder , 
    */
   const process_fast = async(p, { query, method } = {}) => {
 
-    if( p == '' || p == '/' ) return root()
+    //  paths : / => [''] ;  /a/b/c => [a','b','c']
 
-    let hit
-    
-    let paths = p.replace(/^\//,'').split('/')
-
-    //逆向查询节点，理想情况是：直接匹配到最近的 挂载节点
+    let hit = root()
+    let paths = (p == '' || p == '/') ? [] : p.replace(/^\//,'').split('/').map(i => decodeURIComponent(i))
     let idx = paths.length
-    while( idx > 0 ){
-      let cur = paths.slice(0,idx).join('/')
+    let isRoot = idx == 0
+
+    //逆向查询节点
+    while( idx >= 0 ){
+      let cur = '/' + paths.slice(0,idx).join('/')
       let content = nodeCache[cur]
       if( content ){
         hit = content
-        console.log('hit path',cur)
+        idx--
         break
       }else{
         idx--
       }
     }
 
-    if( hit ){
-      let vendor = getVendor(hit.protocol)
-      hit = await vendor.folder(hit.id)
-    }else{
-      hit = root()
-    }
-    
-    //后续处理路径 ，正向
-    for( ; idx < paths.length ; idx++ ) {
-
-      let curname = decodeURIComponent(paths[idx])
-      let children = hit.children || []
-      let index = search(children, 'name', curname)
-
-      if( index == -1){
-        return false
-      }
-      //继续处理
-      else{ 
-        let data = children[index]
-
-        let vendor = getVendor(data.protocol)
-
-        if (data.lnk) {
-          let originId = data.protocol + ':' + data.id
-          await updateLnk(data)
-
-          vendor = getVendor(data.protocol)
-
-          //缓存 快捷方式 的实际链接
-          cache.set(originId, data.protocol + ':' + data.id)
-        }
-
-        if( vendor.cache !== false ){
-          nodeCache[paths.slice(0,idx+1).join('/')] = { protocol: data.protocol , id : data.id }
-        }
-
-
-        if( data.type == 'folder'){
-          let t = await vendor.folder(data.id)
-          
-          if( t ){
-            if( t.type == 'folder' ){
-              hit = await updateFolder(t)
-            }
-            else if(t.type == 'redir') {
-              hit = await process_fast(t.path)
-              //不再参与后续
-              break;
-            }
-            else{
-              hit = await updateFile(t)
-            }
-          }else{
-            return false
-          }
-        }else{
-          let t = await vendor.file(data.id, { query, req : getRuntime('req') ,paths: [], data })
-          if( t ){
-             hit = await updateFile(t)
-             break
-          }else{
-            return false
-          }
-          
-        }
-        
+    if(hit.protocol == 'root'){
+      if( hit.children && hit.children.length == 1 ){
+        hit = hit.children[0]
+      }else if( isRoot ){
+        return hit
       }
     }
 
-    return hit
+    for( ; idx < paths.length; idx++ ){
 
-  }
-
-  //递归方案
-  const process = async(p, { query, full_paths , method }) => {
-    let hit, resp = false,
-      miss
-    let paths = p.replace(/^\//,'').split('/')
-
-    if( !full_paths ) full_paths = paths
-
-    let pl = paths.join('/')
-    //1. path -> target , 需要处理缓存时长
-    const content = cache.get(pl, true)
-    if (content) {
-      console.log(`path${pl}) -> fileid -> cahce`)
-      return updateFolder(content)
-    }
-
-    if (pl == '') {
-      hit = root()
-    } else {
-      let parent = await process(paths.slice(0, -1).join('/'), { query, full_paths , method })
-      let curname = decodeURIComponent(paths[paths.length - 1])
-      
-      //父目录中对比
-      if (parent) {
-        let children = parent.children || []
-        let index = search(children, 'name', curname)
-
-        if (index != -1) {
-          hit = children[index]
-          //路径缓存
-          if (hit.type == 'folder' && hit.id){
-            cache.set(pl, hit.protocol + ':' + hit.id)
-          }
-        } else {
+      if(paths[idx] && hit.children){
+        let children = hit.children
+        hit = children.find(i => i.name == paths[idx])
+        if( !hit ){
           return false
         }
-
       }
-      //无法完成匹配
-      else {
-        return false
+
+      if(hit.protocol == 'root' ){
+        continue
       }
-    }
+      
+      let vendor = getVendor(hit.protocol)
 
-    //2. 根据对象属性 做下一步操作
-    if (hit.protocol == 'root') {
-      return hit
-    }
-
-    let vendor = getVendor(hit.protocol)
-
-    if (vendor) {
-
-      //处理快捷方式
       if (hit.lnk) {
         let originId = hit.protocol + ':' + hit.id
         await updateLnk(hit)
 
         vendor = getVendor(hit.protocol)
-
         //缓存 快捷方式 的实际链接
         cache.set(originId, hit.protocol + ':' + hit.id)
       }
 
-      //folder 
-      if (hit.type == 'folder') {
-
-        resp = await vendor.folder(hit.id, { query, req : getRuntime('req') ,paths: diff(paths, full_paths), content: hit.content })
-        if (resp) updateFolder(resp)
-
-        //TODO check passwd
-
-        if (hit.id != resp.id) {
-          cache.set(pl, hit.protocol + ':' + resp.id)
-        }
-
-        if( resp.redir ){
-          lastName = resp.name
-          console.log('redir::'+resp.redir)
-          //重定向
-          resp = await ls(resp.redir.replace(/^\//,''))
-          resp.name = lastName
-        }
-
+      
+      if( vendor.cache !== false && hit.type == 'folder' ){
+        let cacheId = '/' + paths.slice(0,idx + 1).join('/')
+        nodeCache[cacheId] = { protocol: hit.protocol , id : hit.id , type: hit.type }
       }
-      // file
-      else {
-        resp = await vendor.file(hit.id, { query, req : getRuntime('req') ,paths: diff(paths, full_paths), data: hit })
-        await updateFile(resp)
+      
+      if( hit.type == 'folder'){
+        let t = await vendor.folder(hit.id)
+        //console.log(t.type,t.children)
+        if( t ){
+          if( t.type == 'folder' ){
+            hit = await updateFolder(t)
+          }
+          else if(t.type == 'redir') {
+            hit = await process_fast(t.path)
+            //不再参与后续
+            break;
+          }
+          else{
+            hit = await updateFile(t)
+          }
+        }else{
+          return false
+        }
       }
+      else{
+        let t = await vendor.file(hit.id, { query, req : getRuntime('req') ,paths: [], hit })
+        if( t ){
+           hit = await updateFile(t)
+           break
+        }else{
+          return false
+        }
+      }
+
     }
-
-    return resp
+    
+    return hit
   }
 
 

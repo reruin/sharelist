@@ -47,31 +47,25 @@ const output = async (ctx , data)=>{
 
 module.exports = {
   async index(ctx){
-    let data = await service.path(ctx.runtime)
+    const data = await service.path(ctx.runtime)
 
     let base_url = ctx.path == '/' ? '' : ctx.path
     let parent = ctx.paths.length ? ('/' + ctx.paths.slice(0,-1).join('/')) : ''
     let ignoreexts = (config.getConfig('ignore_file_extensions') || '').split(',')
     let ignorefiles = (config.getConfig('ignore_files') || '').split(',')
     let ignorepaths = config.getIgnorePaths()
-
     let isAdmin = ctx.session.admin
-
-    //data is readonly
-    if( data === false){
+    
+    if( data === false || data === 401){
       ctx.status = 404
     }
-    else if(data === 401){
-      ctx.status = 401
-    }
-    else if(data.body){
+    else if(data.type == 'body' || data.body){
       await ctx.renderSkin('custom',{
         body : data.body
       })
     }
-    else if(data.redirect){
+    else if(data.type == 'redirect' || data.redirect){
       ctx.redirect(data.redirect)
-      return
     }
     else if(data.type == 'folder'){
       let ret = { base_url , parent , data:[] }

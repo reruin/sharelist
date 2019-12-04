@@ -192,7 +192,7 @@ const install = async (redirect_uri , createLink) => {
   return `
     <div class="auth">
       <h3>OneDrive 挂载向导</h3>
-      <p style="font-size:12px;"><a target="_blank" style="font-size:12px;margin-right:5px;color:#337ab7;" href="${createLink}">访问此链接</a>获取 应用机密 和 应用ID</p>
+      <p style="font-size:12px;"><a target="_blank" style="font-size:12px;margin-right:5px;color:#337ab7;" href="${createLink}">访问此链接</a>获取 应用机密 和 应用ID。请注意：个人Microsoft需前往 <a href="https://portal.azure.com/#blade/Microsoft_AAD_RegisteredApps/ApplicationsListBlade" target="_blank" style="font-size:12px;margin-right:5px;color:#337ab7;">Azure管理后台</a> 注册应用才能获取应用机密 和 应用ID。可参考</p>
       <div>
         <form class="form-horizontal" method="post">
           <input type="hidden" name="act" value="install" />
@@ -372,7 +372,7 @@ module.exports = ({ request, cache, getConfig, querystring, base64 , saveDrive ,
         (Date.now() - r.$cached_at < onedrive_max_age_dir)
 
       ) {
-        console.log('get OneDrive folder from cache')
+        console.log('get OneDrive folder from cache' , resid)
         return r
       }
     }
@@ -414,7 +414,7 @@ module.exports = ({ request, cache, getConfig, querystring, base64 , saveDrive ,
     result.$cached_at = Date.now()
     result.children = children
     cache.set(resid, result)
-
+    console.log('cache save',resid)
     return result
   }
 
@@ -431,7 +431,7 @@ module.exports = ({ request, cache, getConfig, querystring, base64 , saveDrive ,
       data.$cached_at && 
       ( Date.now() - data.$cached_at < onedrive_max_age_dir)
     ){
-      console.log('get od download url from cache')
+      console.log('get od download url from upstream' , data)
       return data
     }
 
@@ -442,7 +442,6 @@ module.exports = ({ request, cache, getConfig, querystring, base64 , saveDrive ,
       'Authorization':`bearer ${credentials.access_token}`,
       'Content-Type': 'application/json'
     },json:true})
-
     if(resp.body){
       data = {
         id: id,
@@ -455,6 +454,10 @@ module.exports = ({ request, cache, getConfig, querystring, base64 , saveDrive ,
         ext: extname(resp.body.name),
         url:resp.body['@microsoft.graph.downloadUrl'],
         type: resp.body.folder ? 'folder' : 'other',
+      }
+      if(!data.url && resp.body.webUrl){
+        data.type = 'redirect'
+        data.redirect = resp.body.webUrl
       }
       return data
     }

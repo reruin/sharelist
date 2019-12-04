@@ -13,7 +13,7 @@ const rnd = (l) => {
   return l[roll].replace(/^\//,'')
 }
 
-module.exports = ({getConfig, setIgnorePaths , pathNormalize , getDrives , getRuntime}) => {
+module.exports = ({getConfig, setIgnorePaths , getDrives , getRuntime}) => {
 
   const getCurrentPath = async (name) => {
     let paths = await getDrives()
@@ -30,7 +30,7 @@ module.exports = ({getConfig, setIgnorePaths , pathNormalize , getDrives , getRu
 
   getCurrentPath()
 
-  const folder = async(id) => {
+  const folder = async() => {
 
     let path = getRuntime('req').path
 
@@ -39,7 +39,6 @@ module.exports = ({getConfig, setIgnorePaths , pathNormalize , getDrives , getRu
     let hit = await getCurrentPath(decodeURIComponent(rootName))
 
     if( hit ){
-
       path = path.replace(/^\/[^\/]+/,`/${(hit)}`)
       return {
         type:'redir',
@@ -51,25 +50,5 @@ module.exports = ({getConfig, setIgnorePaths , pathNormalize , getDrives , getRu
     }
   }
 
-  const file = async(id)=>{
-    console.log(id)
-    let realdir = realpath(normalize(id))
-    let stat = {}
-    try{
-      stat = fs.statSync(realpath(realdir))
-    }catch(e){}
-
-    return {
-      id,
-      name: path.basename(id),
-      ext: extname(id),
-      url: realpath(id),
-      size:stat.size,
-      protocol:defaultProtocol,
-      outputType:'file',
-      proxy:true
-    }
-  }
-
-  return { name , version , drive:{ protocols , folder , file , cache:false} }
+  return { name , version , drive:{ protocols , folder , file : folder, cache:false} }
 }

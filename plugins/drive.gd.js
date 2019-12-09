@@ -97,7 +97,7 @@ module.exports = ({ request , getConfig , datetime , cache , wrapReadableStream 
   /**
    * 获取文件实际路径
    */
-  const file = async(id , { data = {} , requireSize = false } = {}) =>{
+  const file = async(id , { data = {} , req , requireSize = false } = {}) =>{
     if(
       data && 
       data.$cached_at && 
@@ -111,6 +111,9 @@ module.exports = ({ request , getConfig , datetime , cache , wrapReadableStream 
 
     if( requireSize && !data.size ){
       let resp = await request.get(`${host}/file/d/${id}/view`)
+      data.name = (resp.body.match(/<meta\s+property="og:title"\s+content="([^"]+)"/) || ['',''])[1]
+      data.ext = (data.name.match(/\.([0-9a-z]+)$/) || ['',''])[1]
+
       if(resp.body.indexOf('errorMessage') == -1 ) {
         let code = (resp.body.match(/viewerData\s*=\s*(\{[\w\W]+?\});<\/script>/) || ['',''])[1]
         let preview_url = ''
@@ -149,6 +152,12 @@ module.exports = ({ request , getConfig , datetime , cache , wrapReadableStream 
         if(resp.headers && resp.headers.location){
           downloadUrl = resp.headers.location
         }
+      }else{
+        return {
+          ...data,
+          type:'body',
+          body:'Too many users'
+        }
       }
     }
 
@@ -156,7 +165,7 @@ module.exports = ({ request , getConfig , datetime , cache , wrapReadableStream 
     data.$cached_at = Date.now()
 
     //强制保存 ， data 是指向 父级 的引用
-    let resid = `${defaultProtocol}:${data.parent}`
+    //let resid = `${defaultProtocol}:${data.parent}`
     // cache.save()
     return data
   }

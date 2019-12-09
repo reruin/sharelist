@@ -45,7 +45,6 @@ class ShareList {
       if( requireAuth(data) && req.access.has(req.path) == false) {
         data.type = 'auth'
       }
-
       return data
     }
     

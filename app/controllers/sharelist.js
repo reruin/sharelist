@@ -122,6 +122,7 @@ module.exports = {
       ctx.body = result
     }
     else{
+      console.log('file===\r\n',data)
       if( ignoreexts.includes(data.ext) || ignorefiles.includes(data.name) ){
         ctx.status = 404
       }else{

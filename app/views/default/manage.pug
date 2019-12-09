@@ -16,9 +16,12 @@ block content
         .form-group
           a.btn.btn-success(href='?a=export',target='_blank')= __('export')
           a.btn.btn-success(href='/manage/shell',target='_blank') Shell
-          form.form-horizontal(style="display:inline-block;",method='post',action="/manage/api")
-                  input(type='hidden',name='a',value='reboot')
-                  button.btn.btn-danger= __('reboot')
+          form.form-horizontal(style="display:inline-block;padding:5px;",method='post',action="/manage/api")
+            input(type='hidden',name='a',value='clear_cache')
+            button.btn.btn-danger= __('clear_cache')
+          form.form-horizontal(style="display:inline-block;padding:5px;",method='post',action="/manage/api")
+            input(type='hidden',name='a',value='reboot')
+            button.btn.btn-danger= __('reboot')
         .panel.panel-default
           .panel-heading
             span= __("general")
@@ -67,9 +70,6 @@ block content
                     option(value='0', selected=config.readme_enable==0 ? 'selected' : null)= __('disable')
               .form-group.text-center
                 button.btn.btn-default(type='submit')= __('save')
-            form.form-horizontal(method='post',action="/manage/api")
-                  input(type='hidden',name='a',value='clear_cache')
-                  button.btn.btn-danger= __('clear_cache')
         .panel.panel-default
           .panel-heading
             span= __("plugin_option")

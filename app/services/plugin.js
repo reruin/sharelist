@@ -95,7 +95,6 @@ const getStream = async (ctx , id ,type, protocol , data) => {
 const getPreview = async (data) => {
   let ext = data.ext
   let name = previewMap.get(ext)
-  console.log(resources[name].preview[ext])
   return name ? await resources[name].preview[ext](data , config.getRuntime('req')) : null
 }
 

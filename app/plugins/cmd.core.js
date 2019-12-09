@@ -159,7 +159,7 @@ module.exports = ({ cache , getVendor , getConfig , getRuntime , updateFolder , 
         }
       }
       else{
-        let t = await vendor.file(hit.id, { query, req : getRuntime('req') ,paths: [], hit })
+        let t = await vendor.file(hit.id, { query, data:hit , req : getRuntime('req') ,paths: [], hit })
         if( t ){
            hit = await updateFile(t)
            break

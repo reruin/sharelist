@@ -133,8 +133,8 @@ module.exports = ({ cache , getVendor , getConfig , getRuntime , updateFolder , 
         cache.set(originId, hit.protocol + ':' + hit.id)
       }
 
-      
-      if( vendor.cache !== false && hit.type == 'folder' ){
+      //root 下不做缓存
+      if( vendor.cache !== false && hit.type == 'folder' && idx > 0 ){
         let cacheId = '/' + paths.slice(0,idx + 1).join('/')
         nodeCache[cacheId] = { protocol: hit.protocol , id : hit.id , type: hit.type }
       }
@@ -145,6 +145,9 @@ module.exports = ({ cache , getVendor , getConfig , getRuntime , updateFolder , 
         if( t ){
           if( t.type == 'folder' ){
             hit = await updateFolder(t)
+            if( vendor.createWriteStream ){
+              hit.writeable = true
+            }
           }
           else if(t.type == 'redir') {
             hit = await process_fast(t.path)

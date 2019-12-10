@@ -45,6 +45,7 @@ module.exports = async(ctx, next) => {
     path:ctx.path,
     query:ctx.query,
     body:ctx.request.body,
+    files:ctx.request.files,
     method:ctx.method,
     host:ctx.host,
     origin:ctx.origin,

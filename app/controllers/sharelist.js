@@ -100,6 +100,8 @@ module.exports = {
         }
       }
       
+      ret.writeable = data.writeable && isAdmin
+      
       if( !ctx.webdav ){
         await ctx.renderSkin('index',ret)
       }

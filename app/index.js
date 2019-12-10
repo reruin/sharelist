@@ -2,7 +2,7 @@ const Koa = require('koa')
 const views = require('koa-views')
 const json = require('koa-json')
 const onerror = require('koa-onerror')
-const bodyparser = require('koa-bodyparser')
+const koaBody = require('koa-body')
 const logger = require('koa-logger')
 const koaStatic = require('koa-static')
 const locales = require('koa-locales')
@@ -42,8 +42,11 @@ app.use(session({
 
 app.use(cors())
 
-app.use(bodyparser({
-  enableTypes:['json', 'form', 'text' , 'xml']
+app.use(koaBody({
+  multipart:true,
+  formidable: {
+    maxFileSize: 4000 * 1024 * 1024
+  }
 }))
 
 app.use(json())

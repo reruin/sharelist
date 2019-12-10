@@ -40,8 +40,13 @@ class ShareList {
     if( req.body && req.body.act == 'auth' ){
       let ra = await this.auth(req)
       return { type:'auth_response' , result: ra }
-    }else{
-      let data = await command('ls' , req.paths.join('/') , req )
+    }
+    //上传
+    else if(req.files){
+      console.log(req.files)
+    }
+    else{
+      let data = await command('ls' , req.paths.join('/'))
       if( requireAuth(data) && req.access.has(req.path) == false) {
         data.type = 'auth'
       }
@@ -51,7 +56,7 @@ class ShareList {
   }
 
   async auth(req) {
-    let data = await command('ls' , req.paths.join('/') , req )
+    let data = await command('ls' , req.paths.join('/'))
     let hit = data.children.find(i => i.name == '.passwd')
     let content = await getSource(hit.id, hit.protocol , hit)
     let body = yaml.parse(content)

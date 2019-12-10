@@ -14,7 +14,7 @@
   "dependencies": {
     "@koa/cors": "^2.2.1",
     "koa": "^2.2.0",
-    "koa-bodyparser": "^3.2.0",
+    "koa-body": "^4.1.1",
     "koa-i18n": "^2.1.0",
     "koa-json": "^2.0.2",
     "koa-locales": "^1.8.0",

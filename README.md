@@ -21,9 +21,9 @@ ShareList 是一个易用的网盘工具，支持快速挂载 GoogleDrive、OneD
   * [文件预览](#文件预览) 
   * [显示README](#显示README) 
   * [负载均衡](#负载均衡) 
-  * [文件/目录上传](#文件/目录上传) 
+  * [文件/目录上传](#文件目录上传) 
   * [下载链接有效期](#下载链接有效期) 
-  * [Nginx/Caddy反代注意事项](#Nginx/Caddy反代注意事项) 
+  * [Nginx/Caddy反代注意事项](#Nginx(Caddy)反代注意事项) 
 * [插件开发](#插件开发) 
 
 
@@ -198,14 +198,14 @@ data:
 #### Torrent  
 由[preview.torrent](plugins/drive.torrent.js)插件实现，为种子文件提供在线预览。  
 
-### 文件/目录上传
+### 文件目录上传
 在登录状态（页面顶部会出现上传按钮），可向 本地磁盘(fs)、OneDriveAPI(oda)、GoogleDriveAPI(gda) 上传文件/目录。  
 目前处于实验性阶段，可能出现各类异常。    
 
 ### 下载链接有效期
 后台管理，常规设置，设置```下载链接有效期```后，下载链接将在此时间段内有效。若要关闭此功能，请设置为0。     
 
-### Nginx/Caddy反代注意事项
+### Nginx(Caddy)反代注意事项
 使用反代时，请添加以下配置。  
 Nginx   
 ```ini

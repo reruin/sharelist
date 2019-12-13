@@ -27,6 +27,8 @@ module.exports = {
   "readme_enable":"显示README.md内容",
   "max_age_dir":"目录缓存时长(秒)",
   "max_age_file":"链接缓存时长(秒)",
+  "max_age_download":"下载链接有效期(秒)",
+  "max_age_download_placeholder":"设置为0时永久有效",
   "virtual_path":"虚拟路径",
   "general":"常规",
   "webdav_path":"WebDAV路径",

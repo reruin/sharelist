@@ -54,7 +54,11 @@ http.post = (url, form, opts) => {
   params.url = url
   if(opts.is_body){
     params.body = form
-  }else{
+  }
+  else if(opts.isFormData){
+    params.formData = form
+  }
+  else{
     params.form = form
   }
   params.method = 'POST'

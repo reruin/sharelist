@@ -18,6 +18,8 @@ const db = createFiledb(configPath , {raw:true} , {
   //外链 10分钟
   max_age_file: 5 * 60 * 1000,
 
+  max_age_download:0,
+
   skin:'default',
 
   //忽略文件（扩展名）
@@ -28,6 +30,8 @@ const db = createFiledb(configPath , {raw:true} , {
   readme_enable:1,
 
   ignore_paths:{},
+
+  max_age_download_sign:'sl_'+Date.now(),
 
   plugin_option:[]
 });

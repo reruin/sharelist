@@ -109,6 +109,9 @@ const sandboxCache = (id) => {
     },
     set(key , ...rest){
       cache.set(`@${id}_${key}` , ...rest)
+    },
+    clear(key , ...rest){
+      cache.clear(`@${id}_${key}`,...rest)
     }
   }
 }

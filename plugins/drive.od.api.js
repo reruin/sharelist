@@ -466,7 +466,6 @@ module.exports = ({ request, cache, getConfig, querystring, base64 , saveDrive ,
   }
 
   const mkdir = async (path , target, credentials) => {
-    
     let children = target.replace(/(^\/|\/$)/g,'').split('/')
 
     //无需创建
@@ -663,13 +662,15 @@ module.exports = ({ request, cache, getConfig, querystring, base64 , saveDrive ,
     let fullpath = pathNormalize(path +'/' + target)
     //为path 创建目的地目录
     await mkdir(path , target , credentials)
-    if( size ){
+    if( size !== undefined ){
       if( size <= 4194304 ){
         return await upload(fullpath , credentials)
       }else{
         return await uploadLargeFile(fullpath , size , credentials)
       }
     }
+
+    cache.clear(`${defaultProtocol}:${id}`)
   }
 
   return { name, version, drive: { protocols, folder, file , createReadStream , createWriteStream } }

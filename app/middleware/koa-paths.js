@@ -45,7 +45,6 @@ module.exports = async(ctx, next) => {
     path:ctx.path,
     query:ctx.query,
     body:ctx.request.body,
-    files:ctx.request.files,
     method:ctx.method,
     host:ctx.host,
     origin:ctx.origin,
@@ -53,6 +52,19 @@ module.exports = async(ctx, next) => {
     paths:paths,
     isAdmin:!!ctx.session.admin,
     access:ctx.session.access
+  }
+
+  if( ctx.get('x-request') ){
+    let data = {}
+    try{
+      data = JSON.parse(decodeURIComponent(ctx.get('x-request')))
+    }catch(e){}
+    if( data.type == 'upload' ){
+      runtime.upload = {
+        stream:ctx.req ,
+        options:data
+      }
+    }
   }
 
   ctx.runtime = runtime

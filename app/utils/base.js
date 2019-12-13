@@ -2,6 +2,8 @@ const mime = require('mime')
 
 const path = require('path')
 
+const crypto = require('crypto')
+
 const md = require('markdown-it')()
 
 const rnd = (min, max) => Math.floor(min + Math.random() * (max - min))
@@ -103,7 +105,7 @@ const pathNormalize = (path , basepath = '') => {
     path = path.replace(DOUBLE_DOT_RE, "/");
   }
 
-  path = path.replace(/\/\.+/g,'/')
+  path = path.replace(/\/\.+\//g,'/')
   path = path == '/' ? path : path.replace(/\/$/,'')
 
   return path;
@@ -125,6 +127,10 @@ const isRelativePath = (v) => !/^http/.test(v)
 const extname = (p) => p.split('.').pop()
 
 const markdownParse = (v) => md.render(v)
+
+const md5 = (v) => {
+  return crypto.createHash('md5').update(v).digest('hex')
+}
 
 module.exports = {
   parsePath,
@@ -148,6 +154,7 @@ module.exports = {
   base64,
   extname,
   markdownParse,
+  md5,
   params(url) {
     url = url.split('?')[1]
     let reg = /(?:&)?([^=]+)=([^&]*)/ig,

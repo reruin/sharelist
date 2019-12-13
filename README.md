@@ -21,6 +21,8 @@ ShareList 是一个易用的网盘工具，支持快速挂载 GoogleDrive、OneD
   * [文件预览](#文件预览) 
   * [显示README](#显示README) 
   * [负载均衡](#负载均衡) 
+  * [文件/目录上传](#文件/目录上传) 
+  * [下载链接有效期](#下载链接有效期) 
   * [Nginx/Caddy反代注意事项](#Nginx/Caddy反代注意事项) 
 * [插件开发](#插件开发) 
 
@@ -178,7 +180,7 @@ data:
 
 **注意：负载目录建立后，其目标目录将被自动隐藏（管理员模式可见）。**   
 
-### 忽略文件类型 
+### 忽略文件类型
 后台管理，常规设置，```忽略文件类型```可定义忽略的文件类型。例如忽略图片：```jpg,png,gif,webp,bmp,jpeg```。  
 ### 显示README
 后台管理，常规设置，将```显示README.md内容```设为启用，当前目录包含```README.md```时，将自动显示在页面。
@@ -194,7 +196,14 @@ data:
 后台管理，插件设置，```支持预览的视频后缀```可定义可预览视频类型。  
 
 #### Torrent  
-由[preview.torrent](plugins/drive.torrent.js)插件实现，为种子文件提供在线预览。
+由[preview.torrent](plugins/drive.torrent.js)插件实现，为种子文件提供在线预览。  
+
+### 文件/目录上传
+在登录状态（页面顶部会出现上传按钮），可向 本地磁盘(fs)、OneDriveAPI(oda)、GoogleDriveAPI(gda) 上传文件/目录。  
+目前处于实验性阶段，可能出现各类异常。    
+
+### 下载链接有效期
+后台管理，常规设置，设置```下载链接有效期```后，下载链接将在此时间段内有效。若要关闭此功能，请设置为0。     
 
 ### Nginx/Caddy反代注意事项
 使用反代时，请添加以下配置。  
@@ -204,6 +213,10 @@ Nginx
   proxy_set_header X-Real-IP $remote_addr;
   proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
   proxy_set_header X-Forwarded-Proto $scheme;
+
+  proxy_set_header Range $http_range;
+  proxy_set_header If-Range $http_if_range;
+  proxy_no_cache $http_range $http_if_range;
 ```   
 Caddy   
 ```ini

@@ -2,7 +2,7 @@ const service = require('../services/sharelist')
 const config = require('../config')
 
 // const { sendFile , sendHTTPFile } = require('../utils/sendfile')
-const { parsePath , pathNormalize , enablePreview, enableRange , isRelativePath , markdownParse} = require('../utils/base')
+const { parsePath , pathNormalize , enablePreview, enableRange , isRelativePath , markdownParse , md5 } = require('../utils/base')
 
 const requireAuth = (data) => !!(data.children && data.children.find(i=>(i.name == '.passwd')))
 
@@ -47,6 +47,15 @@ const output = async (ctx , data)=>{
 
 module.exports = {
   async index(ctx){
+    let downloadLinkAge = config.getConfig('max_age_download')
+
+    if( downloadLinkAge > 0 && ctx.query.t){
+        if( ctx.query.t != md5(config.getConfig('max_age_download_sign') + Math.floor(Date.now() / downloadLinkAge)) ) {
+          ctx.status = 403
+          return
+        }
+    }
+
     const data = await service.path(ctx.runtime)
 
     let base_url = ctx.path == '/' ? '' : ctx.path
@@ -55,14 +64,18 @@ module.exports = {
     let ignorefiles = (config.getConfig('ignore_files') || '').split(',')
     let ignorepaths = config.getIgnorePaths()
     let isAdmin = ctx.session.admin
-    
+
     if( data === false || data === 401){
       ctx.status = 404
     }
     else if(data.type == 'body' || data.body){
-      await ctx.renderSkin('custom',{
-        body : data.body
-      })
+      if( typeof data.body == 'object' ){
+        ctx.body = data.body
+      }else{
+        await ctx.renderSkin('custom',{
+          body : data.body
+        })
+      }
     }
     else if(data.type == 'redirect' || data.redirect){
       ctx.redirect(data.redirect)
@@ -71,6 +84,8 @@ module.exports = {
       let ret = { base_url , parent , data:[] }
 
       let preview_enable = config.getConfig('preview_enable')
+
+      let sign = md5(config.getConfig('max_age_download_sign') + Math.floor(Date.now() / downloadLinkAge))
 
       for(let i of data.children){
         if(
@@ -87,6 +102,10 @@ module.exports = {
           if(await service.isPreviewable(i) && preview_enable){
             href += (href.indexOf('?')>=0 ? '&' : '?') + 'preview'
           }
+          if( i.type != 'folder' && downloadLinkAge > 0 ){
+            href += (href.indexOf('?')>=0 ? '&' : '?') + 't=' + sign
+          }
+          
           if(i.hidden !== true)
             ret.data.push( { href , type : i.type , size: i.displaySize , updated_at:i.updated_at , name:i.name})
         }
@@ -124,7 +143,6 @@ module.exports = {
       ctx.body = result
     }
     else{
-      console.log('file===\r\n',data)
       if( ignoreexts.includes(data.ext) || ignorefiles.includes(data.name) ){
         ctx.status = 404
       }else{

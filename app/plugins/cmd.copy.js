@@ -22,7 +22,7 @@ module.exports = ({ command , pathNormalize , createReadStream , createWriteStre
     let data , i = pl.length
     // destroy flag
     while(i>=0){
-      if( task.destroy ) return null
+      if(task && task.destroy ) return null
 
       data = await command('ls' , '/'+pl.slice(0,i).join('/'))
       if(data){
@@ -30,7 +30,7 @@ module.exports = ({ command , pathNormalize , createReadStream , createWriteStre
       }
       i--
     }
-    console.log('hit id' , data.protocol+':'+data.id)
+    console.log('prepare writestream for ', data.protocol+':'+data.id)
     if( data && data.id && data.protocol ){
       return await createWriteStream({...data , ...extra , target:pl.slice(i,pl.length).join('/')})
     }
@@ -227,6 +227,31 @@ module.exports = ({ command , pathNormalize , createReadStream , createWriteStre
 
   }
 
+  //{ stream:'可读流' , path:'目标路径' , size:'文件大小'}
+  const upload = ({ stream , path , size}) => {
+    stream.pause()
 
-  return { name , version , cmd:{ cp }}
+    return new Promise((resolve,reject) => {
+      parseWrite(null , path , {size}).then( writeStream => {
+        if(!writeStream){
+          resolve(false)
+          return
+        }
+        stream.resume()
+        stream.pipe( writeStream )
+
+        writeStream.on('finish', () => {
+          console.log('finish')
+          //clear cache
+          resolve(true)
+        })
+
+        writeStream.on('error', () => {
+          resolve(false)
+        })
+      })
+    })
+  }
+
+  return { name , version , cmd:{ cp , upload }}
 }

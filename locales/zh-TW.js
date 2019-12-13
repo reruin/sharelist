@@ -27,6 +27,8 @@ module.exports = {
   "readme_enable":"顯示README.md",
   "max_age_dir":"資料夾快取周期(秒)",
   "max_age_file":"檔案快取周期(秒)",
+  "max_age_download":"下載鏈接有效期(秒)",
+  "max_age_download_placeholder":"設置為0時永久有效",
   "virtual_path":"虛擬路徑",
   "general":"通用設定",
   "webdav_path":"WebDAV路徑",

@@ -42,12 +42,7 @@ app.use(session({
 
 app.use(cors())
 
-app.use(koaBody({
-  multipart:true,
-  formidable: {
-    maxFileSize: 4000 * 1024 * 1024
-  }
-}))
+app.use(koaBody())
 
 app.use(json())
 

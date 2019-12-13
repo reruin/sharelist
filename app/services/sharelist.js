@@ -1,3 +1,4 @@
+const fs = require('fs')
 const yaml = require('yaml')
 const http = require('../utils/http')
 const base = require('../utils/base')
@@ -42,8 +43,30 @@ class ShareList {
       return { type:'auth_response' , result: ra }
     }
     //上传
-    else if(req.files){
-      console.log(req.files)
+    else if(req.upload){
+      if(!req.isAdmin){
+        return {
+          type:'body',
+          body:{ status:403 , result:'Forbidden'}
+        }
+      }
+      let file = req.upload
+      let ret = { file:file.name}
+      let result = await command('upload' , {
+        stream:file.stream ,
+        path:[].concat(req.paths,file.options.path || file.options.name).join('/'),
+        size:file.options.size
+      })
+      if(result){
+        ret.status = 0
+      }else{
+        ret.status = 500
+      }
+
+      return {
+        type:'body',
+        body:ret
+      }
     }
     else{
       let data = await command('ls' , req.paths.join('/'))

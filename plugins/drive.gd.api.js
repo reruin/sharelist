@@ -15,6 +15,12 @@ const defaultProtocol = 'gda'
 
 const googledrive_max_age_dir = 600 * 1000
 
+const { URL } = require('url')
+
+const urlFormat = require('url').format
+
+const fileIdMap = {}
+
 class oauth2ForGD {
   constructor(request, qs, handleUpdate) {
     this.request = request
@@ -225,19 +231,26 @@ const install = async (client_id, client_secret, redirect_uri) => {
 }
 
 const parseCredentials = ({name,path}) => {
-  let [rootPath, cstr = ''] = path.split('->')
-  let [client_id, client_secret, redirect_uri, refresh_token] = cstr.split('|')
+  let data = new URL(path)
+  let credentials = { client_id : data.host }
+  for (const [key, value] of data.searchParams) {
+    credentials[key] = value
+  }
   return {
     name,
-    protocol:rootPath.split(':')[0],
-    path: rootPath.replace(/^[^\:]+\:/,''),
-    credentials: {
-      client_id,
-      client_secret,
-      refresh_token,
-      redirect_uri
-    }
+    protocol:data.protocol.split(':')[0],
+    path: data.pathname.replace(/^\//,''),
+    credentials
   }
+}
+
+const createId = (client_id , path) => {
+  return urlFormat({
+    protocol: defaultProtocol,
+    slashes:true,
+    hostname: client_id,
+    pathname: path,
+  })
 }
 // fileid->app_credentials
 module.exports = ({ request, cache, getConfig, querystring, base64, saveDrive, getDrive, getDrives , getRuntime , wrapReadableStream}) => {
@@ -266,7 +279,17 @@ module.exports = ({ request, cache, getConfig, querystring, base64, saveDrive, g
     }
 
     hit.forEach(i => {
-      let key = `${i.protocol}:${i.path}->${c.client_id}|${encodeURIComponent(c.client_secret)}|${c.redirect_uri}|${c.refresh_token}`
+      let key = urlFormat({
+        protocol: i.protocol,
+        hostname: c.client_id,
+        pathname: (i.path == '/' || i.path == '' ) ? '/root' : i.path,
+        slashes:true,
+        query:{
+          client_secret:c.client_secret,
+          redirect_uri:c.redirect_uri,
+          refresh_token:c.refresh_token
+        }
+      })
       saveDrive(key , i.name)
     })
   })
@@ -278,19 +301,18 @@ module.exports = ({ request, cache, getConfig, querystring, base64, saveDrive, g
   })
 
   const getCredentials = async (id) => {
-    // TODO 待解决嵌套情形
-    // /app1/app1_path/app2/app2_path/app2_file
-    // app2_file->app2_credentials
-    let [path, client] = id.split('->')
-    let ret = { path }
-    if (client) {
-      client_id = client.split('|')[0]
-      ret.credentials = await oauth2.getCredentials(client_id)
+    let data = new URL(id)
+    let ret = { path : data.pathname.replace(/^\//,'') , client_id: data.host }
+    if (ret.client_id) {
+      ret.credentials = await oauth2.getCredentials(ret.client_id)
     }
     return ret
   }
 
   const prepare = async (id) => {
+    if(!id.startsWith(defaultProtocol)){
+      id = defaultProtocol + ':' + id
+    }
     const req = getRuntime('req')
 
     let baseUrl = req.origin + req.path
@@ -399,12 +421,8 @@ module.exports = ({ request, cache, getConfig, querystring, base64, saveDrive, g
     if (!predata.credentials) return predata
 
     let { path, credentials } = predata
-
-    id = `${path}->${credentials.client_id}`
-
-    let resid = `${defaultProtocol}:${id}`
-
-    let r = cache.get(resid)
+    console.log('folder cache=='+id+'=')
+    let r = cache.get(id)
     if (r) {
       if (
         r.$cached_at &&
@@ -412,13 +430,11 @@ module.exports = ({ request, cache, getConfig, querystring, base64, saveDrive, g
         (Date.now() - r.$cached_at < googledrive_max_age_dir)
 
       ) {
-        console.log('get google folder from cache')
+        console.log(Date.now()+' CACHE GoogleDriveAPI '+ id)
         return r
       }
     }
     let api = 'https://www.googleapis.com/drive/v3/files'
-
-    if (path == '/') path = 'root'
 
     let resp = await request.get(api, {
       headers: {
@@ -439,7 +455,7 @@ module.exports = ({ request, cache, getConfig, querystring, base64, saveDrive, g
     let files = resp.body.files
     let children = files.map((file) => {
       return {
-        id: file.id + '->' + credentials.client_id,
+        id: createId(credentials.client_id , file.id),
         name: file.name,
         ext: file.fileExtension,
         protocol: defaultProtocol,
@@ -455,11 +471,11 @@ module.exports = ({ request, cache, getConfig, querystring, base64, saveDrive, g
     //缓存 pathid(fid->appid)  <=> path
     //cache.set(baseUrl , id)
     // console.log(children)
-    let result = { path, type: 'folder', protocol: defaultProtocol }
+    let result = { id, type: 'folder', protocol: defaultProtocol }
     result.$cached_at = Date.now()
     result.children = children
     
-    cache.set(resid, result)
+    cache.set(id, result)
 
     return result
   }
@@ -491,6 +507,236 @@ module.exports = ({ request, cache, getConfig, querystring, base64, saveDrive, g
     }
   }
 
+
+  const request_fix = (...rest) => {
+    let req = request(...rest)
+    // request 作为 writestream 时不会emit finish
+    req.on('end' ,function(){
+      this.emit('finish')
+    })
+    req.on('error' , (e)=>{
+      console.log(e)
+    })
+    return req
+  }
+  
+  const metadata = async ({ name , key = 'id' , parentId = 'root' , credentials } = {}) => {
+    let api = 'https://www.googleapis.com/drive/v3/files'
+    let resp = false
+    try{
+       resp = await request.get(api, {
+        headers: {
+          'Authorization': `Bearer ${credentials.access_token}`,
+          // 'Content-Type': 'application/json'
+        },
+        qs: {
+          includeItemsFromAllDrives: true,
+          supportsAllDrives: true,
+          pageSize: 1,
+          fields: `files(${key})`,
+          q: `name = '${name}' and trashed = false and '${parentId}' in parents`,
+        },
+        json: true
+      })
+      if(resp.body.files && resp.body.files.length > 0){
+        resp = resp.body.files[0]
+      }else{
+        return false
+      }
+      
+    }catch(e){
+      return undefined
+    }
+   
+    return resp
+  }
+  //目录是否存
+  // /a/b.txt
+  const exists = async (path , parentId = 'root') => {
+    let lv = path.replace(/(^\/|\/$)/g,'').split('/')
+
+    for(let i = 0; i < lv.length - 1; i++){
+      let name = decodeURIComponent(lv[i])
+      let resp = await metadata({ name , parentId})
+
+      if (resp === undefined) {
+        return undefined
+      }else if(resp === false){
+        //不存在文件
+        return false
+      }else{
+        parentId = resp.id
+      }
+    }
+
+    return true
+  }
+
+  //查找最近的目录
+  const search = async (lv , credentials, parentId="root") => {
+    let i = 0
+    for(; i < lv.length - 1; i++){
+
+      let p = lv.slice(0,i+1).join('/')
+
+      if( fileIdMap[p] ){
+
+        parentId = fileIdMap[p]
+
+      }else{
+
+        let name = decodeURIComponent(lv[i])
+        
+        let resp = await metadata({ name , parentId , credentials})
+
+        if (resp === undefined) {
+          console.log('metadata undefined',name , parentId)
+          return undefined
+        }else if(resp === false){
+          //目录不存
+          break;
+        }else{
+          fileIdMap[p] = resp.id 
+
+          parentId = resp.id
+        }
+      }
+    }
+
+    return [i , parentId]
+  }
+
+  // 在 指定位置创建目录 
+  // 返回 创建的目录ID
+  const mkdir = async (parentId , path , credentials) => {
+    let api = `https://www.googleapis.com/drive/v3/files`
+    let children = path.replace(/(^\/|\/$)/g,'').split('/')
+    let error = false
+
+    console.log('children length',children.length)
+    //无需创建
+    if(children.length <= 1 ) return parentId
+
+    //存在的最外层目录
+    let metadata = await search(children , credentials , parentId)
+
+    if( metadata === undefined ){
+      return false
+    }
+
+    let i = metadata[0]
+    parentId = metadata[1]
+    //递归创建
+    for(; i < children.length - 1; i++){
+      let name = decodeURIComponent(children[i])
+
+      try{
+        resp = await request.post(api,{
+          'name':name,
+          'parents': [parentId],
+          'mimeType':'application/vnd.google-apps.folder',
+        },{
+          headers:{
+            'Authorization': `Bearer ${credentials.access_token}`,
+            'Content-Type': 'application/json'
+          },
+          is_body:true, 
+          json:true
+        })
+
+        if( resp.body ){
+          parentId = resp.body.id
+        }
+      }catch(e){
+        console.log('error',e.body)
+        resp = e.body
+      }
+     
+    }
+
+    return parentId
+  }
+
+
+  //变更文件信息
+  const patch = (fileId , name , parent , credentials) => {
+    let api = `https://www.googleapis.com/drive/v3/files/${fileId}?addParents=${parent}&removeParents=root`
+    request({
+      url:api , 
+      method:'PATCH',
+      headers:{
+        'Authorization': `Bearer ${credentials.access_token}`,
+      },
+      body:{ name },
+      json:true
+    },function(error, response, body) {
+      if (!error) {
+        console.log(body)
+      } else {
+        console.log(error)
+      }
+    })
+  }
+
+  // > 5 * 1024 * 1024 标准上传
+  const upload = async ({folderId , name , size , credentials}) => {
+    let api = `https://www.googleapis.com/upload/drive/v3/files?uploadType=resumable`
+    let resp , uploadUrl
+    try{
+      resp = await request.post(api,{
+        name , 
+        parents:[folderId]
+      },{
+        headers:{
+          'Authorization': `Bearer ${credentials.access_token}`,
+          'Content-Type': 'application/json; charset=UTF-8'
+        },
+        is_body:true, 
+        json:true,
+        //followRedirect:false
+      })
+      //https://developers.google.com/drive/api/v3/manage-uploads#resumable
+      //If the session initiation request succeeds, the response includes a 200 OK HTTP status code. In addition, it includes a Location header that specifies the resumable session URI. Use the resumable session URI to upload the file data and query the upload status.
+      if(resp.headers && resp.headers.location){
+        uploadUrl = resp.headers.location
+      }
+    }catch(e){
+      console.log('error>>>',e.body)
+    }
+
+    console.log(uploadUrl)
+    if(!uploadUrl) return false
+
+    let req = request_fix({
+      url:uploadUrl , 
+      method:'POST',
+      headers:{
+        'Authorization': `Bearer ${credentials.access_token}`,
+      },
+    })
+    return req
+  }
+
+  const uploadFast = async ({ folderId , credentials }) => {
+    let api = `https://www.googleapis.com/upload/drive/v3/files?uploadType=media`
+    let req = request_fix({
+      url:api , 
+      method:'POST',
+      headers:{
+        'Authorization': `Bearer ${credentials.access_token}`,
+        // 'Content-Type': 'image/jpeg'
+      },
+    },function(error, response, body) {
+      if (!error) {
+        console.log(body)
+      } else {
+        console.log(error)
+      }
+    })
+    return req
+  }
+
+
   const createReadStream = async ({id , size , options = {}} = {}) => {
     let predata = await prepare(id)
 
@@ -511,5 +757,30 @@ module.exports = ({ request, cache, getConfig, querystring, base64, saveDrive, g
     return wrapReadableStream(readstream , { size: size } )
   }
 
-  return { name, version, drive: { protocols, folder, file , createReadStream } }
+  const createWriteStream = async ({ id , options = {} , size , target = ''} = {}) => {
+
+    let predata = await prepare(id)
+
+    if (!predata.credentials) return null
+
+    let { path:parentId, credentials } = predata
+    
+    let folderId = await mkdir(parentId , target, credentials)
+
+    if( folderId === false ) return false
+
+    let name = target.split('/').pop()
+
+    if( size !== undefined ){
+      cache.clear(id)
+
+      if( size <= 5242880 ){
+        return await upload({folderId , name , size , credentials })
+      }else{
+        return await upload({folderId , name , size , credentials })
+      }
+    }
+
+  }
+  return { name, version, drive: { protocols, folder, file , createReadStream , createWriteStream } }
 }

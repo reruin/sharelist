@@ -64,7 +64,7 @@ const handlers = async (a, body) => {
     cache.clear()
     result.message = 'Success'
   } else if (a == 'cfg') {
-    let { proxy_enable, preview_enable, readme_enable, max_age_dir, max_age_file, webdav_path, ignore_file_extensions } = body
+    let { proxy_enable, preview_enable, readme_enable, max_age_dir, max_age_file,max_age_download, webdav_path, ignore_file_extensions } = body
     let opts = {}
     if (max_age_dir !== undefined) {
       max_age_dir = parseInt(max_age_dir)
@@ -77,6 +77,13 @@ const handlers = async (a, body) => {
       max_age_file = parseInt(max_age_file)
       if (!isNaN(max_age_file)) {
         opts.max_age_file = max_age_file * 1000
+      }
+    }
+
+    if (max_age_download) {
+      max_age_download = parseInt(max_age_download)
+      if (!isNaN(max_age_download)) {
+        opts.max_age_download = max_age_download * 1000
       }
     }
 

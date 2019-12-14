@@ -21,5 +21,4 @@ router.use('/install',install.routes(), install.allowedMethods())
 router.use(installMid, page.routes(), page.allowedMethods())
 
 
-
 module.exports = router

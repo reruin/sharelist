@@ -98,6 +98,17 @@ module.exports = async(ctx, next) => {
       data:json , 
       depth:ctx.get('depth')
     }
+
+    //webdav 认证状态
+    if(!runtime.isAdmin && ctx.get('authorization')){
+      let [, value] = ctx.get('authorization').split(' ');
+      let pairs = Buffer.from(value, "base64").toString("utf8").split(':')
+      console.log('webdab ',pairs)
+      if( getConfig('token') == pairs[1] ){
+        ctx.session.admin = true
+        runtime.isAdmin = true
+      }
+    }
   }
   await next()
 }

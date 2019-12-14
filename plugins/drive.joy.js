@@ -1,7 +1,6 @@
 /*
- * joy
+ * joy://joy/?cat&page&id
  */
-const { PassThrough } = require('stream')
 const name = 'joy'
 
 const version = '1.0'
@@ -10,22 +9,40 @@ const protocols = ['joy']
 
 const defaultProtocol = 'joy'
 
-const host = Buffer.from('aHR0cDovL3d3dy45MXBvcm4uY29t', 'base64').toString('binary')
+const { URL } = require('url')
+
+const urlFormat = require('url').format
 
 const cache = {}
 
-module.exports = ({request , getConfig , getSource , getRandomIP , wrapReadableStream }) => {
+const parse = (id) => {
+  let data = new URL(id)
+  let ret = {}
+  let credentials = { client_id : data.host }
+  for (const [key, value] of data.searchParams) {
+    ret[key] = value
+  }
+  return ret
+}
+
+const format = (data) => {
+  return urlFormat({
+    protocol: 'joy',
+    slashes:true,
+    hostname: 'joy',
+    query: data,
+  })
+}
+
+module.exports = ({request , getConfig , getSource , getRandomIP , wrapReadableStream , base64 }) => {
   
+  const host = base64.decode('aHR0cHM6Ly93d3cueHZpZGVvcy5jb20=')
+
+  const PAGE_SIZE = 27
+
   let last_update = Date.now()
 
-  let decode = '';
-
-  const pageSize = 100
-
-  const min = (a , b) => (a < b ? a : b)
-
   let cats = []
-  //cate_page_viewkey
 
   const createHeaders = () => {
     let ip = getRandomIP()
@@ -36,6 +53,7 @@ module.exports = ({request , getConfig , getSource , getRandomIP , wrapReadableS
       'HTTP_X_FORWARDED_FOR':ip
     }
   }
+
   const mount = async () => {
     return {
       id : '/',
@@ -49,60 +67,32 @@ module.exports = ({request , getConfig , getSource , getRandomIP , wrapReadableS
   }
 
   const getCats = async() => {
+
     if(cats.length == 0){
-      let { body } = await request.get(`${host}/v.php`);
-      body.replace(/v\.php\?category=([a-z\d]+)&viewtype=([a-z\d]+)">([^<]+)/ig , ($0,$1,$2,$3) => {
-        cats.push({id:'/'+$1 , cat:$1,name:$3.replace(/\s/g,'')})
+      let resp = await request.header(`${host}/change-country/cn` , {followRedirect : false})
+      let cookies = resp['set-cookie'].join('; ')
+
+      resp = await request.get(host , {headers:{'Cookie':cookies}})
+
+      resp.body.replace(/<span[^>]+><\/span>/g,'').replace(/<li class="dyn[^>]+?><a[\w\W]+?href="([^"]+?)"[^>]*?>([^<]+?)<\/a><\/li>/g,($0,$1,$2)=>{
+        cats.push({
+          id:format({cat:base64.encode($1)}),
+          name : $2.replace(/^\s*/,'')
+        })
+        return ''
       })
-      cats.unshift({id:'/default' , cat:'default' , name:'默认'})
+
     }
 
     return cats
   }
 
-  const decodeUrl = async (body , retry = true) => {
-    if(!decode){
-      let scrs = await request.get(`${host}/js/md5.js`)
-      if(scrs.body) decode = scrs.body
-    }
-
-    let code = (body.match(/strencode\([\w\W]+?\)/) || [''])[0]
-    
-    let url = ''
-
-    let flag = false
-    if(code){
-      try{
-        let fn = new Function(`${decode};return ${code};`);
-        let source = fn()
-        if(source){
-          url = (source.match(/src\s*=\s*["']([^"']+)/) || ['',''])[1]
-        }
-      }catch(e){
-        flag = true
-      }
-    }
-
-    if(flag && retry) {
-      return await decodeUrl(body , false)
-    }
-    return url;
-  }
   const getNameByCate = (cate) => {
     let hit = cats.find( i => i.cat == cate)
     if( hit ){
       return hit.name
     }else{
       return '默认'
-    }
-  }
-
-  const getCateByName = (cateName) => {
-    let hit = cats.find( i => i.name == cateName)
-    if( hit ){
-      return hit.cat
-    }else{
-      return 'default'
     }
   }
 
@@ -115,270 +105,162 @@ module.exports = ({request , getConfig , getSource , getRandomIP , wrapReadableS
     }
   }
 
-  const getDetail = async (viewkey) => {
-
-    let { body } = await request.get(`${host}/view_video.php?viewkey=${viewkey}`, {headers:createHeaders()})
-
-    // let url = (body.match(/source\s*src\s*=\s*"([^"]+)/) || ['',''])[1]
-    let name =(body.match(/viewvideo-title">([^<]+)/) || ['',''])[1].replace(/[\r\n]/g,'').replace(/(^[\s]*|[\s]*$)/g,'')
-    
-    let url = await decodeUrl(body)
-
-    return {
-      id:'/f/'+viewkey,
-      name:name+'.mp4',
-      type:'video',
-      ext:'mp4',
-      mime:'video/mp4',
-      protocol:defaultProtocol,
-      $cached_at:Date.now(),
-      proxy:true,
-      url:url
-    }
-  }
-
-  const getCate = (value) => {
-    let cate = getCateByName(value)
-    //console.log( 'get cdate' , { id: cate + '/' + page ,  name:value})
-    return getMock( { id: '/' + cate ,  name:value})
-  }
-
-  const getRange = async (id , name) => {
-    let [,cate,start] = id.split('/')
-
+  const getCatePageCount = async (cate) => {
     let pageCount
+    console.log('cat count',cate)
 
     if( cache[`${cate}_page_count`] && last_update && ( Date.now() - last_update < getConfig('max_age_dir')) ){
       pageCount = cache[`${cate}_page_count`]
     }else{
-      let { body } = await request.get(`${host}/v.php?page=1&category=${cate}`)
-      pageCount = parseInt(body.match(/(?<=page=\d+\">)\d+/g).pop() || 0)
+      
+      //console.log(host+url)
+      let url = getListUrl(cate)
+      console.log(url)
+      let { body } = await request.get(host+url)
+
+      pageCount = Math.ceil( parseInt(body.match(/(?<=<span\sclass=\"sub\">)[^\<]+/g).pop().replace(/[^\d]/g,'') || 0) / PAGE_SIZE )
+
       cache[`${cate}_page_count`] = pageCount
+
       last_update = Date.now()
     }
 
-    start = parseInt(start || 1)
-    end = Math.ceil( pageCount / 100 )
+    return pageCount
+  }
 
-    //每100页 做一次分页
+  const getListUrl = (cate , page = 1) => {
+    cate = base64.decode(cate)
+    console.log(cate)
+    let url 
+    if(cate.startsWith('/porn' || cate.startsWith('/lang'))){
+      url = cate + '/' + page
+    }
+    else if(cate.startsWith('/c')){
+      url = cate.replace('/c','/c/'+page)
+    }
+    else if(cate.startsWith('/?k=')){
+      url = cate+'&p='+page
+    }
+    else if(/^\/s\:\/\//.test(cate)){
+      url = cate.replace('s://','?k=') + '&p=' + page
+    }
+    else{
+      url = '/new/' + page
+    }
+    return url
+  }
 
-    return {
-      id:'-1',
-      name:'name',
-      type:'folder',
-      protocol:defaultProtocol,
-      children:new Array(end).fill(1).map((i , index) => {
-        return {
-          id : `/${cate}/${start}`, 
-          name : `第${start + pageSize*(index)}-${ min((start + pageSize*(index+1) - 1) , pageCount)}页`,
-          protocol:defaultProtocol,
-          updated_at:'-',
-          size:'-',
-          type:'folder',
-        }
+  const getList = async (cat , page) => {
+    console.log('cat list',cat)
+    let url = getListUrl(cat , page)
+    let { body } = await request.get(host+url)
+    let data = []
+
+    body.replace(/<img[\w\W]+?data-src="([^"]+?)"[\w\W]+?<a href="([^"]+?)"\s+title="([^"]+?)"/g , ($0 , $1, $2, $3)=>{
+      data.push({
+        id:format({cat , page , id:base64.encode($2)}),
+        img : $1,
+        protocol:defaultProtocol,
+        name : $3+'.mp4',
+        type:'video',
+        ext:'mp4',
+        mime:'video/mp4',
       })
-    }
+    })
 
+    return data
   }
 
-  const getRangePage = (id , start) => {
-    let [,cate,rangeStart] = id.split('/')
-    rangeStart = parseInt( rangeStart || 1)
-    let rangeEnd = cache[`${cate}_page_count`]
-    let range = min( rangeEnd - rangeStart + 1 , pageSize)
 
-    return {
-      id:'-1',
-      name:'-1',
-      type:'folder',
-      protocol:defaultProtocol,
-      children:new Array(range).fill(1).map((i , index) => {
-        return {
-          id : `/${cate}/${rangeStart}/${rangeStart + index}`, 
-          name : `第${rangeStart + index}页`,
-          protocol:defaultProtocol,
-          updated_at:'-',
-          size:'-',
-          type:'folder',
-        }
-      })
-    }
-  }
+  const folder = async(id , { req }) => {
 
-  const getMock = (opts) => {
-    let child = {id:'' , name: '',  type:'folder', protocol:defaultProtocol } 
-    for( let  i in opts ){
-      child[i] = opts[i]
-    }
+    if( id == '/' ) id = 'joy://joy'
 
-    return {
-      id : '-1',
-      type : 'folder',
-      protocol:defaultProtocol,
-      updated_at:'-',
-      children : [ child ]
-    }
-  }
-
-  const getList = async (id) => {
     if( cache[id] && cache[id].$cached_at && ( Date.now() - cache[id].$cached_at < getConfig('max_age_dir')) ){
       return cache[id]
     }
 
-    let [,cate,range,page] = id.split('/')
-    if(!page) page = 1
-    page = parseInt(page)
-    let { body } = await request.get(`${host}/v.php?page=${page}&category=${cate}`)
-    let children = []
+    const data = parse(id)
 
-    body.replace(/viewkey=([0-9a-z]+)[^<]+?\s*<img\s+src="([^"]+?)"[\w\W]+?title="([^"]+?)"/g , ($0 , $1, $2, $3)=>{
-      children.push({
-        id : `${id}/${$1}`, 
-        name : $3+'.mp4',
-        url: `./${$1}/${$3}.mp4`,
-        protocol:defaultProtocol,
-        updated_at:'-',
-        size:'-',
-        type:'video',
-        ext:'mp4'
-      })
-      return ''
-    })
-
-
-    let resp = {
-      id : '/'+cate+'/'+page,
-      type : 'folder',
-      protocol:defaultProtocol,
-      updated_at:'-',
-      $cached_at:Date.now(),
-      children
+    if(!data.cat){
+      return await mount() 
     }
-
-    cache[id] = resp
-
-    return resp
-  }
-
-
-  /**
-   * id:
-   * case 0: /
-   * case 1: /cate
-   * case 2: /cate/range
-   * case 3: /cate/range/page
-   * case 4  /cate/range/page/viewkey
-   *
-   * path
-   * case a /cate
-   * case b /cate/range
-   * case c /cate/range/page
-   * case d /cate/range/page/viewkey
-   * case e /cate/range/page/viewkey/videoname.mp4
-   */
-  const folder = async(id , {paths}) => {
-
-    //后续路径
-
-    ///const data = decode(id)
-
-    const lv = id == '/' ? 0 : id.substring(1).split('/').length
-    const direct = paths.length == 0
-
-    const len = paths.length
-
-    const value = paths[0]
-
-    //console.log('***' , lv,id , paths)
-
-    // case 0
-    if( lv == 0 ){
-      if( len == 0 ){
-        return await mount() 
+    else{
+      let ret
+      //具体页
+      if( data.page ){
+        ret = {
+          id,
+          name:`第${data.page}页`,
+          type:'folder',
+          protocol:defaultProtocol,
+          children:await getList(data.cat , data.page),
+        }
       }
-      // case b , c , d => mock
-      else { 
-        return getCate(decodeURIComponent(value))
-      }
-    }
-
-    // case 1 /cate <---> case a , c
-    else if( lv == 1 ){
-      //case a
-      if( len == 0 ){
-        return await getRange( id  , value )
-        // return await getList( id + '/1' )
-      }
-      // case c , paths = [range]
+      //范围页
       else{
-        return await getRange( id + '/' + decodeURIComponent(value).replace(/第(\d+)-(\d+)页/,'$1') ,  value)
-      }
-    }
+        let catName = await getNameByCate(data.cat)
+        let catePageTotal = await getCatePageCount(data.cat)
 
-    // case 2 /cate/range
-    else if( lv == 2 ){
-      // case b
-      if( len == 0){
-        return await getRangePage( id  , 0)
-      }
-      else {
-        return await getRangePage( id  ,  decodeURIComponent(value).replace(/第(\d+)页/,'$1'))
-      }
-    }
-    // case 2 /cate/range
-    else if( lv == 3 ){
-      // case b
-      if( len == 0){
-        return await getList( id  )
-      }
-      // case d
-      else {
-        return await getMock( {id : id + '/' + value,  name:value} )
-      }
-    }
-    // case 3
-    else if( lv == 4 ){
-      //不会存在此情况
-      if( len == 0 ){
-        
-      }
-      // case d , paths = [ videoname ]
-      else if( len == 1){
-        return getMock( {
-          id : id + '/f' ,  
-          name:decodeURIComponent(value),
-          ext:'mp4' ,
-          mime:'video/mp4', 
-          type:'video'
-        })
+        ret = {
+          id,
+          name:catName,
+          type:'folder',
+          protocol:defaultProtocol,
+          children:new Array(catePageTotal).fill(1).map((i , index) => {
+            return {
+              id : format({cat:data.cat , page:index+1}), 
+              name : `第${index+1}页`,
+              protocol:defaultProtocol,
+              updated_at:'-',
+              size:'-',
+              type:'folder',
+            }
+          })
+        }
       }
 
+      ret['@cached_at'] = Date.now()
+      cache[id] = ret
+      return ret
     }
-
-    return []
   }
 
-  /**
-   * /f/viewkey , endWith '/f'
-   */
   const file = async(id) =>{
-    id = id.replace(/\/f$/,'')
-    if( cache[id] && cache[id].$cached_at && ( Date.now() - cache[id].$cached_at < getConfig('max_age_file')) ){
-      return cache[id]
+    let data = parse(id)
+    if(cache[data.id]){
+      return cache[data.id]
     }
-    let viewkey = id.split('/').pop()
-    if(viewkey){
-      let resp = await getDetail( viewkey )
-      resp.headers = createHeaders()
-      let size = await getFileSize(resp.url , resp.headers)
-      if(size){
-        resp.size = size
-      }
-      cache[id] = resp
-      return resp
-    }else{
-      return false
+
+    let path = base64.decode(data.id)
+
+    let { body } = await request.get(host+path, {fake:true})
+
+
+    let url_low = (body.match(/setVideoUrlLow\('([^'"]+?)'/) || ['',''])[1]
+
+    let url_high = (body.match(/setVideoUrlHigh\('([^'"]+?)'/) || ['',''])[1]
+
+    let url_hls = (body.match(/setVideoHLS\('([^'"]+?)'/) || ['',''])[1]
+
+    let thumb = (body.match(/setThumbUrl169\('([^'"]+?)'/) || ['',''])[1]
+
+    let thumbslide = (body.match(/setThumbSlide\('([^'"]+?)'/) || ['',''])[1]
+
+    let title = (body.match(/setVideoTitle\('([^'"]+?)'/) || ['',''])[1]
+
+    let ret = {
+      id,
+      name: title,
+      protocol: defaultProtocol,
+      url:url_high,
+      type:'video',
+      ext:'mp4',
+      mime:'video/mp4',
     }
+    cache[data.id] = ret
+
+    return ret
   }
 
   const createReadStream = async ({id , options = {}} = {}) => {

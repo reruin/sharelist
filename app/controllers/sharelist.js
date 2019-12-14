@@ -153,7 +153,7 @@ module.exports = {
     
   },
 
-  async api(ctx ){
+  async api(ctx){
     let ignoreexts = (config.getConfig('ignore_file_extensions') || '').split(',')
     let ignorefiles = (config.getConfig('ignore_files') || '').split(',')
     let anonymous_uplod_enable = !!config.getConfig('anonymous_uplod_enable')
@@ -173,11 +173,12 @@ module.exports = {
         children:[{id:'error' , name:'此页面无法在WebDAV中显示' , type:'txt'}]
       }
     }
-
+    else if(data.type == 'auth'){
+      return data
+    }
     else if(data.type == 'folder'){
       let base_url = ctx.path == '/' ? '' : ctx.path
       let ret = { ...data }
-
       ret.children = data.children
       .filter(i => 
         (
@@ -205,8 +206,12 @@ module.exports = {
       return ret
     }
     else{
-      return { ...data }
+      if( ignoreexts.includes(data.ext) || ignorefiles.includes(data.name) ){
+        ctx.status = 404
+      }else{
+        await output(ctx , data)
+      }
     }
     
-  }
+  },
 }

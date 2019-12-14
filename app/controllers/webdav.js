@@ -1,7 +1,7 @@
 const http = require('../utils/http')
 const { sendFile, sendHTTPFile } = require('../utils/sendfile')
 const { api } = require('./sharelist')
-const { auth } = require('../services/sharelist')
+const { getConfig } = require('../config')
 
 const slashify = (p) => (p[p.length - 1] != '/' ? `${p}/` : p)
 
@@ -178,22 +178,7 @@ class WebDAV {
     this.allows = ['GET', 'PUT', 'HEAD', 'OPTIONS', 'PROPFIND']
   }
 
-  getAuthority() {
-    let authorization = this.ctx.get('authorization')
-    let [, value] = authorization.split(' ');
-    let pairs = Buffer.from(value, "base64").toString("utf8").split(':')
-    return pairs
-  }
-
-  checkAuth() {
-    if (this.ctx.get('authorization')) {
-      return true
-    } else {
-      return false
-    }
-  }
-
-  async serveRequest(ctx, next) {
+  async request(ctx, next) {
     this.ctx = ctx
 
     this.path = /*this.ctx.protocol + '://' + this.ctx.host +*/ this.ctx.path
@@ -216,36 +201,6 @@ class WebDAV {
       this.setHeader("Allow", this.allows.join(', '))
       return false
     }
-  }
-
-  async afterRequest(data) {
-    return false
-    // require auth
-    let reqAuth = data.auth
-    let access = true
-    if (reqAuth) {
-      access = false
-
-      if (this.checkAuth()) {
-        let [user, passwd] = this.getAuthority()
-        if (await auth(data, user, passwd)) {
-          access = true
-        }
-      }
-    }
-
-    if (!access) {
-      // RFC2518 says we must use Digest instead of Basic
-      // but Microsoft Clients do not support Digest
-      // and we don't support NTLM and Kerberos
-      // so we are stuck with Basic here
-      this.setHeader('WWW-Authenticate', `Basic realm="${this.httpAuthRealm}"`)
-      // Windows seems to require this being the last header sent
-      // (changed according to PECL bug #3138)
-      this.setStatus('401 Unauthorized')
-      return true
-    }
-
   }
 
   setHeader(k, v) {
@@ -293,8 +248,18 @@ class WebDAV {
    */
   async http_propfind() {
     const data = await api(this.ctx)
-    let reqAuth = await this.afterRequest(data)
-    if (reqAuth) return
+
+    if(data === false){
+      this.setStatus("404 Not Found")
+      return
+    }
+    if( data.type == 'auth' ){
+      this.setHeader('WWW-Authenticate', `Basic realm="${this.httpAuthRealm}"`)
+      // Windows seems to require this being the last header sent
+      // (changed according to PECL bug #3138)
+      this.setStatus('401 Unauthorized')
+      return true
+    }
 
     let options = propfindParse(this.ctx.webdav.data)
     options.path = this.path
@@ -316,17 +281,13 @@ class WebDAV {
       }
     } else {
       const files = data.children
-      if (files && files.length == 0) {
-        this.setStatus("404 Not Found")
-      } else {
-        this.setStatus("207 Multi-Status")
-        if( this.incompatibleUserAgents ){
-          files.unshift({
-            type: 'folder', href : this.path , name:data.name || '._'
-          })
-        }
-        this.setBody(respCreate(files, options))
+      this.setStatus("207 Multi-Status")
+      if( this.incompatibleUserAgents ){
+        files.unshift({
+          type: 'folder', href : this.path , name:data.name || '._'
+        })
       }
+      this.setBody(respCreate(files, options))
     }
   }
 
@@ -338,13 +299,7 @@ class WebDAV {
    * @return void
    */
   async http_get() {
-    const data = await api(this.ctx)
-    const url = data.url
-    if (data.outputType === 'file') {
-      sendFile(this.ctx, url)
-    } else {
-      await sendHTTPFile(this.ctx, url, data.headers || {} , data)
-    }
+    await api(this.ctx)
   }
 
   /*

@@ -70,7 +70,8 @@ class ShareList {
     }
     else{
       let data = await command('ls' , req.paths.join('/'))
-      if( requireAuth(data) && req.access.has(req.path) == false) {
+      //管理员模式无需密码
+      if( requireAuth(data) && req.access.has(req.path) == false && !req.isAdmin) {
         data.type = 'auth'
       }
       return data
@@ -92,7 +93,6 @@ class ShareList {
       }
     } 
     return false
-    
   }
   /*
    * 获取文件预览页面

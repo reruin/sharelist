@@ -153,32 +153,51 @@ module.exports = {
     
   },
 
-  async api(ctx , base_path = ''){
-    const { paths , query } = ctx
-    let data = await service.path(paths , query , paths)
-    let parent = paths.length ? ('/' + paths.slice(0,-1).join('/')) : ''
+  async api(ctx ){
     let ignoreexts = (config.getConfig('ignore_file_extensions') || '').split(',')
     let ignorefiles = (config.getConfig('ignore_files') || '').split(',')
-   
+    let anonymous_uplod_enable = !!config.getConfig('anonymous_uplod_enable')
+    let ignorepaths = config.getIgnorePaths()
+    let isAdmin = ctx.runtime.isAdmin
+    let base_url = ctx.path == '/' ? '' : ctx.path
+    
+    const data = await service.path(ctx.runtime)
+
     //data is readonly
-    if( data === false){
-      return { status : 404 }
+    if( data === false || data === 401){
+      ctx.status = 404
     }
-    else if(data === 401){
-      return { status : 404 }
+    else if(data.type == 'body' || data.body || data.type == 'redirect' || data.redirect){
+      return {
+        type:'folder',
+        children:[{id:'error' , name:'此页面无法在WebDAV中显示' , type:'txt'}]
+      }
     }
 
     else if(data.type == 'folder'){
+      let base_url = ctx.path == '/' ? '' : ctx.path
       let ret = { ...data }
-      ret.auth = requireAuth(data)
+
       ret.children = data.children
-      .filter(i => (i.ext && !ignoreexts.includes(i.ext)))
+      .filter(i => 
+        (
+          (
+            i.type != 'folder' && 
+            !ignoreexts.includes(i.ext) && 
+            !ignorefiles.includes(i.name) 
+          ) || 
+          (
+            i.type == 'folder' &&  !ignorepaths.includes(base_url + '/' + i.name)
+          )
+        ) &&
+        i.hidden !== true
+      )
       .map(i => {
         let obj = { ...i }
         if( i.url && isRelativePath(i.url) ){
-          obj.href = pathNormalize(base_path + '/' + i.url)
+          obj.href = pathNormalize(base_url + '/' + i.url)
         }else{
-          obj.href = pathNormalize(base_path + '/' + encodeURIComponent(i.name))
+          obj.href = pathNormalize(base_url + '/' + encodeURIComponent(i.name))
         }
         return obj
       })

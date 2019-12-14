@@ -431,7 +431,7 @@ module.exports = ({ request, cache, getConfig, querystring, base64 , saveDrive ,
       data.$cached_at && 
       ( Date.now() - data.$cached_at < onedrive_max_age_dir)
     ){
-      console.log('get od download url from upstream' , data)
+      console.log('get od download url from upstream')
       return data
     }
 
@@ -663,6 +663,8 @@ module.exports = ({ request, cache, getConfig, querystring, base64 , saveDrive ,
     //为path 创建目的地目录
     await mkdir(path , target , credentials)
     if( size !== undefined ){
+      cache.clear(`${defaultProtocol}:${id}`)
+
       if( size <= 4194304 ){
         return await upload(fullpath , credentials)
       }else{
@@ -670,7 +672,6 @@ module.exports = ({ request, cache, getConfig, querystring, base64 , saveDrive ,
       }
     }
 
-    cache.clear(`${defaultProtocol}:${id}`)
   }
 
   return { name, version, drive: { protocols, folder, file , createReadStream , createWriteStream } }

@@ -33,6 +33,8 @@ const db = createFiledb(configPath , {raw:true} , {
 
   max_age_download_sign:'sl_'+Date.now(),
 
+  anonymous_uplod_enable:0,
+
   plugin_option:[]
 });
 

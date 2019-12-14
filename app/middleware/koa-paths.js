@@ -62,6 +62,7 @@ module.exports = async(ctx, next) => {
     if( data.type == 'upload' ){
       runtime.upload = {
         stream:ctx.req ,
+        enable:ctx.session.admin || !!getConfig('anonymous_uplod_enable'),
         options:data
       }
     }

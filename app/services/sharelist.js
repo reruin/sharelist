@@ -44,7 +44,7 @@ class ShareList {
     }
     //上传
     else if(req.upload){
-      if(!req.isAdmin){
+      if(!req.upload.enable){
         return {
           type:'body',
           body:{ status:403 , result:'Forbidden'}

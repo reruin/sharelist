@@ -62,6 +62,7 @@ module.exports = {
     let parent = ctx.paths.length ? ('/' + ctx.paths.slice(0,-1).join('/')) : ''
     let ignoreexts = (config.getConfig('ignore_file_extensions') || '').split(',')
     let ignorefiles = (config.getConfig('ignore_files') || '').split(',')
+    let anonymous_uplod_enable = !!config.getConfig('anonymous_uplod_enable')
     let ignorepaths = config.getIgnorePaths()
     let isAdmin = ctx.session.admin
 
@@ -119,7 +120,7 @@ module.exports = {
         }
       }
       
-      ret.writeable = data.writeable && isAdmin
+      ret.writeable = data.writeable && (isAdmin || anonymous_uplod_enable)
       
       if( !ctx.webdav ){
         await ctx.renderSkin('index',ret)

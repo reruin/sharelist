@@ -73,6 +73,13 @@ block content
                   select.form-control(name='readme_enable',value=config.readme_enable,required)
                     option(value='1', selected=config.readme_enable==1 ? 'selected' : null)= __('enable')
                     option(value='0', selected=config.readme_enable==0 ? 'selected' : null)= __('disable')
+              .form-group
+                .col-sm-4
+                  label= __('anonymous_uplod_enable')
+                .col-sm-8
+                  select.form-control(name='anonymous_uplod_enable',value=config.anonymous_uplod_enable,required)
+                    option(value='1', selected=config.anonymous_uplod_enable==1 ? 'selected' : null)= __('enable')
+                    option(value='0', selected=config.anonymous_uplod_enable==0 ? 'selected' : null)= __('disable')
               .form-group.text-center
                 button.btn.btn-default(type='submit')= __('save')
         .panel.panel-default

@@ -29,6 +29,7 @@ module.exports = {
   "max_age_file":"File max age(second)",
   "max_age_download":"Download link max age(second)",
   "max_age_download_placeholder":"0 for permanent",
+  "anonymous_uplod_enable":"Allow anonymous upload",
   "virtual_path":"Virtual path",
   "general":"General",
   "webdav_path":"WebDAV Path",

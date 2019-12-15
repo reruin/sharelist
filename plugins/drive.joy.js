@@ -44,16 +44,6 @@ module.exports = ({request , getConfig , getSource , getRandomIP , wrapReadableS
 
   let cats = []
 
-  const createHeaders = () => {
-    let ip = getRandomIP()
-
-    return {
-      'PHPSESSID':'nrop',
-      'CLIENT-IP':ip,
-      'HTTP_X_FORWARDED_FOR':ip
-    }
-  }
-
   const mount = async () => {
     return {
       id : '/',
@@ -107,7 +97,6 @@ module.exports = ({request , getConfig , getSource , getRandomIP , wrapReadableS
 
   const getCatePageCount = async (cate) => {
     let pageCount
-    console.log('cat count',cate)
 
     if( cache[`${cate}_page_count`] && last_update && ( Date.now() - last_update < getConfig('max_age_dir')) ){
       pageCount = cache[`${cate}_page_count`]
@@ -115,10 +104,17 @@ module.exports = ({request , getConfig , getSource , getRandomIP , wrapReadableS
       
       //console.log(host+url)
       let url = getListUrl(cate)
-      console.log(url)
       let { body } = await request.get(host+url)
 
-      pageCount = Math.ceil( parseInt(body.match(/(?<=<span\sclass=\"sub\">)[^\<]+/g).pop().replace(/[^\d]/g,'') || 0) / PAGE_SIZE )
+      let hit = body.match(/(?<=<span\sclass=\"sub\">)[^\<]+/g)
+
+      if(hit === null){
+        hit = body.match(/(?<=<a\s*class=\"btn\s*btn-default\s*current\">)[^\<]+/g)
+      }
+
+      if(hit){
+        pageCount = Math.ceil( parseInt(hit.pop().replace(/[^\d]/g,'') || 0) / PAGE_SIZE )
+      }
 
       cache[`${cate}_page_count`] = pageCount
 
@@ -130,9 +126,8 @@ module.exports = ({request , getConfig , getSource , getRandomIP , wrapReadableS
 
   const getListUrl = (cate , page = 1) => {
     cate = base64.decode(cate)
-    console.log(cate)
     let url 
-    if(cate.startsWith('/porn' || cate.startsWith('/lang'))){
+    if(cate.startsWith('/porn') || cate.startsWith('/lang')){
       url = cate + '/' + page
     }
     else if(cate.startsWith('/c')){
@@ -151,7 +146,6 @@ module.exports = ({request , getConfig , getSource , getRandomIP , wrapReadableS
   }
 
   const getList = async (cat , page) => {
-    console.log('cat list',cat)
     let url = getListUrl(cat , page)
     let { body } = await request.get(host+url)
     let data = []
@@ -176,11 +170,17 @@ module.exports = ({request , getConfig , getSource , getRandomIP , wrapReadableS
 
     if( id == '/' ) id = 'joy://joy'
 
+    if(id.startsWith(defaultProtocol) == false) id = defaultProtocol + ':' + id
+      
     if( cache[id] && cache[id].$cached_at && ( Date.now() - cache[id].$cached_at < getConfig('max_age_dir')) ){
       return cache[id]
     }
 
     const data = parse(id)
+    
+    if(data.search){
+      data.cat = base64.encode('/?k='+data.search)
+    }
 
     if(!data.cat){
       return await mount() 
@@ -199,7 +199,7 @@ module.exports = ({request , getConfig , getSource , getRandomIP , wrapReadableS
       }
       //范围页
       else{
-        let catName = await getNameByCate(data.cat)
+        let catName = data.search ? 'search' : await getNameByCate(data.cat)
         let catePageTotal = await getCatePageCount(data.cat)
 
         ret = {
@@ -234,7 +234,7 @@ module.exports = ({request , getConfig , getSource , getRandomIP , wrapReadableS
 
     let path = base64.decode(data.id)
 
-    let { body } = await request.get(host+path, {fake:true})
+    let { body } = await request.get(host+path)
 
 
     let url_low = (body.match(/setVideoUrlLow\('([^'"]+?)'/) || ['',''])[1]

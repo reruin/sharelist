@@ -48,12 +48,12 @@ const output = async (ctx , data)=>{
 module.exports = {
   async index(ctx){
     let downloadLinkAge = config.getConfig('max_age_download')
+    let cursign = md5(config.getConfig('max_age_download_sign') + Math.floor(Date.now() / downloadLinkAge))
 
-    if( downloadLinkAge > 0 && ctx.query.t){
-        if( ctx.query.t != md5(config.getConfig('max_age_download_sign') + Math.floor(Date.now() / downloadLinkAge)) ) {
-          ctx.status = 403
-          return
-        }
+    //exclude folder
+    if( downloadLinkAge > 0 && ctx.query.t && ctx.query.t != cursign ) {
+      ctx.status = 403
+      return
     }
 
     const data = await service.path(ctx.runtime)
@@ -144,6 +144,12 @@ module.exports = {
       ctx.body = result
     }
     else{
+
+      if( downloadLinkAge > 0 && ctx.query.t != cursign ) {
+        ctx.status = 403
+        return
+      }
+
       if( ignoreexts.includes(data.ext) || ignorefiles.includes(data.name) ){
         ctx.status = 404
       }else{

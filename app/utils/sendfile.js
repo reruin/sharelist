@@ -111,9 +111,16 @@ const sendHTTPFile = async (ctx , url  ,data) => {
     ctx.length = chunksize
   }
 
-  // console.log(headers)
-  // console.log('>>>>>',headers , url , data)
-  ctx.body = ctx.req.pipe(http({url , headers})) //.pipe(ctx.res)
+  let stream = http({url , headers})
+  stream.on('response', function(response) {
+    ctx.status = response.statusCode
+    if(response.headers){
+      for(let i in response.headers)
+      ctx.set(i , response.headers[i])
+    }
+    //console.log(response.headers['content-type']) // 'image/png'
+  })
+  ctx.body = stream //.pipe(ctx.res)
 }
 
 const getFile = async (url) => {

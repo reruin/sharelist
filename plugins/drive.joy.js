@@ -86,7 +86,7 @@ module.exports = ({request , getConfig , getSource , getRandomIP , wrapReadableS
     }
   }
 
-  const getFileSize = async (url , headers) => {
+  const sniffSize = async (url , headers = {}) => {
     let nh = await request.header(url , {headers})
     if(nh && nh['content-length']){
       return nh['content-length']
@@ -135,9 +135,6 @@ module.exports = ({request , getConfig , getSource , getRandomIP , wrapReadableS
     }
     else if(cate.startsWith('/?k=')){
       url = cate+'&p='+page
-    }
-    else if(/^\/s\:\/\//.test(cate)){
-      url = cate.replace('s://','?k=') + '&p=' + page
     }
     else{
       url = '/new/' + page
@@ -236,7 +233,6 @@ module.exports = ({request , getConfig , getSource , getRandomIP , wrapReadableS
 
     let { body } = await request.get(host+path)
 
-
     let url_low = (body.match(/setVideoUrlLow\('([^'"]+?)'/) || ['',''])[1]
 
     let url_high = (body.match(/setVideoUrlHigh\('([^'"]+?)'/) || ['',''])[1]
@@ -252,12 +248,14 @@ module.exports = ({request , getConfig , getSource , getRandomIP , wrapReadableS
     let ret = {
       id,
       name: title,
+      // size: await sniffSize(url_high)
       protocol: defaultProtocol,
       url:url_high,
       type:'video',
       ext:'mp4',
       mime:'video/mp4',
     }
+
     cache[data.id] = ret
 
     return ret

@@ -18,8 +18,29 @@ const diff = (a, b) => {
 
 var nodeCache = {}
 
+const clone = (obj) => {
+  let type = typeof obj
+  if( type == 'number' || type == 'string' || type == 'boolean' || type === undefined || type === null ){
+    return obj
+  }
+
+  if (obj instanceof Array) {
+    return obj.map(i => clone(i))
+  }
+
+  if (obj instanceof Object) {
+    let copy = {};
+    for (let attr in obj) {
+      if (obj.hasOwnProperty(attr)) copy[attr] = clone(obj[attr])
+    }
+    return copy
+  }
+
+  return obj
+}
+
 module.exports = ({ cache , getVendor , getConfig , getRuntime , updateFolder , updateLnk , updateFile , pathNormalize , createReadStream , createWriteStream }) => {  
-  const ls = async (p , { query, method } = {} , iscmd) => {
+  const ls = async (p , filter , iscmd) => {
     //处理 协议路径 protocol:id
     let vp = p.split(':')
     if(vp.length){
@@ -31,7 +52,7 @@ module.exports = ({ cache , getVendor , getConfig , getRuntime , updateFolder , 
     }
 
     // 处理标准路径 path
-    let resp = await process_fast(p , {query , method})
+    let resp = await process_fast(p , filter)
     if( iscmd ){
       if( resp.children ){
         resp = { result: resp.children.map(i => i.name).join('\n') }
@@ -40,7 +61,7 @@ module.exports = ({ cache , getVendor , getConfig , getRuntime , updateFolder , 
       }
     }
 
-    return resp
+    return clone(resp)
   }
 
   const cat = async (p) => {
@@ -78,7 +99,7 @@ module.exports = ({ cache , getVendor , getConfig , getRuntime , updateFolder , 
    * 3.正向查找
    * 4.不再缓存 sharelist路径 <-> 数据 关系
    */
-  const process_fast = async(p, { query, method } = {}) => {
+  const process_fast = async(p, filter) => {
 
     //  paths : / => [''] ;  /a/b/c => [a','b','c']
 
@@ -122,6 +143,7 @@ module.exports = ({ cache , getVendor , getConfig , getRuntime , updateFolder , 
         continue
       }
       
+
       let vendor = getVendor(hit.protocol)
 
       if (hit.lnk) {
@@ -162,7 +184,7 @@ module.exports = ({ cache , getVendor , getConfig , getRuntime , updateFolder , 
         }
       }
       else{
-        let t = await vendor.file(hit.id, { query, data:hit , req : getRuntime('req') ,paths: [], hit })
+        let t = await vendor.file(hit.id, { data:hit , req : getRuntime('req') })
         if( t ){
            hit = await updateFile(t)
            break

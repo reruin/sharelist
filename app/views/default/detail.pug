@@ -1,10 +1,11 @@
 extends partial/layout
 
 block content
-  
-  header.detail
+  header
+    .wrap.detail
       a.home #{data.name}
-      a.download.ic.download(href=url)
+      a.download-menu(href=url)
+        i.ic.ic-download
   section.wrap
     .detail
       -if(data.body)

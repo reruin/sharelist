@@ -43,12 +43,14 @@ module.exports = async(ctx, next) => {
   let runtime = {
     href:ctx.href,
     path:ctx.path,
+    querystring:ctx.querystring,
     query:ctx.query,
     body:ctx.request.body,
     method:ctx.method,
     host:ctx.host,
     origin:ctx.origin,
     protocol:ctx.protocol,
+    path:ctx.path,
     paths:paths,
     isAdmin:!!ctx.session.admin,
     access:ctx.session.access

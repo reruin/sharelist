@@ -33,6 +33,11 @@ function byte (v) {
   return Math.floor(v * 100) / 100 + ' ' + ['B','KB','MB','GB','TB','PB','EB'][lo]
 }
 
+var statusCode = {
+  '413':'请求实体太大',
+  '414':'请求URI太长',
+  '415':'不支持的媒体类型',
+}
 function upload(file, opts) {
   var xhr = new XMLHttpRequest();
   var data = { type: 'upload', name: file.name, size: file.size , path : opts.path }
@@ -57,6 +62,9 @@ function upload(file, opts) {
         if (typeof opts.onSuccess === "function") {
           opts.onSuccess(result)
         }
+      }else{
+        let tips = '上传失败。' + statusCode[xhr.status]
+        alert(tips)
       }
     }
   }
@@ -95,7 +103,7 @@ function uploadTask(files , id , isFolder , rootPath){
           if(!isFolder){
             $('#' + currentId).find('.upload-progress').remove()
             $('#' + currentId).find('.tip').remove()
-            $('#' + currentId).removeAttr('id')
+            $('#' + currentId).removeAttr('id').attr('href',(location.pathname+'/'+files[pointer].name).replace(/\/+/g,'/'))
           }
 
           pointer++
@@ -126,11 +134,11 @@ $(function() {
     var dirname
     if(isFolder){
       dirname = (files[0].relativePath || files[0].webkitRelativePath).split('/')[0]
-      $('.list').prepend(`<li><a class="clearfix upload" target="" id="${id}"><div class="upload-progress"></div><div class="row"><span class="file-name col-md-7 col-sm-6 col-xs-8"><i class="ic folder"></i><span class="tip">(等待中)</span>${dirname}</span><span class="file-size col-md-2 col-sm-2 col-xs-4 text-right">-</span><span class="file-modified col-md-3 col-sm-4 hidden-xs text-right">-</span></div></a></li>`)
+      $('.list').prepend(`<li><a class="clearfix upload" target="" id="${id}"><div class="upload-progress"></div><div class="row"><span class="file-name col-md-7 col-sm-6 col-xs-8"><i class="ic ic-folder"></i><span class="tip">(等待中)</span>${dirname}</span><span class="file-size col-md-2 col-sm-2 col-xs-4 text-right">-</span><span class="file-modified col-md-3 col-sm-4 hidden-xs text-right">-</span></div></a></li>`)
     }else{
       for(var i = 0;i<files.length;i++){
         var file = files[i]
-        $('.list').prepend(`<li><a class="clearfix upload" target="" id="${id}_${i}"><div class="upload-progress"></div><div class="row"><span class="file-name col-md-7 col-sm-6 col-xs-8"><i class="ic ${fileType(file.name.split('.').pop())}"></i><span class="tip">(等待中)</span>${file.name}</span><span class="file-size col-md-2 col-sm-2 col-xs-4 text-right">${byte(file.size)}</span><span class="file-modified col-md-3 col-sm-4 hidden-xs text-right">-</span></div></a></li>`)
+        $('.list').prepend(`<li><a class="clearfix upload" target="" id="${id}_${i}"><div class="upload-progress"></div><div class="row"><span class="file-name col-md-7 col-sm-6 col-xs-8"><i class="ic ic-${fileType(file.name.split('.').pop())}"></i><span class="tip">(等待中)</span>${file.name}</span><span class="file-size col-md-2 col-sm-2 col-xs-4 text-right">${byte(file.size)}</span><span class="file-modified col-md-3 col-sm-4 hidden-xs text-right">-</span></div></a></li>`)
       }
     }
 

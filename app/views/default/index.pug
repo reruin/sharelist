@@ -6,12 +6,16 @@ block content
     .wrap
       -if(parent)
         a.back(href=parent)
+          i.ic.ic-back(style="color:#333;font-size:18px;")
       a.home(href='/')= _config_('title')
       -if(writeable)
-        a.upload()
-          input(type="file",multiple="",name="file")
-        a.upload.folder()
-          input(type="file",multiple="",webkitdirectory="",directory="",name="file")
+        .upload-menu
+          a
+            i.ic.ic-upload-folder
+            input(type="file",multiple="",webkitdirectory="",directory="",name="file")
+          a
+            i.ic.ic-upload
+            input(type="file",multiple="",name="file")
   section.wrap
     .list-header
       .row
@@ -24,7 +28,7 @@ block content
           a.clearfix(href=i.href , target=i.type == 'folder' ? '' : '_blank')
             .row
               span.file-name.col-md-7.col-sm-6.col-xs-8
-                i.ic(class=i.type)
+                i.ic(class='ic-'+i.type)
                 | #{i.name}
               span.file-size.col-md-2.col-sm-2.col-xs-4.text-right
                 | #{i.size}

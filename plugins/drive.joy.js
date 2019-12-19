@@ -18,7 +18,6 @@ const cache = {}
 const parse = (id) => {
   let data = new URL(id)
   let ret = {}
-  let credentials = { client_id : data.host }
   for (const [key, value] of data.searchParams) {
     ret[key] = value
   }

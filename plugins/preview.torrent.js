@@ -8,7 +8,9 @@ const name = 'torrentParse'
 const version = '1.0'
 
 module.exports = ({request}) => {
-
+  const decodeUrl = (req) => {
+    return req.origin + req.path + ( req.querystring ? '?' + req.querystring.replace(/preview&?/,'') : '')
+  }
   const torrent = async (data , req)=>{
     return {
       ...data,
@@ -263,7 +265,7 @@ module.exports = ({request}) => {
           function start(){
             if (WebTorrent.WEBRTC_SUPPORT) {
               client = new WebTorrent()
-              var torrentId = '${req.origin}${req.path}'
+              var torrentId = '${decodeUrl(req)}'
 
               if(torrentId.endsWith('.magnet')){
                 load('正在解析磁力链接...');

@@ -7,6 +7,9 @@ const version = '1.0'
 
 module.exports = ({getSource , getPluginOption , setPluginOption}) => {
 
+  const decodeUrl = (req) => {
+    return req.path + ( req.querystring ? '?' + req.querystring.replace(/preview&?/,'') : '')
+  }
 
   const video = async (data , req) => {
     return {
@@ -14,7 +17,7 @@ module.exports = ({getSource , getPluginOption , setPluginOption}) => {
       // body:`
       //   <video src="${req.path}" style="min-width: 90%;min-height: 60vh;" controls="controls" autoplay="autoplay"></video>
       // `,
-       body:'<iframe></iframe><script>var content=\'<style>video{width:100%;height:100%;background:#000;}body{margin:0;padding:0;}</style><video src=\"'+req.path+'\" controls=\"controls\" autoplay=\"autoplay\"></video>\';document.querySelector("iframe").contentWindow.document.write(content);</script>'
+       body:'<iframe></iframe><script>var content=\'<style>video{width:100%;height:100%;background:#000;}body{margin:0;padding:0;}</style><video src=\"'+decodeUrl(req)+'\" controls=\"controls\" autoplay=\"autoplay\"></video>\';document.querySelector("iframe").contentWindow.document.write(content);</script>'
        
     }
   }
@@ -23,7 +26,7 @@ module.exports = ({getSource , getPluginOption , setPluginOption}) => {
     return {
       ...data,
       body:`
-        <iframe></iframe><script>document.querySelector("iframe").contentWindow.document.write('<audio src="${req.path}" controls="controls" autoplay="autoplay" />')</script>
+        <iframe></iframe><script>document.querySelector("iframe").contentWindow.document.write('<audio src="${decodeUrl(req)}" controls="controls" autoplay="autoplay" />')</script>
       `
     }
   }
@@ -32,7 +35,7 @@ module.exports = ({getSource , getPluginOption , setPluginOption}) => {
     return {
       ...data,
       body:`
-        <img src="${req.path}" />
+        <img src="${decodeUrl(req)}" />
       `
     }
   }

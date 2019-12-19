@@ -297,7 +297,6 @@ const updateFile = async (file) => {
   if(file.type != 'folder'){
     file.type = getFileType(file.ext)
   }
-
   file.displaySize = format.byte(file.size)
 
   
@@ -356,12 +355,11 @@ const updateFolder = (folder) => {
         d.size = null
       }
     }
-
     if(d.type != 'folder'){
       d.type = getFileType(d.ext)
       if(!d.mime) d.mime = getMIME(d.ext) || 'file/unknow'
     }
-
+  
     d.displaySize = format.byte(d.size)
     d.$ = index
 

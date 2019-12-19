@@ -1,0 +1,85 @@
+@ic-video: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAAiElEQVRYhWP4//8/w0DiAbUc7IDbLuYNQPwfhO8GuPyHgWf1Zf9h4uiYiuoaGNAFvxw9CNbwaecWnAZTUx2GA152NYE1/P3yGa/B1FKH4QB6RwOGA+gdDVgdQM9oYBgF+IKOHnjUAaMOGLwOoDYYeg4Y8CgYdcCoA0YdMOqAUQeMKAc0DKADGgCfyG7ow0+2DgAAAABJRU5ErkJggg==';
+@ic-folder: '../svg/folder.svg';
+@ic-doc: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAASUlEQVRYw2Nwav3SAMT/Bwg3MAyg5WA86oBRB4w6AKcDqA2GngNG08BoGhhNA6NpYDQNUCuIh64DRtPAqANGHTDqAHo6YEC75wDdjZvK7JI72wAAAABJRU5ErkJggg==';
+@ic-audio: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAAIGNIUk0AAHolAACAgwAA+f8AAIDpAAB1MAAA6mAAADqYAAAXb5JfxUYAAAFYSURBVFjDxZdbEcMgEEUrIRIiIQo6+e1fJCAhEuKgEioBCZFQCZGABEo6NLNDd5ddGkpn7leBe8JjHxfv/aWlTv1tt+sYtAXNQV1ufC0AH+WCzOkAYdFhlwDgI0vthhogmu9fNhL/d0EPBOKJQagAgLmnAMDYPmjNQYgBEvMsAJiX7oZVAyDmYgACYhIDEOYqgLjOmryOLgvAmJcA9MlaCwuQMf8CiIHnzgWf3RTM30gAgTkGsICbPjBPFK4xvAEyRloA8s3HcRYeQy2A44wRAAPGrDUBNuZuHa+hJsCunoA4xtQGGFsDNN0B1/oONH0FjokDMDHdqUhofgBwmUgII+zE5QJTAPBQ5AInyYZGCiDIhp0qGwogtABWXQ9kIDQV0ZzMnUtqQlMCgJivv1TFRgoQz9yeVhUjEFxfsCAFDVqolHZGhgEYpU3Jv3rDpUVz6mKB2ku64xdzQpXFCkSXPgAAAABJRU5ErkJggg==';
+@ic-other: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAAIGNIUk0AAHolAACAgwAA+f8AAIDpAAB1MAAA6mAAADqYAAAXb5JfxUYAAAB0SURBVBhX7c6xDYAwDERRj8cYLMMcjMI4lB7BkC5ChFwEZ1Gcpd/6nkWE1U3LHi9brXP1nn0E8BEEA7CdzSiCAiiPUQQNgCKoAARBB/QQKYAnRBqghUgF3CHSAVcEA+AFAeQswFACCCCAAAIIIIAAAvwKcAD27D1Y/f8QWQAAAABJRU5ErkJggg==';
+@ic-image: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAAyklEQVRYw2O47WLeAMT/Bwg3MAyg5WA86oBRB4w6YNQBQ8cBn3ZuAeMBccDLrqb/MABi09UBj9Jj///9/BnuABAbJEYXB9wNcPn/+8Wz/+gAJAaSo0aU4XXAl6MH/+MCIDlc+l5P64erA7HJcsDbRbP/EwIgNej6ntWVYagDiZHkgCfFmf+JBSC1uNILMekGwwEPogOwGoILgNSC9OBKL4TSDYYDfty59Z9UANJDjD6QGoIOoDUYdcDgd8BodTzqgFEHDIQDBrR7DgBGdZVPSID9BgAAAABJRU5ErkJggg==';
+@ic-archive: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAAlklEQVR4Ae3XAQaAUBAE0D1cHWnHB3S7jlSgakMDiEZtscuAqnk+H2sxAPo9o7vPe9YnA2CKrtZad5a7+xIPX85yIELzbjET3cZjTwFMdvWSiXP5/wJ8HqCnAH8H1C0oQN2CAgAY7ObEtyKACLVcABChlgsAItRyAUCEWi4AiFDLBQARajkBAkIpj6QvJumrWfpymr6eb9QOrCLiwSKDAAAAAElFTkSuQmCC';
+@ic-word: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAAIGNIUk0AAHolAACAgwAA+f8AAIDpAAB1MAAA6mAAADqYAAAXb5JfxUYAAAGeSURBVFjDrZfBjcQgDEUpgRJSQkrguMeUMCWkBC57poSUkBIogRI47jElzG6kGSnKfn/baJA4gZ0H/thO+Pr+eYJZAhl/6w9g87isV8Hvv3lubmChKgAF2OQBgCY5OxSAyqAdAEW6znNOBODJoB0Ay7l5Ehfxx2ficLpoJN9mB/vj22lnMb0BLPRE9lvr18XNKsTXaSQACTqBvdt1w0oJdQG+5y7YrOzZsrhG4OwgABL0DvbOFsfptmcyKBtBd/WZC1ebDbEcgd6t4todApSg0atZrUptSiwruLnNkLaTOcMpsSzgA00LrTfHp9daRE8JpXLlUNVb5VYSoll4wonYZAawSBkLJRNyypUkoIUBROnKQLpm5beQBBSDUus7OiloXAoJXRV8taANoTDNSguGeorJ2+oxZxvL5QJgpgWIACDyrr1liw3rsjwVD75lQxvWg3UI6qWxFHKI2isERwNBY0maW7kAEQCt7M7OZhXaaBDy34zf5gjeQURVP2nDALL3v5EIMY8AJKsADUJMIwDRKyZJiGF0oD/nAfHSAvQL+a1U+D3oZUEAAAAASUVORK5CYII=';
+@ic-pdf: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAAEEfUpiAAAAGXRFWHRTb2Z0d2FyZQBBZG9iZSBJbWFnZVJlYWR5ccllPAAAAY9JREFUeNpiZACC2y7m/xmggAmZAxYAESq7TzDAaEZ0FQABxIhVC4qK/0AAYtxxtQALsMAYMAAQQBhmYACQAnSALAa3FN1omBhBKwACCKTgPpBWwCEfyIRHEgTWMzEQAthcjixG0AQmfF4kKiQJWgEQQITCgYEYN5KtGWtkP6sr+0+MGCwYWdBDBpRwkUMNlxjOQMIW5IQC8T8lQcDEQCEAGRBIiQEAAQTyQgAoWZOh94HqnpOKlIbBA0rDQIEqgchAtaT87cJZcPIkJIazRODUN2KQ7pnGQEgMqxdgSRikgZAYDKMYAKsFnteX4/UySB1MLbi0JzUToatjImQbIVcNjtw4tA0IBAgwSsoDagBw/TtQlhNZv9MYjDqABT3bYwOgouDrsYNUU4fSdMUnCTNEvLSW4V7gQYrV4Q0BbIUgDPy8e4u4+OThYSBkHrpjWPAZ+PPubYZ3i+bAg5WmaYCcBhp6SH2/eI6BVPNYqOELSkKK4vpstCCihgMeDKD9D5hATWxoG5+eDgHZFQiyGwD9lkN+iurmeQAAAABJRU5ErkJggg==';
+
+
+@font-face {
+  font-family: "ic";
+  src: url('//at.alicdn.com/t/font_1557369_3dvr2196h7b.eot?t=1576552169059');
+  /* IE9 */
+  src: url('//at.alicdn.com/t/font_1557369_3dvr2196h7b.eot?t=1576552169059#iefix') format('embedded-opentype'),
+    /* IE6-IE8 */
+    url('data:application/x-font-woff2;charset=utf-8;base64,d09GMgABAAAAAARYAAsAAAAACFgAAAQLAAEAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHEIGVgCDMAqEKINbATYCJAMYCw4ABCAFhCUHWxs0BxGVnNnIPg6bsmWnzAfhcWbKtAkESTsPAvpO/FnchSwoJZX5FxR+EHI51VfGIugv3CswxxPesZgkv+z9PvmzGGwBCyGdgE1YQPrH/dSlTaSefQDIWFGUdtFuNKWopjXO5gPEDbqLmBhxaT0EYCcnFAdRv2Hz9ljRgG4CEMOHDOqD1bKjR7IFVgRmz1h9QqzGwCqXyKcAq/jvxTeslBUkhgJs1No16E/tP9vnldXszGy6D5exeD8HEE0CBRQH0CD697p6gpKh4qCwF8tpygKYaATyc+fnlTMZ2BPndrhnoROQKLT3xxMgTIDgdLXNwwZ8bsMIJHxuR6DgcwcCDZ87ibliZZd6FLO5YxsrsBV4BdAVh6BCIuAHFM3usWibP8+0WHi9PWF3Lo3NiUdc9xp1vN7ycMVUx0T9vQejibkdNh0qkFzR6cCRbOmXw4+0ii8LPSuyYfb6peFYUZg+JsTB4BvndLi7tGEstiUeSnaKb9i0fppdOaV9QG98app7UMf+AzoN9Exz3k3kNnclGwQepPMZu1MN3dPiInWKP9H+ckXC5eZfl0x2cAl7pw52XOl0p1Sq1ulQtIBXnbVc3Gp7HXw9e9rNm1On/j/ozzk7ra1pBA/qHg4G7y0OHC/wuO774P0PwTqXy/kn4svqTGzY3tu+4cBB/u/8A6+0mWl7Fnxmm9nnykT/m8DL1JWpV9bsyPfX6lFh2Gf1V+W2U+Mp+MuI4SN+OQgGTJ7adirVHi/sLl+hefNLDkpR2X83+eyyhX0aN464zCaN+/j6EIu5zH1hk95WGp3vaEOtvXJrheovtg8p3KnO7Nqie5sbLbL3WkDnweg1sRGy8NfLv/jti1+Xf1Orn5y/RA6SA/3GTAfI/GduaLeq4waO6pWaw/XP6rKqqj8Z9dWyyKcxWBX899vxI+KHXp7qv1kdGoCXOQd95WL7cJPnlS+jAKxImE3+aau5HFH8zJQ0sJs6H5v5RR8BNGDMBjPvujJMOjCEl6gAj8wZz+fndy9z6PVFBJKQBomFCCgkOZVamxsMHOQFE0kJsFOMaLKDAA8MEXoOUJTGAYEmDhI3W0ChOaTU2mNgEOYMJpoHYKcjH3M6KCjyLOp50kIpmhMWlluH6suisBeU7WrtCwu3uCHfF9xiEsaF3VJLfu6Afp+tRBw6zw1uFm1Gdc3YeS7JSpiLdOsocn1XCi03sKAeHkIjECmI4QRSYGFaHHUJi1brC4iMHTUa7+A48QbC0xf4vFQkISTuVW6FdqTi3pf07MlYIQgOxOFhGpDNaa2ImhoG6fodJVSEhJB8RaBjTQRrublCeGupeYMcbhXgeFMM1FCN1FhN1BRcE7qadRo4rlPys5QPrZ02MtpWkw5xMmwDAAA=') format('woff2'),
+    url('//at.alicdn.com/t/font_1557369_3dvr2196h7b.woff?t=1576552169059') format('woff'),
+    url('//at.alicdn.com/t/font_1557369_3dvr2196h7b.ttf?t=1576552169059') format('truetype'),
+    /* chrome, firefox, opera, Safari, Android, iOS 4.2+ */
+    url('//at.alicdn.com/t/font_1557369_3dvr2196h7b.svg?t=1576552169059#ic') format('svg');
+  /* iOS 4.1- */
+}
+
+.ic {
+  font-family: "ic" !important;
+  font-size: 14px;
+  font-style: normal;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  color: #8f8f8f;
+}
+
+.ic-upload-folder:before {
+  content: "\e638";
+}
+
+.ic-download:before {
+  content: "\e609";
+}
+
+.ic-back:before {
+  content: "\e60a";
+}
+
+.ic-folder:before {
+  content: "\e60b";
+}
+
+.ic-upload:before {
+  content: "\e60c";
+}
+
+.ic-video {
+  background-image: url(@ic-video);
+}
+
+.ic-audio {
+  background-image: url(@ic-audio);
+}
+
+.ic-doc {
+  background-image: url(@ic-doc);
+}
+
+.ic-word {
+  background-image: url(@ic-word);
+}
+
+.ic-pdf {
+  background-image: url(@ic-pdf);
+}
+
+.ic-other {
+  background-image: url(@ic-other);
+}
+
+.ic-image {
+  background-image: url(@ic-image);
+}
+
+.ic-archive {
+  background-image: url(@ic-archive);
+}

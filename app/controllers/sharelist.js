@@ -10,14 +10,17 @@ const output = async (ctx , data)=>{
 
   const isPreview = ctx.request.querystring.indexOf('preview') >= 0
 
-  const isProxy = config.getConfig('proxy_enable') || data.proxy
+  const downloadLinkAge = config.getConfig('max_age_download')
+
+  const isProxy = config.getConfig('proxy_enable') || data.proxy || downloadLinkAge > 0
 
   let url = data.url
    
   if(isPreview){
     //代理 或者 文件系统
     await ctx.renderSkin('detail',{
-      data : await service.preview(data) , url : isProxy ? ctx.path : url
+      data : await service.preview(data) , 
+      url : isProxy ? (ctx.path + '?' + ctx.querystring.replace(/preview&?/,'')) : url
     })
   }
   else{
@@ -49,13 +52,12 @@ module.exports = {
   async index(ctx){
     let downloadLinkAge = config.getConfig('max_age_download')
     let cursign = md5(config.getConfig('max_age_download_sign') + Math.floor(Date.now() / downloadLinkAge))
-
     //exclude folder
     if( downloadLinkAge > 0 && ctx.query.t && ctx.query.t != cursign ) {
       ctx.status = 403
       return
     }
-
+    
     const data = await service.path(ctx.runtime)
 
     let base_url = ctx.path == '/' ? '' : ctx.path

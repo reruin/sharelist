@@ -7,19 +7,6 @@ const config = require('../config')
 const format = require('../utils/format')
 const { getDrive, getAuth, getStream , getSource, updateLnk, checkAuthority, updateFile, updateFolder , getPreview , isPreviewable , command } = require('./plugin')
 
-const access_check = (d) => {
-  return d
-
-  if (base.checkPasswd(d)) {
-    return {
-      auth: true,
-      ...d
-    }
-  } else {
-    return d
-  }
-}
-
 const diff = (a, b) => {
   let ret = []
   b.forEach((v, i) => {
@@ -69,7 +56,12 @@ class ShareList {
       }
     }
     else{
-      let data = await command('ls' , req.paths.join('/'))
+      let data = await command('ls' , req.paths.join('/') , function(data){
+        if( requireAuth(data) && req.access.has(req.path) == false && !req.isAdmin) {
+          return true
+        }
+      })
+      
       //管理员模式无需密码
       if( requireAuth(data) && req.access.has(req.path) == false && !req.isAdmin) {
         data.type = 'auth'

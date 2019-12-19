@@ -14,6 +14,7 @@ const less = require('./middleware/koa-less')
 const addr = require('./middleware/koa-addr')
 const paths = require('./middleware/koa-paths')
 const render = require('./middleware/koa-render')
+const staticCache = require('koa-static-cache')
 
 const routers = require('./routers/index')
 const cors = require('@koa/cors')
@@ -59,8 +60,9 @@ app.use(logger())
 app.use(less(__dirname + '/public' , { dest: os.tmpdir() + '/sharelist'}))
 
 // 配置静态资源加载中间件
-app.use(koaStatic(__dirname + '/public'))
-app.use(koaStatic(os.tmpdir()+'/sharelist'))
+app.use(staticCache(__dirname + '/public' , {maxage:30 * 24 * 60 * 60 }))
+app.use(staticCache(os.tmpdir()+'/sharelist' , {maxage:30 * 24 * 60 * 60}))
+
 
 app.use(async (ctx , next) => {
   ctx.state.__ = ctx.__.bind(ctx)

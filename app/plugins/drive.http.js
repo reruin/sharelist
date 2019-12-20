@@ -23,19 +23,25 @@ module.exports = ({wrapReadableStream , request}) => {
   const folder = file
 
   const getFileSize = async (url , headers) => {
-    let nh = await request.header(url , {headers})
-    if(nh && nh['content-length']){
-      return nh['content-length']
-    }else{
+    try{
+      let nh = await request.header(url , {headers})
+      if(nh && nh['content-length']){
+        return nh['content-length']
+      }else{
+        return null
+      }
+    }
+    catch(e){
       return null
     }
   }
 
   const createReadStream = async ({id , options = {}} = {}) => {
-    let url = `http:${id}`
+    let url = encodeURI(`http:${id}`)
     let size = await getFileSize(url)
+    console.log('get file size' , size)
     let readstream = request({url, method:'get'})
-    return wrapReadableStream(readstream , { size: r.size } )
+    return wrapReadableStream(readstream , { size } )
   }
 
   return { name , version , drive:{ protocols , folder , file , createReadStream , mountable : false } }

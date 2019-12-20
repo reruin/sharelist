@@ -169,7 +169,6 @@ module.exports = ({ command , pathNormalize , createReadStream , createWriteStre
   }
 
   const cp = async (basepath , [src , dst]) => {
-
     if(src == '-h'){
       return {result:'cp -l : 列出所有任务\ncp -w id : 列出指定任务\ncp -k id : 移除指定taskId任务\ncp -r : 清除所有任务'}
     }
@@ -253,5 +252,9 @@ module.exports = ({ command , pathNormalize , createReadStream , createWriteStre
     })
   }
 
-  return { name , version , cmd:{ cp , upload }}
+  const wget = async (basepath='', [src]) => {
+    return await cp(basepath , [src , src.split('/').pop()])
+  }
+
+  return { name , version , cmd:{ cp , upload , wget }}
 }

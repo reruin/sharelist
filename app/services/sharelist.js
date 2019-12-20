@@ -41,7 +41,7 @@ class ShareList {
       let ret = { file:file.name}
       let result = await command('upload' , {
         stream:file.stream ,
-        path:[].concat(req.paths,file.options.path || file.options.name).join('/'),
+        path:file.options.filepath || [].concat(req.paths,file.options.path || file.options.name).join('/'),
         size:file.options.size
       })
       if(result){

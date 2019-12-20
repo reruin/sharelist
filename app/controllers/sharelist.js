@@ -217,7 +217,11 @@ module.exports = {
       if( ignoreexts.includes(data.ext) || ignorefiles.includes(data.name) ){
         ctx.status = 404
       }else{
-        await output(ctx , data)
+        if(ctx.runtime.method == 'GET'){
+          await output(ctx , data)
+        }else{
+          return data
+        }
       }
     }
     

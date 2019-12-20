@@ -5,6 +5,10 @@ const { getConfig } = require('../config')
 
 const slashify = (p) => (p[p.length - 1] != '/' ? `${p}/` : p)
 
+var virtualFile = {
+
+}
+
 const default_options = {
   ns:{
     name:'D',
@@ -68,20 +72,20 @@ const propsCreate = (data, options) => {
 }
 
 const propfindParse = (data, ns) => {
-  // console.log('raw',data)
   if(!data){
     return default_options
   }
 
   let findprop_ns = nsParse(data)
+  let method = Object.keys(data)[0].split(':').pop() || 'propfind'
+
   let fp_ns_name = findprop_ns ? `${findprop_ns.name}:` : ''
   let props = {}
-  if(data[`${fp_ns_name}propfind`]['$$'].hasOwnProperty(`${fp_ns_name}allprop`)){
+  if(data[`${fp_ns_name}${method}`]['$$'].hasOwnProperty(`${fp_ns_name}allprop`)){
     return default_options
   }
-
-  if(data[`${fp_ns_name}propfind`]['$$'][`${fp_ns_name}prop`]){
-    let props_raw = data[`${fp_ns_name}propfind`]['$$'][`${fp_ns_name}prop`]
+  if(data[`${fp_ns_name}${method}`]['$$'][`${fp_ns_name}prop`]){
+    let props_raw = data[`${fp_ns_name}${method}`]['$$'][`${fp_ns_name}prop`]
     let prop_ns = nsParse(props_raw) || findprop_ns
     let prop_ns_name = prop_ns ? `${prop_ns.name}:` : ''
     for (let prop in props_raw['$$']) {
@@ -113,6 +117,7 @@ const nsParse = (data) => {
 }
 
 
+//<?xml version="1.0" encoding="utf-8" ?> <D:multistatus xmlns:D='DAV:'> <D:response> <D:href>http://www.domain.example.com/public/</D:href> <D:propstat> <D:prop> <D:lockdiscovery> <D:activelock> <D:locktype><D:write/></D:locktype> <D:lockscope><D:exclusive/></D:lockscope> <D:depth>0</D:depth> <D:owner>James Smith</D:owner> <D:timeout>Infinite</D:timeout> <D:locktoken> <D:href>opaquelocktoken:f81de2ad-7f3d-a1b3-4f3c-00a0c91a9d76</D:href> </D:locktoken> </D:activelock> </D:lockdiscovery> </D:prop> <D:status>HTTP/1.1 200 OK</D:status> </D:propstat> </D:response> </D:multistatus>
 const respCreate = (data, options) => {
   let { props, path, ns: { name, value } } = options
 
@@ -247,9 +252,12 @@ class WebDAV {
    * @return void
    */
   async http_propfind() {
+    
+    let options = propfindParse(this.ctx.webdav.data)
+    options.path = this.path
+    options.depth = this.depth
     const data = await api(this.ctx)
-
-    if(data === false){
+    if(!data){
       this.setStatus("404 Not Found")
       return
     }
@@ -260,10 +268,6 @@ class WebDAV {
       this.setStatus('401 Unauthorized')
       return true
     }
-
-    let options = propfindParse(this.ctx.webdav.data)
-    options.path = this.path
-    options.depth = this.depth
 
 
     if (options.depth == '0') {
@@ -276,6 +280,13 @@ class WebDAV {
         } else {
           this.setStatus("207 Multi-Status")
           let files = [data]
+          for(let i of files){
+            if( virtualFile[i.href] ){
+              if( virtualFile[i.href].locked ){
+                i['locktype'] = 'write'
+              }
+            }
+          }
           this.setBody(respCreate(files, options))
         }
       }
@@ -301,6 +312,34 @@ class WebDAV {
   async http_get() {
     await api(this.ctx)
   }
+  /*
+  //create
+  async http_put() {
+    let ret = await api(this.ctx)
+    this.setStatus("200 Success")
+  }
+
+  // put时 webdav 将lock文件 此方法没有实现
+  async http_lock(){
+    if( !virtualFile[this.ctx.path] ){
+      virtualFile[this.ctx.path] = {}
+    }
+
+    virtualFile[this.ctx.path]['locked'] = true
+    this.setStatus("200 Success")
+    this.setBody(`<?xml version="1.0" encoding="utf-8" ?> <D:multistatus xmlns:D='DAV:'> <D:response> <D:href>${this.ctx.path}</D:href> <D:propstat> <D:prop> <D:lockdiscovery> <D:activelock> <D:locktype><D:write/></D:locktype> <D:lockscope><D:exclusive/></D:lockscope> <D:depth>0</D:depth> <D:owner>ShareList</D:owner> <D:timeout>Infinite</D:timeout> <D:locktoken> <D:href>opaquelocktoken:f81de2ad-7f3d-a1b3-4f3c-00a0c91a9d76</D:href> </D:locktoken> </D:activelock> </D:lockdiscovery> </D:prop> <D:status>HTTP/1.1 200 OK</D:status> </D:propstat> </D:response> </D:multistatus>`)
+
+  }
+
+  async http_unlock(){
+    if( !virtualFile[this.ctx.path] ){
+      virtualFile[this.ctx.path] = {}
+    }
+    virtualFile[this.ctx.path]['locked'] = false
+
+    this.setStatus("200 Success")
+  }
+  */
 
   /*
   http_head() {}

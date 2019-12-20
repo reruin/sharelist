@@ -92,20 +92,31 @@ module.exports = async(ctx, next) => {
       ( webdavMethods.includes(method.toLowerCase()) )
     ){
     let xml = await parser(ctx.req)
+
     let json = await xml2js( xml , {
       explicitChildren:true,
       explicitArray:false
     })
+
     ctx.webdav = {
       data:json , 
       depth:ctx.get('depth')
+    }
+
+    //upload
+    if(method == 'PUT'){
+      //{ type: 'upload', name: file.name, size: file.size , path : opts.path }
+      runtime.upload = {
+        stream:ctx.req ,
+        enable:ctx.session.admin || !!getConfig('anonymous_uplod_enable'),
+        options:{ name: ctx.path.split('/').pop() , filepath: ctx.path.replace(webdavPath,'')}
+      }
     }
 
     //webdav 认证状态
     if(!runtime.isAdmin && ctx.get('authorization')){
       let [, value] = ctx.get('authorization').split(' ');
       let pairs = Buffer.from(value, "base64").toString("utf8").split(':')
-      console.log('webdab ',pairs)
       if( getConfig('token') == pairs[1] ){
         ctx.session.admin = true
         runtime.isAdmin = true

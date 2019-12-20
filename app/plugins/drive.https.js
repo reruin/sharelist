@@ -16,32 +16,33 @@ module.exports = ({wrapReadableStream , request}) => {
       name:id.split('/').pop(),
       ext: id.split('.').pop(),
       url: `https:${id}`,
-      protocol:'https'
+      protocol:'https',
     }
   }
 
   const folder = file
 
-  const getFileSize = async (url) => {
-    let size = null
+  const getFileSize = async (url , headers) => {
     try{
-      let nh = await request.header(url)
+      let nh = await request.header(url , {headers})
       if(nh && nh['content-length']){
-        size = nh['content-length']
+        return nh['content-length']
+      }else{
+        return null
       }
-    }catch(e){
-      console.log(e) 
     }
-    return size
+    catch(e){
+      return null
+    }
   }
 
   const createReadStream = async ({id , options = {}} = {}) => {
-    let url = `http:${id}`
+    let url = encodeURI(`https:${id}`)
     let size = await getFileSize(url)
+    console.log('get file size' , size)
     let readstream = request({url, method:'get'})
-    console.log('>>>',url,size)
-
-    return wrapReadableStream(readstream , { size: size } )
+    return wrapReadableStream(readstream , { size } )
   }
-  return { name , version , drive:{ protocols , folder , file , createReadStream , mountable : false} }
+
+  return { name , version , drive:{ protocols , folder , file , createReadStream , mountable : false } }
 }

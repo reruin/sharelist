@@ -13,7 +13,7 @@ const protocols = ['odb']
 const defaultProtocol = 'odb'
 
 
-module.exports = ({ request, cache, getConfig }) => {
+module.exports = ({ request, cache, getConfig , datetime }) => {
 
   const clientMap = {}
 
@@ -110,7 +110,7 @@ module.exports = ({ request, cache, getConfig }) => {
         ext: i['.fileType'],
         protocol: defaultProtocol,
         created_at: '-',
-        updated_at: i.Modified,
+        updated_at: datetime(i.Modified.replace(/\//g,'-')),
         size: i.FileSizeDisplay,
         type: i.FSObjType == '1' ? 'folder' : undefined,
       }

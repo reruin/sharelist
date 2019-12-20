@@ -11,7 +11,7 @@ const protocols = ['od', 'onedrive']
 
 const defaultProtocol = 'od'
 
-module.exports = ({ request , cache , getConfig , querystring}) => {
+module.exports = ({ request , cache , getConfig , querystring , datetime }) => {
 
   var _authkey, _appid, _rootcid, _cookie , _authid
 
@@ -71,7 +71,6 @@ module.exports = ({ request , cache , getConfig , querystring}) => {
 
   // 非公开接口
   const folder = async (id, _) => {
-
     checkAuthId(id)
 
     _ = _ || {}
@@ -102,7 +101,7 @@ module.exports = ({ request , cache , getConfig , querystring}) => {
     let { authkey, cookie, appid } = await getAuth()
 
     let children = []
-
+    console.log('>>>>',id)
     let cid = id.split('!')[0].toLowerCase()
 
     let opts = {
@@ -155,8 +154,8 @@ module.exports = ({ request , cache , getConfig , querystring}) => {
           protocol: defaultProtocol,
           parent: i.parentId,
           mime: i.mimeType,
-          created_at: i.displayCreationDate.replace(/\//g, '-'),
-          updated_at: i.displayModifiedDate.replace(/\//g, '-'),
+          created_at: datetime(i.displayCreationDate.replace(/\//g, '-')),
+          updated_at: datetime(i.displayModifiedDate.replace(/\//g, '-')),
           size: parseInt(i.size),
           type: i.folder ? 'folder' : undefined,
 

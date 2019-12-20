@@ -1,7 +1,6 @@
 const { isString , isDate } = require('./base')
 
-const datetime = (date, expr) => {
-  expr = expr || 'yyyy-MM-dd hh:mm:ss'
+const datetime = (date, expr = 'iso') => {
   var a = new Date()
   if(isDate(date)){
     a = date
@@ -27,6 +26,9 @@ const datetime = (date, expr) => {
     return v < 10 ? "0" + v : v;
   }
 
+  if(expr === 'iso'){
+    return a.toISOString()
+  }
   return expr.replace(/(?:s{1,2}|m{1,2}|h{1,2}|d{1,2}|M{1,4}|y{1,4})/g, function(str) {
 
     switch (str) {

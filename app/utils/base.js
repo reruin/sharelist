@@ -39,6 +39,7 @@ const parsePath = (url) => {
 }
 
 const getFileType = (v) => {
+  if(v) v = v.toLowerCase()
   if (['mp4', 'mpeg', 'wmv', 'webm', 'avi', 'rmvb', 'mov', 'mkv', 'f4v', 'flv'].includes(v)) {
     return 'video'
   } else if (['mp3', 'm4a', 'wav', 'wma', 'ape', 'flac', 'ogg'].includes(v)) {

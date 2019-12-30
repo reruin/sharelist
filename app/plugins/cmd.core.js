@@ -53,6 +53,7 @@ module.exports = ({ cache , getVendor , getConfig , getRuntime , updateFolder , 
 
     // 处理标准路径 path
     let resp = await process_fast(p , filter)
+
     if( iscmd ){
       if( resp.children ){
         resp = { result: resp.children.map(i => i.name).join('\n') }
@@ -61,7 +62,15 @@ module.exports = ({ cache , getVendor , getConfig , getRuntime , updateFolder , 
       }
     }
 
-    return clone(resp)
+    let ret = clone(resp)
+    if(ret.children){
+      ret.children.forEach(i => {
+        if(i.ext) i.ext = i.ext.toLowerCase()
+      })
+    }else if(ret.ext){
+      ret.ext = ret.ext.toLowerCase()
+    }
+    return ret
   }
 
   const cat = async (p) => {

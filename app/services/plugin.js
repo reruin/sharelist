@@ -99,6 +99,7 @@ const getPreview = async (data) => {
 }
 
 const isPreviewable = async (data) => {
+  console.log(data.ext)
   return previewMap.has(data.ext)
 }
 

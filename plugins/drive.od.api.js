@@ -503,7 +503,7 @@ module.exports = ({ request, cache, getConfig, querystring, base64 , saveDrive ,
         console.log('info:',resp.error.message)
         //return false
       }else{
-        console.log(resp)
+        console.log('mkdir error')
       }
     }
 
@@ -533,7 +533,7 @@ module.exports = ({ request, cache, getConfig, querystring, base64 , saveDrive ,
         'Content-Type': 'application/json'
       },
     },function(error, response, body){
-      //console.log(body,error)
+      // console.log('chunk from',offset)
       if(error) {
         this.emit('finish' , {error:true , req_error:true , detail:error})
       }
@@ -591,24 +591,35 @@ module.exports = ({ request, cache, getConfig, querystring, base64 , saveDrive ,
     let name = decodeURIComponent( p.pop() )
 
     let api = 'https://graph.microsoft.com/v1.0' + ((!path || path == '/') ? `/me/drive/root/` : `/me/drive/items/root:${encodeURIComponent(path).replace(/\/+$/g,'/')}:/`) + 'createUploadSession'
+   // api = 'https://graph.microsoft.com/v1.0/me/drive/items/root:/Amlogic USB Burning Tool_v2.1.6.8.zip:/createUploadSession'
 
-    console.log('createUploadSession success')
+    console.log('createUploadSession', api)
     let resp
     try{
-      resp = await request.post(api , {
-        // 同名重命名
-        "item": {"name": name, "@microsoft.graph.conflictBehavior": "rename"}
-      },{headers:{
-        'Authorization':`bearer ${credentials.access_token}`,
-        'Content-Type': 'application/json'
-      },json:true})
+      resp = await request({
+        url:api,
+        method:'post',
+        body:{
+          "item": {
+            "@microsoft.graph.conflictBehavior": "rename",
+            "name":name
+          }
+        },
+        headers:{
+          'Authorization': `Bearer ${credentials.access_token}`,
+          'Content-Type': 'application/json'
+        },
+        json:true,
+        async:true
+      })
+
     }catch(e){
-      console.log(e)
       resp = e.body || e
     }
     
     if( resp.error ){
       console.log('error',resp.error)
+      return { error : resp.error }
     }
 
     if(resp.body && resp.body.uploadUrl){

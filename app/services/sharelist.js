@@ -44,10 +44,12 @@ class ShareList {
         path:file.options.filepath || [].concat(req.paths,file.options.path || file.options.name).join('/'),
         size:file.options.size
       })
-      if(result){
+      if(result.success){
         ret.status = 0
       }else{
         ret.status = 500
+        let msg = typeof result.message == 'object' ? JSON.stringify(result.message) : result.message
+        ret.result = msg
       }
 
       return {

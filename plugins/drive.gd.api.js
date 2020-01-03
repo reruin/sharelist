@@ -702,6 +702,7 @@ module.exports = ({ request, cache, getConfig, querystring, base64, saveDrive, g
       }
     }catch(e){
       console.log('error>>>',e.body)
+      return { error: e.body }
     }
 
     console.log(uploadUrl)

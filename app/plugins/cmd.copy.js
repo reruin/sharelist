@@ -233,8 +233,12 @@ module.exports = ({ command , pathNormalize , createReadStream , createWriteStre
     return new Promise((resolve,reject) => {
       parseWrite(null , path , {size}).then( writeStream => {
         if(!writeStream){
-          resolve(false)
+          resolve({ success:false , message:''})
           return
+        }
+        if( writeStream && writeStream.error ){
+          resolve({ success:false , message:writeStream.error })
+          return 
         }
         stream.resume()
         stream.pipe( writeStream )
@@ -242,11 +246,11 @@ module.exports = ({ command , pathNormalize , createReadStream , createWriteStre
         writeStream.on('finish', () => {
           console.log('finish')
           //clear cache
-          resolve(true)
+          resolve({ success:true })
         })
 
-        writeStream.on('error', () => {
-          resolve(false)
+        writeStream.on('error', (e) => {
+          resolve({ success:false , message:e })
         })
       })
     })

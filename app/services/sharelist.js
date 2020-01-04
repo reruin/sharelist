@@ -6,6 +6,7 @@ const cache = require('../utils/cache')
 const config = require('../config')
 const format = require('../utils/format')
 const { getDrive, getAuth, getStream , getSource, updateLnk, checkAuthority, updateFile, updateFolder , getPreview , isPreviewable , command } = require('./plugin')
+const wrapReqStream = require('../utils/wrapReqStream')
 
 const diff = (a, b) => {
   let ret = []
@@ -40,7 +41,7 @@ class ShareList {
       let file = req.upload
       let ret = { file:file.name}
       let result = await command('upload' , {
-        stream:file.stream ,
+        stream:wrapReqStream(file.stream) ,
         path:file.options.filepath || [].concat(req.paths,file.options.path || file.options.name).join('/'),
         size:file.options.size
       })

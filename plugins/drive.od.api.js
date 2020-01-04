@@ -554,6 +554,7 @@ module.exports = ({ request, cache, getConfig, querystring, base64 , saveDrive ,
       offset += chunk.length
 
       if( offset % chunkSize == 0 ){
+        passThroughtStream.pause()
         passThroughtStream.unpipe()
         req.on('finish' , (data) => {
           //console.log('finish',data)
@@ -574,6 +575,7 @@ module.exports = ({ request, cache, getConfig, querystring, base64 , saveDrive ,
               //console.log('switch')
               req = createChunkStream(url , size , offset , chunkSize)
               passThroughtStream.pipe( req )
+              passThroughtStream.resume()
             }
           }
         })

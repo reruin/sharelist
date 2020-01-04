@@ -229,7 +229,6 @@ module.exports = ({ command , pathNormalize , createReadStream , createWriteStre
   //{ stream:'可读流' , path:'目标路径' , size:'文件大小'}
   const upload = ({ stream , path , size}) => {
     stream.pause()
-
     return new Promise((resolve,reject) => {
       parseWrite(null , path , {size}).then( writeStream => {
         if(!writeStream){
@@ -240,8 +239,8 @@ module.exports = ({ command , pathNormalize , createReadStream , createWriteStre
           resolve({ success:false , message:writeStream.error })
           return 
         }
-        stream.resume()
         stream.pipe( writeStream )
+        stream.resume()
 
         writeStream.on('finish', () => {
           console.log('finish')

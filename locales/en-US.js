@@ -35,6 +35,8 @@ module.exports = {
   "webdav_path":"WebDAV Path",
   "ignore_file_extensions":"Ignore File Extensions",
   "ignore_file_extensions_placeholder":"e.g. docx,pptx",
+  "ignore_paths":"Ignore Path",
+  "ignore_paths_placeholder":"e.g. /a,/b/c",
   "plugin_option":"Plugin Option",
   "reboot":"Reboot",
 }

@@ -29,7 +29,9 @@ const db = createFiledb(configPath , {raw:true} , {
 
   readme_enable:1,
 
-  ignore_paths:{},
+  ignore_paths:{
+    '__root__':['/readme.md']
+  },
 
   max_age_download_sign:'sl_'+Date.now(),
 

@@ -35,6 +35,8 @@ module.exports = {
   "webdav_path":"WebDAV路徑",
   "ignore_file_extensions":"忽略文件類型",
   "ignore_file_extensions_placeholder":"文件擴展名，多個用逗號分隔",
+  "ignore_paths":"忽略路徑",
+  "ignore_paths_placeholder":"路徑，多個用逗號分隔",
   "plugin_option":"插件配置",
   "reboot":"重啟",
 }

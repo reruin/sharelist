@@ -59,10 +59,10 @@ app.use(logger())
 //less 中间件
 app.use(less(__dirname + '/public' , { dest: os.tmpdir() + '/sharelist'}))
 
+
 // 配置静态资源加载中间件
 app.use(staticCache(__dirname + '/public' , {maxage:30 * 24 * 60 * 60 }))
-app.use(staticCache(os.tmpdir()+'/sharelist' , {maxage:30 * 24 * 60 * 60}))
-
+app.use(staticCache(os.tmpdir()+'/sharelist' , {maxage:30 * 24 * 60 * 60 , dynamic:true}))
 
 app.use(async (ctx , next) => {
   ctx.state.__ = ctx.__.bind(ctx)

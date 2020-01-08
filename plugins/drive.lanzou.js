@@ -96,8 +96,8 @@ module.exports = ({ request , getConfig , datetime , cache , retrieveSize }) => 
 
     let params = parse(id)
     if(params.fid){
-      let { body , headers } = await request.get(host+'/'+params.fid)
-      let cookie = headers['set-cookie'].join('; ')
+      let { body , headers } = await request.get(host+'/'+params.fid , { headers:{'User-Agent':'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_14_4) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/79.0.3945.88 Safari/537.36'}})
+      let cookie = headers['set-cookie'] ? headers['set-cookie'].join('; ') : ''
       let formdata = getFormDataForFolder(body)
       if( formdata ){
         formdata.pg = 1
@@ -106,6 +106,9 @@ module.exports = ({ request , getConfig , datetime , cache , retrieveSize }) => 
         }
 
         let res = await request.post(`${host}/filemoreajax.php` , formdata ,{headers:{'Cookie':cookie} , json:true})
+
+        // let cookie = headers['set-cookie'] ? headers['set-cookie'].join('; ') : ''
+
         if(res.body.zt != 1){
           res.body.text = []
         }
@@ -145,20 +148,21 @@ module.exports = ({ request , getConfig , datetime , cache , retrieveSize }) => 
    */
   const file = async(id , { data = {} } = {}) =>{
     
+    let url
     let { body }  = await request.get(`${host}/tp/${id}` , {headers:{'User-Agent':'Mozilla/5.0 (Linux; Android 6.0; 1503-M02 Build/MRA58K) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/37.0.0.0 Mobile MQQBrowser/6.2 TBS/036558 Safari/537.36 MicroMessenger/6.3.25.861 NetType/WIFI Language/zh_CN'}})
+    try{
 
-    let url = (body.match(/(?<=dpost\s*\+\s*["']\?)[^"']+/) || [false])[0]
-    let base = (body.match(/(?<=urlp[^\=]*=\s*')[^']+/)|| [false])[0]
+      let code = body.split('<script type="text/javascript">')[1].split('</script>')[0]
 
-    if(url == false){
-      url = (body.match(/(?<=urlp[^\"\']*[\"\']\s*)\?[^'"]+/)|| [false])[0]
-      if( url == false){
-        return false
-      }
+      code = 'var data = {}; function $c(){ return data };' + code.replace('document.getElementById','$c').replace(/document/g,'') + ';data.onfocus();return data.href;'
+      url = (new Function(code))()
+    }catch(e){
+
     }
-    let name = (body.match(/(?<="md">)[^<]+/) || [''])[0].replace(/\s*$/,'')
+    
+    if(!url) return false
 
-    url = base + '?' + url
+    let name = (body.match(/(?<="md">)[^<]+/) || [''])[0].replace(/\s*$/,'')
     data.url = url
     data.name = filterExt(name)
     data.$cached_at = Date.now()

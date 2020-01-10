@@ -110,7 +110,7 @@ const handlers = async (a, body) => {
     if (webdav_path) {
       opts.webdav_path = webdav_path
     }
-
+    opts.ignore_paths = config.getConfig('ignore_paths')
     opts.ignore_file_extensions = ignore_file_extensions
     opts.ignore_paths.__root__ = ignore_paths.split(',')
     await config.save(opts)

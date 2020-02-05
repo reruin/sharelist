@@ -2,7 +2,7 @@ const fs = require('fs')
 const os = require('os')
 const { createFiledb } = require('./utils/db/filedb');
 const configPath = process.cwd() +'/cache/config.json'
-const port = process.env.PORT || 33001
+const port = process.env.PORT || 51221
 const runtime = {}
 
 const db = createFiledb(configPath , {raw:true} , {

@@ -23,6 +23,8 @@ const merge = function(dst , src) {
     }else{
       if (typeof src[key] == 'object' || Array.isArray(src[key])) {
         merge(dst[key], src[key]);
+      }else{
+        dst[key] = src[key]
       }
     }
   }

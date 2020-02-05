@@ -73,7 +73,7 @@ class oauth2ForGD {
 
     let { client_id, client_secret, redirect_uri } = appConfig
 
-    return await authToken({ client_id, client_secret, redirect_uri , code },key)
+    return await this.authToken({ client_id, client_secret, redirect_uri , code },key)
   }
 
   async authToken({client_id, client_secret, redirect_uri , code} , key){

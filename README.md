@@ -76,7 +76,20 @@ ShareList会根据填写的挂载内容，自动开启挂载向导，按指示�
 对于不符合OneDrive安全要求的域名，将采用中转方式验证，[查看中转页面](https://github.com/reruin/reruin.github.io/blob/master/redirect/onedrive.html)。   
 **注意：由于onedrive修改了政策，个人Microsoft帐户已无法通过向导进行绑定。
 需前往 [Azure管理后台](https://portal.azure.com/#blade/Microsoft_AAD_RegisteredApps/ApplicationsListBlade) 注册应用并获取  app_id 和 app_secret 。**  
-#### 3. 挂载OneDrive For Business
+
+#### 3. 使用官方API挂载世纪互联
+由[plugins/drive.odc.api.js](plugins/drive.odc.api.js)插件实现。   
+```
+挂载标示：odc
+挂载内容：   
+    odc://应用ID/路径?client_secret=应用机钥&redirect_uri=回调地址&refresh_token=refresh_token&tenant=组织名   
+    /
+```
+ShareList会根据填写的挂载内容，自动开启挂载向导，按指示操作即可。  
+  
+**注意：组织名是指网盘访问链接中 ```https://***-my.sharepoint.cn/``` 星号所示部分。**  
+
+#### 4. 挂载OneDrive For Business
 由[plugins/drive.odb.js](plugins/drive.odb.js)插件实现。  
 ```
 挂载标示：odb  

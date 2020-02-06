@@ -7,7 +7,7 @@ ShareList 是一个易用的网盘工具，支持快速挂载 GoogleDrive、OneD
 * [安装](#安装) 
 * [使用示例](#使用示例)   
   * [挂载GoogleDrive](#挂载GoogleDrive) 
-  * [挂载OneDrive](#挂载挂载OneDrive) 
+  * [挂载OneDrive（含世纪互联）](#挂载挂载OneDrive) 
   * [挂载本地文件](#挂载本地文件) 
   * [挂载GitHub](#挂载GitHub) 
   * [挂载蓝奏云](#挂载蓝奏云) 
@@ -56,6 +56,8 @@ ShareList 是一个易用的网盘工具，支持快速挂载 GoogleDrive、OneD
 ```
 ShareList会根据填写的挂载内容的不同形式，自动开启挂载向导，按指示操作即可。   
 
+***
+
 ### 挂载OneDrive
 #### 1. 使用分享ID挂载
 由[plugins/drive.od.js](plugins/drive.od.js)插件实现。  
@@ -63,6 +65,8 @@ ShareList会根据填写的挂载内容的不同形式，自动开启挂载向�
 挂载标示：od  
 挂载内容：分享的文件ID。 
 ``` 
+**注意：单文件夹内最多显示30条结果。**  
+
 #### 2. 使用官方API挂载
 由[plugins/drive.od.api.js](plugins/drive.od.api.js)插件实现。   
 ```
@@ -95,6 +99,9 @@ ShareList会根据填写的挂载内容，自动开启挂载向导，按指示�
 挂载标示：odb  
 挂载内容：分享的url
 ```
+**注意：单文件夹内最多显示30条结果。**  
+
+***
 
 ### 挂载本地文件
 由[drive.fs.js](app/plugins/drive.fs.js)插件实现。  
@@ -103,6 +110,8 @@ ShareList会根据填写的挂载内容，自动开启挂载向导，按指示�
 挂载内容：文件路径。
 ```
 **注意：统一使用unix风格路径，例如 windows D盘 为 ```/d/```。**   
+
+***
 
 ### 挂载GitHub
 由[plugins/drive.github.js](plugins/drive.github.js)插件实现。用于访问GitHub代码库。有以下两种挂载方式。    
@@ -113,6 +122,8 @@ ShareList会根据填写的挂载内容，自动开启挂载向导，按指示�
   username/repo
 ```  
 **注意：仅用于浏览，不支持 ```git clone``` 等git操作。**  
+
+***
 
 ### 挂载蓝奏云
 由[plugins/drive.lanzou.js](drive.lanzou)插件实现。提供对[蓝奏云](https://www.lanzou.com/)的访问支持。   
@@ -126,6 +137,8 @@ ShareList会根据填写的挂载内容，自动开启挂载向导，按指示�
 
 插件为 ```mp4/jpg ```等禁止上传的格式提供解析支持，只需在文件名后附加```txt```后缀即可。以mp4为例，将```xxx.mp4```命名为```xxx.mp4.txt```后再上传，插件将自动解析为mp4文件。 
 
+***
+
 ### 挂载h5ai
 由[drive.h5ai.js](plugins/drive.h5ai.js)插件实现，用于访问h5ai目录程序。  
 ```
@@ -133,6 +146,8 @@ ShareList会根据填写的挂载内容，自动开启挂载向导，按指示�
 挂载路径：http地址
 ```
 例如： ```h5ai:https://larsjung.de/h5ai/demo/```   
+
+***
 
 ### 挂载WebDAV
 由[drive.webdav.js](plugins/drive.webdav.js)插件实现，用于访问WebDAV服务。  
@@ -144,6 +159,8 @@ ShareList会根据填写的挂载内容，自动开启挂载向导，按指示�
   https://username:password@webdavserver.com:1222/?acceptRanges=none
 ```
 **注意：若服务端不支持断点续传，需追加```acceptRanges=none```** 
+
+***
 
 ### 虚拟目录
 在需创建虚拟目录处新建```目录名.d.ln```文件。 其内容为```挂载标识:挂载路径```。   
@@ -158,12 +175,14 @@ gd:0BwfTxffUGy_GNF9KQ25Xd0xxxxxxx
 ```  
 系统内置了一种单文件虚拟目录系统，使用yaml构建，以```sld```作为后缀保存。参考[example/ShareListDrive.sld](example/sharelist_drive.sld)。 
 
+***
 
 ### 虚拟文件
 与虚拟目录类似，目标指向具体文件。  
 在需创建虚拟文件处新建```文件名.后缀名.ln```文件。 其内容为```挂载标识:挂载路径```。 
 如：创建一个```ubuntu_18.iso```的虚拟文件，请参考[example/linkTo_download_ubuntu_18.iso.ln](example)。 
   
+***
 
 ### 目录加密
 在需加密目录内新建 ```.passwd``` 文件，```type```为验证方式，```data```为验证内容。  
@@ -178,8 +197,14 @@ data:
 
 ```user1```用户可使用密码```111111```验证，```user2```用户可使用密码```aaaaaa```验证。请参考[example/secret_folder/.passwd](example)。 
 
+***
+
 ### 流量中转
-后台管理，常规设置，将```中转（包括预览）```设为启用即可实现中转代理。
+后台管理，常规设置，将```中转（包括预览）```设为启用即可实现中转代理。  
+**注意，由于功能限制，以下挂载方式将强制使用中转模式：    
+```OneDrive For Business（id挂载）、GoogleDriveAPI、GoogleDrive（id挂载）```**  
+
+***
 
 ### 负载均衡
 由[drive.lb.js](app/plugins/drive.lb.js)插件实现。用于将请求转发到多个对等的网盘。       

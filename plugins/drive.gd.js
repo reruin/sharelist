@@ -140,18 +140,40 @@ module.exports = ({ request , getConfig , datetime , cache , wrapReadableStream 
       }
     }
 
-    let downloadUrl = ''
     let { body , headers }  = await request.get(host + '/uc?id='+id+'&export=download',{followRedirect : false})
     if(headers && headers.location){
-      downloadUrl = headers.location
+      data.url = headers.location
     }else{
       if(body && body.indexOf('Too many users') == -1){
-        let url = (body.match(/\/uc\?export=download[^"']+/i) || [''])[0]
+
         let cookie = headers['set-cookie'].join('; ')
+        let url =  (body.match(/\/uc\?export=download[^"']+/i) || [''])[0]
+
+        // stage 1 : confirm 
+        // https://drive.google.com/uc?export=download&confirm=xxxx
         let resp = await request.get(host + url.replace(/&amp;/g,'&') , {headers:{'Cookie':cookie} , followRedirect : false})
-        if(resp.headers && resp.headers.location){
-          downloadUrl = resp.headers.location
-        }
+        url = resp.headers.location
+
+        // stage 2 download link without nonce
+        // https://xxxx.googleusercontent.com/docs/securesc/xxxx?e=download
+        resp = await request.get(url , {followRedirect : false})
+        let cookie_guc = resp.headers['set-cookie'].join('; ')
+
+        url = resp.headers.location
+
+        // stage 3 nonceSigner
+        // https://docs.google.com/nonceSigner?nonce=xxxx&continue=xxxx
+        resp = await request.get(url , {headers:{'Cookie':cookie} , followRedirect : false})
+        url = resp.headers.location
+
+        // stage 4 
+        // https://xxxx.googleusercontent.com/docs/securesc/xxxx?e=download&nonce=xxxx
+        data.url = url
+
+        data.headers = { cookie: cookie_guc }
+
+        data.proxy = true
+
       }else{
         return {
           ...data,
@@ -161,7 +183,6 @@ module.exports = ({ request , getConfig , datetime , cache , wrapReadableStream 
       }
     }
 
-    data.url = downloadUrl
     data.$cached_at = Date.now()
 
     //强制保存 ， data 是指向 父级 的引用

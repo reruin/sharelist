@@ -85,7 +85,7 @@ const getFileSize = async (url , headers) => {
     return null
   }
 }
-const sendHTTPFile = async (ctx , url  ,data) => {
+const sendHTTPFile = async (ctx , url  ,data = {}) => {
   let headers = data.headers || {}
 
   headers = mergeHeaders(ctx.req.headers , headers)
@@ -111,7 +111,8 @@ const sendHTTPFile = async (ctx , url  ,data) => {
     ctx.length = chunksize
   }
 
-  let stream = http({url , headers})
+  let extra = data.proxy_options || {}
+  let stream = http({url , headers , ...extra})
   stream.on('response', function(response) {
     ctx.status = response.statusCode
     if(response.headers){

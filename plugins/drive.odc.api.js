@@ -57,7 +57,7 @@ class oauth2ForOD {
   }
 
   async generateAuthUrl(config) {
-    const { client_id, client_secret, tenant, redirect_uri } = config
+    let { client_id, client_secret, tenant, redirect_uri } = config
 
     const opts = {
       client_id,
@@ -71,9 +71,10 @@ class oauth2ForOD {
     if(!isSecretUrl(redirect_uri)){
       opts.redirect_uri = this.PROXY_URL
       opts.state = redirect_uri
+      //redirect_uri = this.PROXY_URL
     }
 
-    this.pathAppMap[redirect_uri] = { client_id, client_secret, tenant, redirect_uri, create_time: Date.now() }
+    this.pathAppMap[redirect_uri] = { client_id, client_secret, tenant, redirect_uri:opts.redirect_uri, create_time: Date.now() }
 
     return `${this.OAUTH2_AUTH_BASE_URL}?${this.qs.stringify(opts)}`;
   }
@@ -81,8 +82,7 @@ class oauth2ForOD {
   //验证code 并获取 credentials
   async getToken(key, code) {
     let appConfig = this.pathAppMap[key]
-
-    if (!appConfig) return { error: true, msg: '没有匹配到app_id' }
+    if (!appConfig) return { error: true, msg: '没有匹配到app_id. key:'+key }
 
     let { client_id, client_secret, tenant, redirect_uri } = appConfig
 
@@ -102,6 +102,7 @@ class oauth2ForOD {
     try {
       resp = await this.request.post(this.OAUTH2_TOKEN_URL, params, { json: true })
     } catch (e) {
+      console.log(e)
       resp = e
     }
 
@@ -235,7 +236,7 @@ module.exports = ({ request, cache, getConfig, querystring, base64 , saveDrive ,
 
 
     //是否有其他配置参数
-    let hit = data.filter(i => i.credentials.client_id == c.client_id)
+    let hit = data.filter(i => i.credentials.client_id == c.client_id && i.credentials.client_secret == c.client_secret)
 
     //无配置参数匹配路径名
     if( hit.length == 0 ){
@@ -250,6 +251,7 @@ module.exports = ({ request, cache, getConfig, querystring, base64 , saveDrive ,
       }
     }
 
+    console.log('update hit',hit)
     hit.forEach(i => {
       let key = urlFormat({
         protocol: i.protocol,

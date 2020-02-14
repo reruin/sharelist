@@ -46,7 +46,7 @@ module.exports = ({getSource , getPluginOption , setPluginOption}) => {
         <script src="https://cdn.bootcss.com/dplayer/1.25.0/DPlayer.min.js"></script>
         <div id="dplayer" style="margin-top:32px;height:60vh;"></div>
         <script>
-          var url = '${decodeUrl(req)}' , subtitle = url.replace(/\\.[^\\?]+/,'.vtt');
+          var url = '${decodeUrl(req)}' , subtitle = url.replace(/\\.[^\\.]+?(\\?|$)/,'.vtt$1');
           var dp = new DPlayer({
             container: document.getElementById('dplayer'),
             video:{

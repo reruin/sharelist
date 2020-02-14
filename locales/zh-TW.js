@@ -38,5 +38,7 @@ module.exports = {
   "ignore_paths":"忽略路徑",
   "ignore_paths_placeholder":"路徑，多個用逗號分隔",
   "plugin_option":"插件配置",
+  "custom_style":"自定義樣式",
+  "custom_script":"自定義腳本",
   "reboot":"重啟",
 }

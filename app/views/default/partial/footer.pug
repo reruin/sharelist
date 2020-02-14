@@ -2,3 +2,6 @@ footer
   p
     a(href='https://github.com/reruin/sharelist',target='_blank') GitHub
     a(href='/manage',target='_blank')= __('manage')
+-if(g_config.custom_script)
+  .
+    !{g_config.custom_script}

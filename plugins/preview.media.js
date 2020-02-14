@@ -42,14 +42,20 @@ module.exports = ({getSource , getPluginOption , setPluginOption}) => {
       //   <video src="${req.path}" style="min-width: 90%;min-height: 60vh;" controls="controls" autoplay="autoplay"></video>
       // `,
        body: videoPlayer == 'dplayer' ? `
-        <script src="https://cdn.bootcss.com/dplayer/1.25.0/DPlayer.min.js"></script>
         <link href="https://cdn.bootcss.com/dplayer/1.25.0/DPlayer.min.css" rel="stylesheet" />
-        <div id="dplayer" style="margin-top:32px;height:60vh;">
+        <script src="https://cdn.bootcss.com/dplayer/1.25.0/DPlayer.min.js"></script>
+        <div id="dplayer" style="margin-top:32px;height:60vh;"></div>
         <script>
+          var url = '${decodeUrl(req)}' , subtitle = url.replace(/\\.[^\\?]+/,'.vtt');
           var dp = new DPlayer({
             container: document.getElementById('dplayer'),
-            video: {
-                url: '${decodeUrl(req)}',
+            video:{
+              url: url,
+            },
+            subtitle: {
+              url: subtitle,
+              fontSize: '25px',
+              bottom: '7%',
             },
           });
         </script>
@@ -77,9 +83,36 @@ module.exports = ({getSource , getPluginOption , setPluginOption}) => {
     }
   }
 
+  const hls = async (data , req) => {
+    return {
+      ...data,
+       body: `
+        <link href="https://cdn.bootcss.com/dplayer/1.25.0/DPlayer.min.css" rel="stylesheet" />
+        <script src="https://cdn.bootcss.com/hls.js/8.0.0-beta.3/hls.min.js"></script>
+        <script src="https://cdn.bootcss.com/dplayer/1.25.0/DPlayer.min.js"></script>
+        <div id="dplayer" style="margin-top:32px;height:60vh;"></div>
+        <script>
+          var url = '${decodeUrl(req)}';
+          var dp = new DPlayer({
+            container: document.getElementById('dplayer'),
+            video:{
+              url: url,
+              type:'hls'
+            },
+            
+          });
+        </script>
+      `
+    }
+  }
+
 
   videoFormat.split(',').forEach( ext => {
     preview[ext] = video
+  });
+  
+  ['m3u8'].forEach( ext => {
+    preview[ext] = hls
   });
 
   ['mp3','m4a','acc'].forEach( ext => {

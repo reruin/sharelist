@@ -85,6 +85,18 @@ block content
                   select.form-control(name='anonymous_uplod_enable',value=config.anonymous_uplod_enable,required)
                     option(value='1', selected=config.anonymous_uplod_enable==1 ? 'selected' : null)= __('enable')
                     option(value='0', selected=config.anonymous_uplod_enable==0 ? 'selected' : null)= __('disable')
+              .form-group
+                .col-sm-4
+                  label= __('custom_style')
+                .col-sm-8
+                  textarea.form-control(name='custom_style')
+                    | #{config.custom_style}
+              .form-group
+                .col-sm-4
+                  label= __('custom_script')
+                .col-sm-8
+                  textarea.form-control(name='custom_script')
+                    | #{config.custom_script}
               .form-group.text-center
                 button.btn.btn-default(type='submit')= __('save')
         .panel.panel-default

@@ -38,5 +38,7 @@ module.exports = {
   "ignore_paths":"Ignore Path",
   "ignore_paths_placeholder":"e.g. /a,/b/c",
   "plugin_option":"Plugin Option",
+  "custom_style":"Custom Style",
+  "custom_script":"Custom Script",
   "reboot":"Reboot",
 }

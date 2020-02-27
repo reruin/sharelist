@@ -42,6 +42,9 @@ const db = createFiledb(configPath , {raw:true} , {
   custom_style:'',
 
   custom_script:'',
+
+  //代理路径
+  proxy_paths:[]
 });
 
 if(process.env.PORT){

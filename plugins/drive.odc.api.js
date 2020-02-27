@@ -236,13 +236,13 @@ module.exports = ({ request, cache, getConfig, querystring, base64 , saveDrive ,
 
 
     //是否有其他配置参数
-    let hit = data.filter(i => i.credentials.client_id == c.client_id && i.credentials.client_secret == c.client_secret)
+    //let hit = data.filter(i => i.credentials.client_id == c.client_id && i.credentials.client_secret == c.client_secret)
 
     //无配置参数匹配路径名
-    if( hit.length == 0 ){
+    //if( hit.length == 0 ){
       const name = decodeURIComponent(getRuntime('req').path.replace(/^\//g,''))
-      hit = data.filter(i => i.name == name)
-    }
+      let hit = data.filter(i => i.name == name)
+    //}
     //路径也无法匹配
     if( hit.length == 0 ){
       //仅有一个可用挂载源

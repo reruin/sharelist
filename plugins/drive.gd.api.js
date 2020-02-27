@@ -262,14 +262,11 @@ module.exports = ({ request, cache, getConfig, querystring, base64, saveDrive, g
 
 
     //是否有其他配置参数
-    let hit = data.filter(i => i.credentials.client_id == c.client_id)
+    // let hit = data.filter(i => i.credentials.client_id == c.client_id)
 
-    //无配置参数匹配路径名
-    if( hit.length == 0 ){
-      const name = decodeURIComponent(getRuntime('req').path.replace(/^\//g,''))
-      hit = data.filter(i => i.name == name)
-    }
-
+    //匹配路径名
+    const name = decodeURIComponent(getRuntime('req').path.replace(/^\//g,''))
+    hit = data.filter(i => i.name == name )
     //路径也无法匹配
     if( hit.length == 0 ){
       //仅有一个可用挂载源
@@ -277,7 +274,7 @@ module.exports = ({ request, cache, getConfig, querystring, base64, saveDrive, g
         hit = data
       }
     }
-
+    console.log('hit>>',hit)
     hit.forEach(i => {
       let key = urlFormat({
         protocol: i.protocol,

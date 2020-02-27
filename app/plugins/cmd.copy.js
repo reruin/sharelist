@@ -11,7 +11,12 @@ const version = '1.0'
 
 const { PassThrough , Transform , Writeable, Readable } = require('stream')
 
-module.exports = ({ command , pathNormalize , createReadStream , createWriteStream , byte }) => {  
+const padRight = (str , len, charStr = ' ') => {
+  let strlen = str.replace(/[^\x00-\xff]/g,"00").length
+  return str + new Array(len - strlen + 1).join(charStr)
+}
+
+module.exports = ({ command , pathNormalize , createReadStream , createWriteStream , rectifier, byte }) => {  
   
   const tasks = {}
 
@@ -51,6 +56,10 @@ module.exports = ({ command , pathNormalize , createReadStream , createWriteStre
     }else{
       files.push( { path: data.name , id: data.id , size:data.size,protocol:data.protocol , target_is_file:true} )
     }
+
+    files.forEach(i => {
+      i.stats = { status:'waiting' , speed:'0' , progress:'0%'} 
+    })
     return files
   }
 
@@ -69,7 +78,15 @@ module.exports = ({ command , pathNormalize , createReadStream , createWriteStre
         if( writeStream ){
           task.cWriteStream = writeStream
           task.cReadStream = readStream
-          await process(readStream , writeStream , task)
+          i.stats.status  = 'processing'
+          let r = await process(rectifier(readStream) , writeStream , i)
+          if(r === false){
+             task.stats.error++
+             i.stats.status  = 'error'
+           }else{
+             task.stats.success++
+             i.stats.status  = 'success'
+           }
         }else{
           task.stats.error++
           // return {result:'dst does not support write'}
@@ -77,12 +94,13 @@ module.exports = ({ command , pathNormalize , createReadStream , createWriteStre
       }else{
         task.stats.error++
       }
+      task.stats.cur++
     }
 
     task.status = 'finish'
   }
 
-  const process = (readStream, writeStream, task) => {
+  const process = (readStream, writeStream , currentTask ) => {
     return new Promise((resolve , reject) => {
       let start , startCur , chunkSize = 0 , chunkSizeTotal = 0
       let trunkCache = []
@@ -93,39 +111,34 @@ module.exports = ({ command , pathNormalize , createReadStream , createWriteStre
 
       const onError = err => {
         console.log('err',err)
-        //task.stats.error++
-        //task.stats.error_files.push(task.dst)
-        //resolve()
+        resolve(false)
       };
 
-      readStream.on('error', onError);
+      readStream.once('error', onError);
       writeStream.on('close', onClose);
-      writeStream.on('error', onError);
+      writeStream.once('error', onError);
       writeStream.on('finish' , ()=>{
-        task.stats.success++
-        task.stats.speed = byte( chunkSizeTotal * 1000 / (Date.now() - start))
-        resolve()
+        currentTask.stats.speed = byte( chunkSizeTotal * 1000 / (Date.now() - start))
+        resolve(true)
       })
 
-      let passThroughtStream = new PassThrough()
-      passThroughtStream.on('data' , (chunk) => {
-        chunkSizeTotal += chunk.length
-        // console.log('read >>',chunk.length)
+      readStream.on('write_data' , ({ current}) => {
+        chunkSizeTotal += current
+
         if( !start ) {
           start = startCur = Date.now()
         }else{
           let time = Date.now()
-          chunkSize += chunk.length
+          //chunkSize += current
           if( time - startCur > 3000 ){
-            task.stats.speed = byte(chunkSize * 1000 / (time - startCur))
-            chunkSize = 0
-            startCur = time
+            currentTask.stats.speed = byte(chunkSizeTotal * 1000 / (time - startCur))
+            currentTask.stats.progress = Math.round(chunkSizeTotal * 100 / currentTask.size) + '%'
+            //chunkSize = 0
+            //startCur = time
           }
         }
-
-        // tasks.stats.chunkSizeTotal = chunkSizeTotal
       })
-      readStream.pipe(passThroughtStream).pipe(writeStream);
+      readStream.pipe(writeStream);
     })
   }
 
@@ -157,13 +170,19 @@ module.exports = ({ command , pathNormalize , createReadStream , createWriteStre
   const queryTask = (id) => {
     if(id && tasks[id]){
       let task = tasks[id]
+      let count = task.list.length
+      let pathpadright = task.list.reduce((t,c)=>{
+        let l = c.path.replace(/[^\x00-\xff]/g,"00").length
+        return t > l ? t : l
+      },0)
+      let details = task.list.map((i,idx) => {
+        return `${(idx+1)}/${count}\t${padRight(i.path,pathpadright+5)}${padRight(i.stats.status == 'processing' ? i.stats.progress : i.stats.status,20)}${padRight(i.stats.speed+'/S',15)}| ${byte(i.size)}`
+      })
       return [
-        `Task: ${id}`,
-        `created time: ${task.created_at}`,
-        `${task.meta.basepath}: ${task.meta.src}  --> ${task.meta.dst}`,
-        `status: ${task.status} ${ task.status == 'processing' ? (task.stats.speed+'/S') : '' } total/success/error = ${task.stats.total}/${task.stats.success}/${task.stats.error}`,
-        `Error files:
-          ${task.stats.error_files.join('\n')}`
+        `Task ${id} ${task.created_at.toISOString()}`,
+        `total/success/error = ${task.stats.total}/${task.stats.success}/${task.stats.error}`,
+        ``,
+        details.join('\n'),
       ].join('\n')
     }
   }
@@ -203,21 +222,21 @@ module.exports = ({ command , pathNormalize , createReadStream , createWriteStre
     }
 
     let task = {
-      created_at:Date.now(),
+      created_at:new Date(),
       list: [],
       meta:{basepath , src , dst},
-      stats:{total:'--' , success:0 , error:0, speed:0, error_files:[]},
+      stats:{total:'--' ,cur:0, success:0 , error:0, speed:0, error_files:[]},
       status:'init'
     }
     tasks[taskId++] = task
 
     //使用协议模式
     let vendorMode = /^[a-z0-7]+\:/.test(src)
-    parseFiles(task , vendorMode ? src : pathNormalize(src , basepath)).then( read => {
+    parseFiles(task , vendorMode ? src : pathNormalize(src , basepath)).then( files => {
       if(!task.destroy) {
         task.status = 'processing'
-        task.list = read
-        task.stats.total = read.length
+        task.list = files
+        task.stats.total = files.length
         transfers(task)
       }
     })

@@ -40,5 +40,6 @@ module.exports = {
   "plugin_option":"插件配置",
   "custom_style":"自定义样式",
   "custom_script":"自定义脚本",
-  "reboot":"重启"
+  "reboot":"重启",
+  "proxy_paths":"中转路径",
 }

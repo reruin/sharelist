@@ -41,4 +41,5 @@ module.exports = {
   "custom_style":"自定義樣式",
   "custom_script":"自定義腳本",
   "reboot":"重啟",
+  "proxy_paths":"代理路徑",
 }

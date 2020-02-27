@@ -229,13 +229,13 @@ module.exports = ({ request, cache, getConfig, querystring, base64 , saveDrive ,
       .map(i => parseCredentials(i))
 
     //是否有其他配置参数
-    let hit = data.filter(i => i.credentials.client_id == c.client_id)
+    //let hit = data.filter(i => i.credentials.client_id == c.client_id)
 
     //无配置参数匹配路径名
-    if( hit.length == 0 ){
-      const name = decodeURIComponent(getRuntime('req').path.replace(/^\//g,''))
-      hit = data.filter(i => i.name == name)
-    }
+    //if( hit.length == 0 ){
+    const name = decodeURIComponent(getRuntime('req').path.replace(/^\//g,''))
+    let hit = data.filter(i => i.name == name)
+    //}
     //路径也无法匹配
     if( hit.length == 0 ){
       //仅有一个可用挂载源
@@ -392,6 +392,7 @@ module.exports = ({ request, cache, getConfig, querystring, base64 , saveDrive ,
     })
 
     if (!resp.body) return false
+    if (resp.body && resp.body.error) return false
 
     const ts = Date.now()
     let children = resp.body.value.map((i) => {
@@ -497,12 +498,12 @@ module.exports = ({ request, cache, getConfig, querystring, base64 , saveDrive ,
       }catch(e){
         resp = e.body
       }
-      
       // 409 文件夹已存在
       if(resp && resp.error){
         console.log('info:',resp.error.message)
         //return false
       }else{
+        console.log(resp)
         console.log('mkdir error')
       }
     }
@@ -533,7 +534,7 @@ module.exports = ({ request, cache, getConfig, querystring, base64 , saveDrive ,
         'Content-Type': 'application/json'
       },
     },function(error, response, body){
-      // console.log('chunk from',offset)
+      console.log('chunk from',offset)
       if(error) {
         this.emit('finish' , {error:true , req_error:true , detail:error})
       }
@@ -552,7 +553,6 @@ module.exports = ({ request, cache, getConfig, querystring, base64 , saveDrive ,
 
     passThroughtStream.on('data' , (chunk) => {
       offset += chunk.length
-
       if( offset % chunkSize == 0 ){
         passThroughtStream.pause()
         passThroughtStream.unpipe()
@@ -562,13 +562,15 @@ module.exports = ({ request, cache, getConfig, querystring, base64 , saveDrive ,
             //无法重试
             if( data.req_error ){
               console.log('offset error at:',offset)
+              return { error: data.detail}
+
             }else{
+              return { error: 'unknow'}
               //req = createChunkStream(url , size , offset - chunk.length , chunkSize)
               //passThroughtStream.pipe( req )
             }
             
           }else{
-            //console.log('chunk from',data , offset)
             if(data.id){
               passThroughtStream.end()
             }else{
@@ -595,7 +597,6 @@ module.exports = ({ request, cache, getConfig, querystring, base64 , saveDrive ,
     let api = 'https://graph.microsoft.com/v1.0' + ((!path || path == '/') ? `/me/drive/root/` : `/me/drive/items/root:${encodeURIComponent(path).replace(/\/+$/g,'/')}:/`) + 'createUploadSession'
    // api = 'https://graph.microsoft.com/v1.0/me/drive/items/root:/Amlogic USB Burning Tool_v2.1.6.8.zip:/createUploadSession'
 
-    console.log('createUploadSession', api)
     let resp
     try{
       resp = await request({
@@ -625,7 +626,7 @@ module.exports = ({ request, cache, getConfig, querystring, base64 , saveDrive ,
     }
 
     if(resp.body && resp.body.uploadUrl){
-      console.log('Get uploadUrl success')
+      console.log('UPLOAD '+resp.body.uploadUrl)
       // chunkSize = 327680 10485760
       return createRangeStream({url : resp.body.uploadUrl , chunkSize:10485760 , size})
     }
@@ -677,7 +678,7 @@ module.exports = ({ request, cache, getConfig, querystring, base64 , saveDrive ,
     await mkdir(path , target , credentials)
     if( size !== undefined ){
       cache.clear(`${defaultProtocol}:${id}`)
-
+      console.log(size)
       if( size <= 4194304 ){
         return await upload(fullpath , credentials)
       }else{

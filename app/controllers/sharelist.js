@@ -6,13 +6,23 @@ const { parsePath , pathNormalize , enablePreview, enableRange , isRelativePath 
 
 const requireAuth = (data) => !!(data.children && data.children.find(i=>(i.name == '.passwd')))
 
+const isProxyPath = (path , paths) => {
+  return (
+    path == '' ||  path == '/' || 
+    paths.length == 0 ||
+    paths.some(p => path.startsWith(p))
+  ) ? true : false
+}
+
 const output = async (ctx , data)=>{
 
   const isPreview = ctx.request.querystring.indexOf('preview') >= 0
 
   const downloadLinkAge = config.getConfig('max_age_download')
 
-  const isProxy = config.getConfig('proxy_enable') || data.proxy || downloadLinkAge > 0
+  const proxy_paths = config.getConfig('proxy_paths') || []
+
+  const isProxy = (config.getConfig('proxy_enable') && isProxyPath(ctx.path , proxy_paths)) || data.proxy || downloadLinkAge > 0
 
   let url = data.url
    

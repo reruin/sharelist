@@ -8,7 +8,7 @@ const http = require('../utils/http')
 const config = require('../config')
 const { sendFile , sendHTTPFile ,sendStream, getFile, getHTTPFile } = require('../utils/sendfile')
 const wrapReadableStream = require('../utils/wrapReadableStream')
-
+const rectifier = require ('../utils/rectifier')
 
 const assign = (...rest) => Object.assign(...rest)
 
@@ -143,6 +143,7 @@ const getHelpers = (id) => {
     pathNormalize,
     command,
     wrapReadableStream,
+    rectifier,
     getOption:()=>{
 
     },

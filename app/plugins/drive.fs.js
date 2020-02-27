@@ -91,7 +91,7 @@ module.exports = ({datetime , extname , pathNormalize}) => {
   }
 
   const createReadStream = ({id , options = {}} = {}) => {
-    return fs.createReadStream(realpath(id) , options)
+    return fs.createReadStream(realpath(id) , {...options,highWaterMark:64*1024})
   }
 
   const mkdir = (p) => {

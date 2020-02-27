@@ -41,4 +41,5 @@ module.exports = {
   "custom_style":"Custom Style",
   "custom_script":"Custom Script",
   "reboot":"Reboot",
+  "proxy_paths":"Proxy Paths",
 }

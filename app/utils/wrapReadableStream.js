@@ -21,7 +21,7 @@ class wrapReadableStream extends Readable {
       response.on('data' , (chunk)=>{
         let bytesRead = chunk.length
         this.length += bytesRead
-        
+        console.log( this.length )
         if(bytesRead > 0){
           this.buffers.push(chunk.slice(0));
           if(this.needReadable){

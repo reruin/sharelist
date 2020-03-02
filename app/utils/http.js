@@ -11,7 +11,7 @@ const http = (opts, ...rest) => {
   if (opts.async) {
     return new Promise(function(resolve, reject) {
       request(opts, function(error, response, body) {
-        if (!error && response.statusCode == 200) {
+        if (!error) {
           resolve(response)
         } else {
           reject(error || response);

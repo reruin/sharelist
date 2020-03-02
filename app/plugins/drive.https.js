@@ -24,7 +24,7 @@ module.exports = ({wrapReadableStream , request}) => {
 
   const getFileSize = async (url , headers) => {
     try{
-      let nh = await request.header(url , {headers})
+      let nh = await request.header(decodeURIComponent(url) , {headers})
       if(nh && nh['content-length']){
         return nh['content-length']
       }else{
@@ -40,7 +40,7 @@ module.exports = ({wrapReadableStream , request}) => {
     let url = encodeURI(`https:${id}`)
     let size = await getFileSize(url)
     console.log('get file size' , size)
-    let readstream = request({url, method:'get'})
+    let readstream = request({url:decodeURIComponent(url), method:'get'})
     return wrapReadableStream(readstream , { size } )
   }
 

@@ -75,7 +75,7 @@ http.post = (url, form, opts) => {
   let params = { ...opts }
   params.headers = Object.assign({}, headers, params.headers || {})
   params.url = url
-  if (opts.is_body) {
+  if (opts.is_body || opts.body === true) {
     params.body = form
   } else if (opts.isFormData) {
     params.formData = form

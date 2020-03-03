@@ -8,7 +8,7 @@ ShareList 是一个易用的网盘工具，支持快速挂载 GoogleDrive、OneD
 * [使用示例](#使用示例)   
   * [挂载GoogleDrive](#挂载GoogleDrive) 
   * [挂载OneDrive（含世纪互联）](#挂载挂载OneDrive) 
-  * [挂载天翼云盘](#挂载天翼云盘) 
+  * [挂载天翼云盘（支持账号密码挂载）](#挂载天翼云盘) 
   * [挂载本地文件](#挂载本地文件) 
   * [挂载GitHub](#挂载GitHub) 
   * [挂载蓝奏云](#挂载蓝奏云) 
@@ -106,7 +106,18 @@ ShareList 是一个易用的网盘工具，支持快速挂载 GoogleDrive、OneD
 ***
 
 ### 挂载天翼云盘
+#### 1. 账号密码挂载（Cookie方式）
 由[drive.189cloud.js](app/plugins/drive.189cloud.js)插件实现。  
+```
+挂载标示：ctcc
+挂载内容：  
+    //用户名/初始文件夹ID?password=密码 
+    /
+```
+建议填写```/```，ShareList将自动开启挂载向导，按指示填写用户名密码即可。  
+
+#### 2. API方式挂载
+由[drive.189cloud.api.js](app/plugins/drive.189cloud.api.js)插件实现。  
 ```
 挂载标示：ctc
 挂载内容：   

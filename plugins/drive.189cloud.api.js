@@ -501,5 +501,5 @@ module.exports = ({ request, cache, getConfig, querystring, base64, saveDrive, g
     }
   }
 
-  return { name, label:'天翼云', version, drive: { protocols, folder, file , createReadStream  } }
+  return { name, label:'天翼云 API版', version, drive: { protocols, folder, file , createReadStream  } }
 }

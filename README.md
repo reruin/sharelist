@@ -8,6 +8,7 @@ ShareList 是一个易用的网盘工具，支持快速挂载 GoogleDrive、OneD
 * [使用示例](#使用示例)   
   * [挂载GoogleDrive](#挂载GoogleDrive) 
   * [挂载OneDrive（含世纪互联）](#挂载挂载OneDrive) 
+  * [挂载天翼云盘](#挂载天翼云盘) 
   * [挂载本地文件](#挂载本地文件) 
   * [挂载GitHub](#挂载GitHub) 
   * [挂载蓝奏云](#挂载蓝奏云) 
@@ -51,10 +52,10 @@ ShareList 是一个易用的网盘工具，支持快速挂载 GoogleDrive、OneD
 ```
 挂载标示：gda  
 挂载内容：  
-  gda://应用ID/root?client_secret=应用机钥&redirect_uri=回调地址&refresh_token=refresh_token   
+  //应用ID/root?client_secret=应用机钥&redirect_uri=回调地址&refresh_token=refresh_token   
   /   
 ```
-ShareList会根据填写的挂载内容的不同形式，自动开启挂载向导，按指示操作即可。   
+建议填写```/```，ShareList将自动开启挂载向导，按指示操作即可。  
 
 ***
 
@@ -76,7 +77,8 @@ ShareList会根据填写的挂载内容的不同形式，自动开启挂载向�
     OneDrive路径
     /
 ```
-ShareList会根据填写的挂载内容，自动开启挂载向导，按指示操作即可。  
+建议填写```/```，ShareList将自动开启挂载向导，按指示操作即可。  
+  
 对于不符合OneDrive安全要求的域名，将采用中转方式验证，[查看中转页面](https://github.com/reruin/reruin.github.io/blob/master/redirect/onedrive.html)。   
 **注意：由于onedrive修改了政策，个人Microsoft帐户已无法通过向导进行绑定。
 需前往 [Azure管理后台](https://portal.azure.com/#blade/Microsoft_AAD_RegisteredApps/ApplicationsListBlade) 注册应用并获取  app_id 和 app_secret 。**  
@@ -86,10 +88,10 @@ ShareList会根据填写的挂载内容，自动开启挂载向导，按指示�
 ```
 挂载标示：odc
 挂载内容：   
-    odc://应用ID/路径?client_secret=应用机钥&redirect_uri=回调地址&refresh_token=refresh_token&tenant=组织名   
+    //应用ID/路径?client_secret=应用机钥&redirect_uri=回调地址&refresh_token=refresh_token&tenant=组织名   
     /
 ```
-ShareList会根据填写的挂载内容，自动开启挂载向导，按指示操作即可。  
+建议填写```/```，ShareList将自动开启挂载向导，按指示操作即可。  
   
 **注意：组织名是指网盘访问链接中 ```https://***-my.sharepoint.cn/``` 星号所示部分。**  
 
@@ -100,6 +102,19 @@ ShareList会根据填写的挂载内容，自动开启挂载向导，按指示�
 挂载内容：分享的url
 ```
 **注意：单文件夹内最多显示30条结果。**  
+
+***
+
+### 挂载天翼云盘
+由[drive.189cloud.js](app/plugins/drive.189cloud.js)插件实现。  
+```
+挂载标示：ctc
+挂载内容：   
+    //应用ID/初始文件夹ID?app_secret=应用机钥&redirect_uri=回调地址&access_token=access_token   
+    /
+```
+建议填写```/```，ShareList将自动开启挂载向导，按指示操作即可。  
+**注意：access_token每隔30天需手动更新一次，到期前24小时内访问对应路径时会有更新提示。**   
 
 ***
 

@@ -6,7 +6,9 @@ const protocols = ['ctc']
 
 const defaultProtocol = 'ctc'
 
-const googledrive_max_age_dir = 600 * 1000
+const max_age_dir = 30 * 60 * 1000
+
+const max_age_file = 3 * 60 * 1000
 
 const { URL } = require('url')
 
@@ -35,12 +37,13 @@ const xml2js = ( xml , options = {}) => {
 const isSecretUrl = (url) => {
   return true //!(url.includes('://127.0.0.1') == false && url.includes('://localhost') == false && url.startsWith('https') == false)
 }
+
 class OAuth2 {
-  constructor(request, qs, handleUpdate) {
+  constructor(request, qs, handleUpdate , getRuntime) {
     this.request = request
     this.qs = qs
     this.handleUpdate = handleUpdate
-
+    this.getRuntime = getRuntime
     this.clientMap = {}
     this.pathAppMap = {}
 
@@ -90,19 +93,19 @@ class OAuth2 {
       //redirect_uri = this.PROXY_URL
     }
     //console.log(`appKey=${app_id}&timestamp=${timestamp}` , app_secret)
-    this.pathAppMap[redirect_uri] = { app_id, app_secret, redirect_uri:opts.redirect_uri, create_time: Date.now() }
+    this.pathAppMap[redirect_uri] = { app_id, app_secret, redirect_uri:opts.callbackUrl.replace(/\?$/,''), create_time: Date.now() }
 
     return `${this.OAUTH2_AUTH_BASE_URL}?${this.qs.stringify(opts)}`;
   }
 
   //验证code 并获取 credentials
   async getToken(key, code) {
+    console.log('rd')
+
     let appConfig = this.pathAppMap[key]
 
     if (!appConfig) return { error: true, msg: '没有匹配到app_id' }
-
     let { app_id, app_secret, redirect_uri } = appConfig
-
     return await this.authToken({ app_id, app_secret, redirect_uri , code },key)
   }
 
@@ -122,7 +125,6 @@ class OAuth2 {
     } catch (e) {
       resp = e
     }
-    console.log(resp)
 
     if (resp.body && !resp.body.error) {
       let { expiresIn, accessToken } = resp.body
@@ -141,58 +143,32 @@ class OAuth2 {
     let credentials = this.clientMap[app_id]
     if (credentials) {
       let { update_time, expires_in , refresh_token } = credentials
-      if ((Date.now() - update_time) < expires_in * 1000 * 0.9) {
+      if (expires_in - Date.now() > 86400000) {
         return credentials
       }
-      else if(refresh_token){
+      //小于一天 即将到期
+      else {
         return await this.refreshAccessToken(credentials)
-      }
-      else{
-        return credentials
       }
     }
   }
-
+  //需要用户自主更新
   async refreshAccessToken(credentials) {
-    let { app_id, app_secret, redirect_uri, refresh_token } = credentials
-    if (app_id && app_secret /*&& redirect_uri*/ && refresh_token) {
-
-      let params = {
-        app_id,
-        app_secret,
-        // redirect_uri, 
-        refresh_token,
-        grant_type: 'refresh_token'
-      }
-
-      try {
-        let resp = await this.request.post(this.OAUTH2_TOKEN_URL, params, { json: true })
-        let body = resp.body
-        if (body.access_token) {
-          credentials.access_token = body.access_token
-          credentials.expires_in = body.expires_in
-          credentials.update_time = Date.now()
-          if(body.refresh_token) credentials.refresh_token = body.refresh_token
-          this.clientMap[app_id] = credentials
-          await this.handleUpdate(this.clientMap[app_id])
-          console.log('refreshAccessToken success')
-
-          return credentials
-        }
-      } catch (e) {
-        return {error:true , msg:e.body ? e.body.error_description:'挂载失败'}
-      }
+    const req = this.getRuntime('req')
+    if(req.isAdmin){
+      let url = await this.generateAuthUrl(credentials)
+      return {error:true , expired:true ,msg:`AccessToken 即将过期<br/><a style="margin:12px  0" href="${url}">请点击此处更新</a>`}
+    }else{
+      return {error:true , expired:true ,msg:'AccessToken 需要更新，请以管理身份访问此页面操作。'}
     }
-    return {error:true , msg:'refreshAccessToken 失败，缺少参数'}
   }
 }
 
 const error = async (msg, href) => {
   return `
     <div class="auth">
-      <h3>挂载 天翼云 失败</h3>
+      <h3>挂载 天翼云</h3>
       <p style="font-size:12px;">失败请重试。原因：${msg}</p>
-      <p style="font-size:12px;"><a style="font-size:12px;margin-right:5px;color:#337ab7;" href="${href}">点此重新开始</a></p>
     </div>
   `
 }
@@ -245,14 +221,8 @@ module.exports = ({ request, cache, getConfig, querystring, base64, saveDrive, g
       .map(i => parseCredentials(i))
 
 
-    //是否有其他配置参数
-    let hit = data.filter(i => i.credentials.app_id == c.app_id)
-
-    //无配置参数匹配路径名
-    if( hit.length == 0 ){
-      const name = decodeURIComponent(getRuntime('req').path.replace(/^\//g,''))
-      hit = data.filter(i => i.name == name)
-    }
+    const name = decodeURIComponent(getRuntime('req').path.replace(/^\//g,''))
+    let hit = data.filter(i => i.name == name)
 
     //路径也无法匹配
     if( hit.length == 0 ){
@@ -266,17 +236,18 @@ module.exports = ({ request, cache, getConfig, querystring, base64, saveDrive, g
       let key = urlFormat({
         protocol: i.protocol,
         hostname: c.app_id,
-        pathname: (i.path == '/' || i.path == '' ) ? '/root' : i.path,
+        pathname: (i.path == '/' || i.path == '' ) ? '/' : i.path,
         slashes:true,
         query:{
           app_secret:c.app_secret,
           redirect_uri:c.redirect_uri,
-          refresh_token:c.refresh_token
+          access_token:c.access_token,
+          expires_in:c.expires_in,
         }
       })
       saveDrive(key , i.name)
     })
-  })
+  } , getRuntime)
 
   //获取所有相关根目录，并创建凭证
   getDrives().then(resp => {
@@ -301,22 +272,10 @@ module.exports = ({ request, cache, getConfig, querystring, base64, saveDrive, g
 
     let baseUrl = req.origin + req.path
 
-    let { path, credentials } = await getCredentials(id)
-    // 无credentials
-    if(!credentials){
-      if (req.body && req.body.act && req.body.act == 'install') {
-        let { app_id, app_secret, proxy_url } = req.body
-        if (app_id && app_secret) {
-          return {
-            id,
-            type: 'folder',
-            protocol: defaultProtocol,
-            redirect: await oauth2.generateAuthUrl({ app_id, app_secret, redirect_uri: baseUrl })
-          }
-        }
-      }
+    let { path, credentials , expired  } = await getCredentials(id)
 
-      // 挂载验证回调
+    //无 或者 过期
+    if( !credentials || (credentials.error && credentials.expired) ){
       if (req.query.code) {
         let credentials = await oauth2.getToken(baseUrl, req.query.code)
         if (credentials.error) {
@@ -336,6 +295,23 @@ module.exports = ({ request, cache, getConfig, querystring, base64, saveDrive, g
         }
       }
     }
+    
+    // 无credentials
+    if(!credentials){
+      // 挂载验证回调
+      if (req.body && req.body.act && req.body.act == 'install') {
+        let { app_id, app_secret } = req.body
+        if (app_id && app_secret) {
+          return {
+            id,
+            type: 'folder',
+            protocol: defaultProtocol,
+            redirect: await oauth2.generateAuthUrl({ app_id, app_secret, redirect_uri: baseUrl })
+          }
+        }
+      }
+
+    }
     // 存在无credentials
     else{
       //credentials验证过程出错
@@ -347,10 +323,8 @@ module.exports = ({ request, cache, getConfig, querystring, base64, saveDrive, g
           body: await error(credentials.msg, baseUrl)
         }
       }
-      console.log(credentials)
       if (credentials.app_id ) {
         if (credentials.access_token) {
-          console.log('><><><')
           return { path, credentials }
         }
         // 缺少 refresh_token 跳转至验证页面
@@ -376,7 +350,7 @@ module.exports = ({ request, cache, getConfig, querystring, base64, saveDrive, g
     }
   }
 
-  const fetch = (operate = 'GET' , url , credentials , qs) => {
+  const fetch = async (operate = 'GET' , url , credentials , qs) => {
     let date = new Date().toGMTString()
     let signature = hmac(`AccessToken=${credentials.access_token}&Operate=${operate}&RequestURI=${url}&Date=${date}`,credentials.app_secret)
 
@@ -387,13 +361,26 @@ module.exports = ({ request, cache, getConfig, querystring, base64, saveDrive, g
       'content-type':'application/json',
       "accept":"application/json"
     }
-    return request({
-      url:`https://api.cloud.189.cn${url}`,
-      headers,
-      method:operate,
-      qs, json:true,
-      async:true,
-    })
+    let resp
+    try{
+      let r = await request({
+        url:`https://api.cloud.189.cn${url}`,
+        headers,
+        method:operate,
+        qs, json:true,
+        async:true,
+      })
+
+      resp = await xml2js(r.body)
+      if(resp.error){
+        resp.error = resp.error.message[0]
+      }
+    }catch(e){
+      resp = { error:'request error' }
+    }
+
+    return resp
+    
   }
 
   const folder = async (id, options) => {
@@ -408,73 +395,44 @@ module.exports = ({ request, cache, getConfig, querystring, base64, saveDrive, g
       if (
         r.$cached_at &&
         r.children &&
-        (Date.now() - r.$cached_at < googledrive_max_age_dir)
+        (Date.now() - r.$cached_at < max_age_dir)
 
       ) {
         console.log(Date.now()+' CACHE 189Cloud '+ id)
         return r
       }
     }
-    let api = '/listFiles.action'
+   
+    let qs = { iconOption:1 }
 
-    let qs = {
-      app_id:`${credentials.app_id}`,
-      access_token:`${credentials.access_token}`,
-    }
-    if(path) qs.folderId = path
+    if(path && path != '/') qs.folderId = path
 
-    let resp = await fetch('GET','/listFiles.action', credentials , {
-      folderId:path,
-      iconOption:1
-    })
+    let resp = await fetch('GET','/listFiles.action', credentials , qs)
 
-    if(resp.body){
-      resp.body = await xml2js(resp.body)
-    }
-
-    console.log(resp.body)
-
-    if (resp.body.res_message) {
+    if (resp.error) {
       return {
-        id, type: 'folder', protocol: defaultProtocol,body:resp.body.res_message
+        id, type: 'folder', protocol: defaultProtocol,body:resp.error
       }
     }
 
-    let children = []
-    for(let file of resp.fileList.folder){
-      children.push({
-        id: createId(credentials.app_id , file.id),
-        name: file.name,
-        ext: file.fileExtension,
+    let children = [].concat(resp.listFiles.fileList[0].folder || [], resp.listFiles.fileList[0].file || []).map( file => {
+      let item = {
+        id: createId(credentials.app_id , file.id[0]),
+        name: file.name[0],
         protocol: defaultProtocol,
-        // parent:i[1][0],
-        mime: file.mimeType,
-        created_at: file.modifiedTime,
-        updated_at: file.modifiedTime,
-        size: parseInt(file.size),
-        type: file.mimeType.indexOf('.folder') >= 0 ? 'folder' : undefined,
-      })
-    }
-    
-    for(let file of resp.fileList.file){
-      children.push({
-        id: createId(credentials.app_id , file.id),
-        name: file.name,
-        ext: file.fileExtension,
-        protocol: defaultProtocol,
-        // parent:i[1][0],
-        mime: file.mimeType,
-        created_at: file.modifiedTime,
-        updated_at: file.modifiedTime,
-        size: parseInt(file.size),
-        type: file.mimeType.indexOf('.folder') >= 0 ? 'folder' : undefined,
-      })
-    }
-    
+        created_at: file.createDate[0],
+        updated_at: file.lastOpTime[0],
+        type: file.size ? undefined : 'folder',
+      }
+      if( item.type != 'folder' ){
+        item.ext = file.name[0].split('.').pop()
+        item.size = parseInt(file.size[0])
+      }
 
-    //缓存 pathid(fid->appid)  <=> path
-    //cache.set(baseUrl , id)
-    // console.log(children)
+      return item
+    })
+
+
     let result = { id, type: 'folder', protocol: defaultProtocol }
     result.$cached_at = Date.now()
     result.children = children
@@ -494,306 +452,56 @@ module.exports = ({ request, cache, getConfig, querystring, base64, saveDrive, g
 
     let data = options.data || {}
 
-    let api = `http://api.189.cn/ChinaTelecom/getFileDownloadUrl.action`
+    let r = cache.get(id)
+    if (r) {
+      if (
+        r.$cached_at &&
+        r.children &&
+        (Date.now() - r.$cached_at < max_age_file)
 
-    let resp = await request.get(api, {
-      qs: {
-        app_id:`${credentials.app_id}`,
-        access_token:`${credentials.access_token}`,
-        fileId:path
-      },
-      json: true
+      ) {
+        console.log(Date.now()+' CACHE 189Cloud '+ id)
+        return r
+      }
+    }
+
+    let resp = await fetch('GET','/getFileDownloadUrl.action', credentials , {
+      fileId:path,
+      short:false, //是否获取短地址
     })
 
-    console.log(resp)
+    if(resp.error) {
+      return {
+        id, type: 'folder', protocol: defaultProtocol,body:resp.error
+      }
+    }
 
-    // result.fileDownloadUrl
-    return {
+    let expired_at = (resp.fileDownloadUrl.match(/(?<=expired=)\d+/) || [0])[0]
+
+    resp = {
       id,
-      url: api,
+      $cached_at:Date.now(),
+      url: resp.fileDownloadUrl,
       name: data.name,
       ext: data.ext,
       protocol: defaultProtocol,
-      proxy: true,
       size:data.size,
     }
-  }
 
+    cache.set(id, resp)
 
-  const request_fix = (...rest) => {
-    let req = request(...rest)
-    // request 作为 writestream 时不会emit finish
-    req.on('end' ,function(){
-      this.emit('finish')
-    })
-    req.on('error' , (e)=>{
-      console.log(e)
-    })
-    return req
-  }
-  
-  const metadata = async ({ name , key = 'id' , parentId = 'root' , credentials } = {}) => {
-    let api = 'https://www.googleapis.com/drive/v3/files'
-    let resp = false
-    try{
-       resp = await request.get(api, {
-        headers: {
-          'Authorization': `Bearer ${credentials.access_token}`,
-          // 'Content-Type': 'application/json'
-        },
-        qs: {
-          includeItemsFromAllDrives: true,
-          supportsAllDrives: true,
-          pageSize: 1,
-          fields: `files(${key})`,
-          q: `name = '${name}' and trashed = false and '${parentId}' in parents`,
-        },
-        json: true
-      })
-      if(resp.body.files && resp.body.files.length > 0){
-        resp = resp.body.files[0]
-      }else{
-        return false
-      }
-      
-    }catch(e){
-      return undefined
-    }
-   
     return resp
   }
-  //目录是否存
-  // /a/b.txt
-  const exists = async (path , parentId = 'root') => {
-    let lv = path.replace(/(^\/|\/$)/g,'').split('/')
-
-    for(let i = 0; i < lv.length - 1; i++){
-      let name = decodeURIComponent(lv[i])
-      let resp = await metadata({ name , parentId})
-
-      if (resp === undefined) {
-        return undefined
-      }else if(resp === false){
-        //不存在文件
-        return false
-      }else{
-        parentId = resp.id
-      }
-    }
-
-    return true
-  }
-
-  //查找最近的目录
-  const search = async (lv , credentials, parentId="root") => {
-    let i = 0
-    for(; i < lv.length - 1; i++){
-
-      let p = lv.slice(0,i+1).join('/')
-
-      if( fileIdMap[p] ){
-
-        parentId = fileIdMap[p]
-
-      }else{
-
-        let name = decodeURIComponent(lv[i])
-        
-        let resp = await metadata({ name , parentId , credentials})
-
-        if (resp === undefined) {
-          console.log('metadata undefined',name , parentId)
-          return undefined
-        }else if(resp === false){
-          //目录不存
-          break;
-        }else{
-          fileIdMap[p] = resp.id 
-
-          parentId = resp.id
-        }
-      }
-    }
-
-    return [i , parentId]
-  }
-
-  // 在 指定位置创建目录 
-  // 返回 创建的目录ID
-  const mkdir = async (parentId , path , credentials) => {
-    let api = `https://www.googleapis.com/drive/v3/files`
-    let children = path.replace(/(^\/|\/$)/g,'').split('/')
-    let error = false
-
-    console.log('children length',children.length)
-    //无需创建
-    if(children.length <= 1 ) return parentId
-
-    //存在的最外层目录
-    let metadata = await search(children , credentials , parentId)
-
-    if( metadata === undefined ){
-      return false
-    }
-
-    let i = metadata[0]
-    parentId = metadata[1]
-    //递归创建
-    for(; i < children.length - 1; i++){
-      let name = decodeURIComponent(children[i])
-
-      try{
-        resp = await request.post(api,{
-          'name':name,
-          'parents': [parentId],
-          'mimeType':'application/vnd.google-apps.folder',
-        },{
-          headers:{
-            'Authorization': `Bearer ${credentials.access_token}`,
-            'Content-Type': 'application/json'
-          },
-          is_body:true, 
-          json:true
-        })
-
-        if( resp.body ){
-          parentId = resp.body.id
-        }
-      }catch(e){
-        console.log('error',e.body)
-        resp = e.body
-      }
-     
-    }
-
-    return parentId
-  }
-
-
-  //变更文件信息
-  const patch = (fileId , name , parent , credentials) => {
-    let api = `https://www.googleapis.com/drive/v3/files/${fileId}?addParents=${parent}&removeParents=root`
-    request({
-      url:api , 
-      method:'PATCH',
-      headers:{
-        'Authorization': `Bearer ${credentials.access_token}`,
-      },
-      body:{ name },
-      json:true
-    },function(error, response, body) {
-      if (!error) {
-        console.log(body)
-      } else {
-        console.log(error)
-      }
-    })
-  }
-
-  // > 5 * 1024 * 1024 标准上传
-  const upload = async ({folderId , name , size , credentials}) => {
-    let api = `https://www.googleapis.com/upload/drive/v3/files?uploadType=resumable`
-    let resp , uploadUrl
-    try{
-      resp = await request.post(api,{
-        name , 
-        parents:[folderId]
-      },{
-        headers:{
-          'Authorization': `Bearer ${credentials.access_token}`,
-          'Content-Type': 'application/json; charset=UTF-8'
-        },
-        is_body:true, 
-        json:true,
-        //followRedirect:false
-      })
-      //https://developers.google.com/drive/api/v3/manage-uploads#resumable
-      //If the session initiation request succeeds, the response includes a 200 OK HTTP status code. In addition, it includes a Location header that specifies the resumable session URI. Use the resumable session URI to upload the file data and query the upload status.
-      if(resp.headers && resp.headers.location){
-        uploadUrl = resp.headers.location
-      }
-    }catch(e){
-      console.log('error>>>',e.body)
-      return { error: e.body }
-    }
-
-    console.log(uploadUrl)
-    if(!uploadUrl) return false
-
-    let req = request_fix({
-      url:uploadUrl , 
-      method:'POST',
-      headers:{
-        'Authorization': `Bearer ${credentials.access_token}`,
-      },
-    })
-    return req
-  }
-
-  const uploadFast = async ({ folderId , credentials }) => {
-    let api = `https://www.googleapis.com/upload/drive/v3/files?uploadType=media`
-    let req = request_fix({
-      url:api , 
-      method:'POST',
-      headers:{
-        'Authorization': `Bearer ${credentials.access_token}`,
-        // 'Content-Type': 'image/jpeg'
-      },
-    },function(error, response, body) {
-      if (!error) {
-        console.log(body)
-      } else {
-        console.log(error)
-      }
-    })
-    return req
-  }
-
 
   const createReadStream = async ({id , size , options = {}} = {}) => {
-    let predata = await prepare(id)
-
-    if (!predata.credentials) return null
-
-    let { path, credentials } = predata
-
-    let url = `https://www.googleapis.com/drive/v3/files/${path}?alt=media`
-
-    let readstream = request({
-      url,
-      method:'get' , 
-      headers: {
-        'Authorization': `Bearer ${credentials.access_token}`
-      }
-    })
-
-    return wrapReadableStream(readstream , { size: size } )
-  }
-
-  const createWriteStream = async ({ id , options = {} , size , target = ''} = {}) => {
-
-    let predata = await prepare(id)
-
-    if (!predata.credentials) return null
-
-    let { path:parentId, credentials } = predata
-    
-    let folderId = await mkdir(parentId , target, credentials)
-
-    if( folderId === false ) return false
-
-    let name = target.split('/').pop()
-
-    if( size !== undefined ){
-      cache.clear(id)
-
-      if( size <= 5242880 ){
-        return await upload({folderId , name , size , credentials })
-      }else{
-        return await upload({folderId , name , size , credentials })
-      }
+    let resp = await file(id)
+    if(resp.body){
+      return resp
+    }else{
+      let readstream = request({url:resp.url , method:'get'})
+      return wrapReadableStream(readstream , { size: size } )
     }
-
   }
-  return { name, version, drive: { protocols, folder, file , createReadStream , createWriteStream } }
+
+  return { name, version, drive: { protocols, folder, file , createReadStream  } }
 }

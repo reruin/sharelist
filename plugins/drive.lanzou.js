@@ -172,5 +172,5 @@ module.exports = ({ request , getConfig , datetime , cache , retrieveSize }) => 
     return data
   }
 
-  return { name , version, drive:{ protocols, folder , file } }
+  return { name , label:'蓝奏云',version, drive:{ protocols, folder , file } }
 }

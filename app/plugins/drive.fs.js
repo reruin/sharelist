@@ -109,5 +109,5 @@ module.exports = ({datetime , extname , pathNormalize}) => {
     return fs.createWriteStream(realpath(fullpath) , options)
   }
 
-  return { name , version , drive:{ protocols , folder , file , cache:false , createReadStream , createWriteStream } }
+  return { name , label:'本地文件',version , drive:{ protocols , folder , file , cache:false , createReadStream , createWriteStream } }
 }

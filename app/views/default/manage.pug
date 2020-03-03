@@ -155,7 +155,7 @@ block content
                     .col-sm-2
                       select.form-control(name='vendor', value=(i.path.match(/^.*(?=\:\/\/)/) || [''])[0],placeholder=__('type'),required)
                         each vendor in vendors
-                          option(value=vendor.protocol, selected=i.path.indexOf(vendor.protocol+':')>=0 ? 'selected' : null) #{vendor.name}
+                          option(value=vendor.protocol, selected=i.path.indexOf(vendor.protocol+':')>=0 ? 'selected' : null) #{vendor.label}
                     .col-sm-2
                       input.form-control(type='text', name='name', value=i.name,placeholder=__('name'),required)
                     .col-sm-7

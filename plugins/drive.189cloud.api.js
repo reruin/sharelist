@@ -16,8 +16,6 @@ const urlFormat = require('url').format
 
 const crypto = require('crypto')
 
-const fileIdMap = {}
-
 const parseXML = require('xml2js').parseString
 
 
@@ -295,7 +293,7 @@ module.exports = ({ request, cache, getConfig, querystring, base64, saveDrive, g
         }
       }
     }
-    
+
     // 无credentials
     if(!credentials){
       // 挂载验证回调
@@ -503,5 +501,5 @@ module.exports = ({ request, cache, getConfig, querystring, base64, saveDrive, g
     }
   }
 
-  return { name, version, drive: { protocols, folder, file , createReadStream  } }
+  return { name, label:'天翼云', version, drive: { protocols, folder, file , createReadStream  } }
 }

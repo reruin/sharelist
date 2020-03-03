@@ -50,5 +50,5 @@ module.exports = ({getConfig, setIgnorePaths , getDrives , getRuntime}) => {
     }
   }
 
-  return { name , version , drive:{ protocols , folder , file : folder, cache:false} }
+  return { name , label:'负载均衡', version , drive:{ protocols , folder , file : folder, cache:false} }
 }

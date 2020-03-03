@@ -780,5 +780,5 @@ module.exports = ({ request, cache, getConfig, querystring, base64, saveDrive, g
     }
 
   }
-  return { name, version, drive: { protocols, folder, file , createReadStream , createWriteStream } }
+  return { name, label:'GD API版', version, drive: { protocols, folder, file , createReadStream , createWriteStream } }
 }

@@ -420,6 +420,7 @@ const parseLnk = (content) => {
 const getVendors = () => [...new Set(driveMountableMap.values())].map(id => {
   return {
     name : resources[id].name,
+    label: resources[id].label || resources[id].name,
     protocol : resources[id].drive.protocols[0]
   }
 })

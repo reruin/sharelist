@@ -688,5 +688,5 @@ module.exports = ({ request, cache, getConfig, querystring, base64 , saveDrive ,
 
   }
 
-  return { name, version, drive: { protocols, folder, file , createReadStream , createWriteStream } }
+  return { name, label:'OD API版',version, drive: { protocols, folder, file , createReadStream , createWriteStream } }
 }

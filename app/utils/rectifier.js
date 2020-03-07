@@ -37,7 +37,13 @@ class rectifier extends Readable {
   }
 
   isTargetPaused(){
-    return this.target.isPaused()
+    // request instance
+    if(this.target.responseContent){
+      return this.target.responseContent.isPaused()
+    }else{
+      return this.target.isPaused()
+    }
+    
   }
   _read() {
     if( this.length <= 0 && this.isEnd ){

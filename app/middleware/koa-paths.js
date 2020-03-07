@@ -60,8 +60,13 @@ module.exports = async(ctx, next) => {
     let data = {}
     try{
       data = JSON.parse(decodeURIComponent(ctx.get('x-request')))
-    }catch(e){}
+    }catch(e){
+
+    }
     if( data.type == 'upload' ){
+      //保持长连接
+      ctx.req.socket.setKeepAlive(true)
+
       runtime.upload = {
         stream:ctx.req ,
         enable:ctx.session.admin || !!getConfig('anonymous_uplod_enable'),

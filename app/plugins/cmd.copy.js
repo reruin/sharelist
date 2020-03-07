@@ -124,7 +124,6 @@ module.exports = ({ command , pathNormalize , createReadStream , createWriteStre
 
       readStream.on('write_data' , ({ current}) => {
         chunkSizeTotal += current
-
         if( !start ) {
           start = startCur = Date.now()
         }else{
@@ -251,7 +250,7 @@ module.exports = ({ command , pathNormalize , createReadStream , createWriteStre
     return new Promise((resolve,reject) => {
       parseWrite(null , path , {size}).then( writeStream => {
         if(!writeStream){
-          resolve({ success:false , message:''})
+          resolve({ success:false , message:'未能初始化上传流'})
           return
         }
         if( writeStream && writeStream.error ){
@@ -262,13 +261,14 @@ module.exports = ({ command , pathNormalize , createReadStream , createWriteStre
         stream.resume()
 
         writeStream.on('finish', () => {
-          console.log('finish')
+          console.log('finish =============>')
           //clear cache
           resolve({ success:true })
         })
 
         writeStream.on('error', (e) => {
-          resolve({ success:false , message:e })
+          console.log('upload error',e)
+          resolve({ success:false , message:e.toString() })
         })
       })
     })

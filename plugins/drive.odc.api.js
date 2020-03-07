@@ -227,7 +227,7 @@ const createId = (client_id , path) => {
   })
 }
 
-module.exports = ({ request, cache, getConfig, querystring, base64 , saveDrive , getDrive,getDrives, extname , getRuntime , pathNormalize}) => {
+module.exports = ({ request, cache, getConfig, querystring, base64 , saveDrive , getDrive,getDrives, extname , getRuntime , pathNormalize, chunkStream}) => {
 
   const oauth2 = new oauth2ForOD(request, querystring , async (c) => {
     let paths = await getDrives()
@@ -558,7 +558,7 @@ module.exports = ({ request, cache, getConfig, querystring, base64 , saveDrive ,
     return req
   }
 
-  const createChunkStream = ( url , size , offset = 0, chunkSize) => {
+  const createChunkStream = ( url , size , offset = 0, chunkSize, retry = 3) => {
     let currentChunkSize = ( size - offset < chunkSize ) ? (size - offset) : chunkSize
     //console.log('create' , currentChunkSize,`bytes ${offset}-${offset+currentChunkSize-1}/${size}`)
     let req = request({
@@ -569,59 +569,68 @@ module.exports = ({ request, cache, getConfig, querystring, base64 , saveDrive ,
         'Content-Range':`bytes ${offset}-${offset+currentChunkSize-1}/${size}`,
         'Content-Type': 'application/json'
       },
+      json:true
     },function(error, response, body){
       // console.log('chunk from',offset)
       if(error) {
-        this.emit('finish' , {error:true , req_error:true , detail:error})
+        console.log(`error bytes(${retry}) ${offset}-${offset+currentChunkSize-1}/${size}` , error)
+
+        if(retry > 0){
+          // return 
+          this.emit('retry' , { retry:retry-1 ,  offset })
+        }else{
+          this.emit('fail' , {error:true , msg:error})
+        }
       }
       else {
-        this.emit('finish' , body)
+        console.log(`finish bytes ${offset}-${offset+currentChunkSize-1}/${size}`)
+
+        if(body.error){
+
+          if(retry > 0){
+            this.emit('retry' , { retry:retry-1 ,  offset })
+          }else{
+            this.emit('fail' , {error:true , msg:JSON.stringify(body.error)})
+          }
+        }else{
+          this.emit('finish' , body)
+        }
       }
     })
     return req
   }
 
   const createRangeStream = ({url , chunkSize , size}) => {
-    let passThroughtStream = new PassThrough()
-    let offset = 0
-    let req = createChunkStream(url , size , offset , chunkSize)
-    let cache = []
+    //只读流会通过整理后 进入 req，并在req异常时 重试
+    let stream = chunkStream(createChunkStream(url , size , 0 , chunkSize) , {chunkSize , size} )
 
-    passThroughtStream.on('data' , (chunk) => {
-      offset += chunk.length
-
-      if( offset % chunkSize == 0 ){
-        passThroughtStream.pause()
-        passThroughtStream.unpipe()
-        req.on('finish' , (data) => {
-          //console.log('finish',data)
-          if(data.error){
-            //无法重试
-            if( data.req_error ){
-              console.log('offset error at:',offset)
-            }else{
-              //req = createChunkStream(url , size , offset - chunk.length , chunkSize)
-              //passThroughtStream.pipe( req )
-            }
-            
-          }else{
-            //console.log('chunk from',data , offset)
-            if(data.id){
-              passThroughtStream.end()
-            }else{
-              //console.log('switch')
-              req = createChunkStream(url , size , offset , chunkSize)
-              passThroughtStream.pipe( req )
-              passThroughtStream.resume()
-            }
-          }
-        })
+    stream.on('update' , (offset, resp) => {
+      if(resp.error){
+        return { error: resp.msg }
+      }else{
+        // successd return {id , ...}
+        if(resp.id){
+          console.log('finish' , resp)
+          stream.finish(resp)
+        }else{
+          stream.next( createChunkStream(url , size , offset , chunkSize) )
+        }
       }
     })
 
-    passThroughtStream.pipe( req )
+    stream.on('retry' , ({ retry, offset }) => {
+      stream.retry( createChunkStream(url , size , offset , chunkSize , retry) )
+    })
 
-    return passThroughtStream
+    stream.on('error' , (err) => {
+      console.log('stream said: error',err)
+    })
+
+    stream.on('finish' , (err) => {
+      console.log('stream said: finish')
+    })
+
+    return stream
   }
 
   const upload = async (path , size , credentials) => {
@@ -662,7 +671,7 @@ module.exports = ({ request, cache, getConfig, querystring, base64 , saveDrive ,
     }
 
     if(resp.body && resp.body.uploadUrl){
-      console.log('Get uploadUrl success')
+      console.log('Start Upload : '+resp.body.uploadUrl)
       // chunkSize = 327680 10485760
       return createRangeStream({url : resp.body.uploadUrl , chunkSize:10485760 , size})
     }
@@ -700,9 +709,8 @@ module.exports = ({ request, cache, getConfig, querystring, base64 , saveDrive ,
       'Authorization':`bearer ${credentials.access_token}`,
       'Content-Type': 'application/json'
     },json:true})
-
     if(resp.body){
-      let downloadUrl = resp.body['@microsoft.graph.downloadUrl']
+      let downloadUrl = resp.body['@content.downloadUrl']
       return request({url:downloadUrl , method:'get'})
     }
   }

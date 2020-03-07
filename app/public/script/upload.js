@@ -44,10 +44,14 @@ function upload(file, opts) {
   xhr.open("POST", "");
   xhr.overrideMimeType("application/octet-stream");
   xhr.setRequestHeader('x-request', encodeURIComponent(JSON.stringify(data)));
-
+  xhr.timeout = 0;
   xhr.upload.addEventListener('progress', function(e) {
     if (opts.onProgress) opts.onProgress(e)
   })
+
+  xhr.ontimeout = function () {
+    console.error('The request timed out.');
+  };
 
 
   xhr.onreadystatechange = function(e) {
@@ -63,7 +67,8 @@ function upload(file, opts) {
           opts.onSuccess(result)
         }
       }else{
-        let tips = '上传失败。' + statusCode[xhr.status]
+        console.log( xhr.status )
+        let tips = '上传失败。' + statusCode[xhr.status] || ''
         alert(tips)
       }
     }

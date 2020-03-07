@@ -9,6 +9,7 @@ const config = require('../config')
 const { sendFile , sendHTTPFile ,sendStream, getFile, getHTTPFile } = require('../utils/sendfile')
 const wrapReadableStream = require('../utils/wrapReadableStream')
 const rectifier = require ('../utils/rectifier')
+const chunkStream = require('../utils/chunkStream')
 
 const assign = (...rest) => Object.assign(...rest)
 
@@ -144,6 +145,7 @@ const getHelpers = (id) => {
     command,
     wrapReadableStream,
     rectifier,
+    chunkStream,
     getOption:()=>{
 
     },

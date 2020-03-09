@@ -98,7 +98,6 @@ const sendHTTPFile = async (ctx , url  ,data = {}) => {
     let range = ctx.get('range')
     let fileSize = data.size
     let chunksize = fileSize
-
     if(range){
       let [start , end] = getRange(ctx.header.range , fileSize)
       ctx.set('Content-Range', 'bytes ' + `${start}-${end}/${fileSize}`)
@@ -107,11 +106,18 @@ const sendHTTPFile = async (ctx , url  ,data = {}) => {
       chunksize = end - start + 1
     }else{
       ctx.set('Content-Range', 'bytes ' + `0-${fileSize-1}/${fileSize}`)
+      ctx.status = 206
     }
     ctx.length = chunksize
   }
 
   let extra = data.proxy_options || {}
+  if(data.proxy_headers){
+    for(let i in data.proxy_headers){
+      headers[i] = data.proxy_headers[i]
+    }
+  }
+
   let stream = http({url , headers , ...extra})
   stream.on('response', function(response) {
     ctx.status = response.statusCode

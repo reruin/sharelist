@@ -685,14 +685,22 @@ module.exports = ({ request, cache, getConfig, querystring, base64 , saveDrive ,
   
   // id 当前有效路径
   // target 后续实际路径
-  const createWriteStream = async ({ id , options = {} , size , target = ''} = {}) => {
+  const createWriteStream = async ({ id , size , type , name,  target = ''} = {}) => {
     let predata = await prepare(id)
     if (!predata.credentials) return null
-    let { path, credentials } = predata
+    let { path:filepath, credentials } = predata
 
-    let fullpath = pathNormalize(path +'/' + target)
     //为path 创建目的地目录
-    await mkdir(path , target , credentials)
+    await mkdir(filepath , target , credentials)
+
+
+    let paths = [filepath,target]
+    if( type == 'folder' ){
+      paths.push(name)
+    }
+    let fullpath = pathNormalize(paths.join('/'))
+
+    console.log(fullpath)
     if( size !== undefined ){
       cache.clear(`${defaultProtocol}:${id}`)
       if( size <= 4194304 ){
@@ -701,6 +709,7 @@ module.exports = ({ request, cache, getConfig, querystring, base64 , saveDrive ,
         return await uploadLargeFile(fullpath , size , credentials)
       }
     }else{
+      console.log('无法解析文件大小')
       return { error:true , msg:'无法解析文件大小'}
     }
 

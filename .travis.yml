@@ -1,18 +1,11 @@
-sudo: false
 language: node_js
 node_js:
-  - 8
-  - 9
-  - 10
-  - 11
-cache:
-  directories:
-    - node_modules
-install:
-  - npm install
-before_script:
- - npm install -g pm2
-# script:
-#   - npm run lint
-#   - npm run test-cov
-#   - npm run bench
+  - 'stable'
+services:
+  - docker
+script:
+  #- npm install pkg -g
+  #- npm run build
+  - echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USERNAME" --password-stdin
+  - docker build -t reruin/sharelist:latest .
+  - docker push reruin/sharelist:latest

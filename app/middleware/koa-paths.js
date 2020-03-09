@@ -108,6 +108,8 @@ module.exports = async(ctx, next) => {
       depth:ctx.get('depth')
     }
 
+    ctx.runtime.isWebDAV = true
+    console.log(ctx.request.headers['user-agent'])
     //upload
     if(method == 'PUT'){
       //{ type: 'upload', name: file.name, size: file.size , path : opts.path }

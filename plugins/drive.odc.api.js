@@ -717,7 +717,7 @@ module.exports = ({ request, cache, getConfig, querystring, base64 , saveDrive ,
 
   // id 当前有效路径
   // target 后续实际路径
-  const createWriteStream = async ({ id , options = {} , size , target = ''} = {}) => {
+  const createWriteStream = async ({ id , size , target = ''} = {}) => {
     let predata = await prepare(id)
 
     if (!predata.credentials) return null
@@ -725,6 +725,8 @@ module.exports = ({ request, cache, getConfig, querystring, base64 , saveDrive ,
     let { path, credentials } = predata
 
     let fullpath = pathNormalize(path +'/' + target)
+
+    console.log('full',fullpath)
     //为path 创建目的地目录
     await mkdir(path , target , credentials)
 

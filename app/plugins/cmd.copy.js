@@ -50,11 +50,11 @@ module.exports = ({ command , pathNormalize , createReadStream , createWriteStre
         if(i.type == 'folder'){
           files = files.concat( await parseFiles(task , path+'/'+i.name , parent+'/'+i.name) )
         }else{
-          files.push( { path: `${parent}/`+i.name , id: i.id , size:i.size , protocol:i.protocol } )
+          files.push( { path: `${parent}/`+i.name , id: i.id , name:i.name, size:i.size , protocol:i.protocol } )
         }
       }
     }else{
-      files.push( { path: data.name , id: data.id , size:data.size,protocol:data.protocol , target_is_file:true} )
+      files.push( { path: data.name , name:data.name, id: data.id , size:data.size,protocol:data.protocol , target_is_file:true} )
     }
 
     files.forEach(i => {
@@ -73,8 +73,8 @@ module.exports = ({ command , pathNormalize , createReadStream , createWriteStre
       let readStream = await createReadStream(i)
       if( readStream ){
         //It's very important
-        let size = i.size || readStream.size 
-        let writeStream = await parseWrite(task , pathNormalize( i.target_is_file ? dst : (dst + '/' + i.path), basepath) , {size})
+        let size = i.size || readStream.size , name = i.name
+        let writeStream = await parseWrite(task , pathNormalize( i.target_is_file ? dst : (dst + '/' + i.path), basepath) , {size , name})
         if( writeStream ){
           task.cWriteStream = writeStream
           task.cReadStream = readStream
@@ -89,6 +89,7 @@ module.exports = ({ command , pathNormalize , createReadStream , createWriteStre
            }
         }else{
           task.stats.error++
+          console.log( 'dst does not support write' )
           // return {result:'dst does not support write'}
         }
       }else{

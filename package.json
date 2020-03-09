@@ -9,7 +9,7 @@
     "dev": "./node_modules/.bin/nodemon app.js -i ./cache",
     "prd": "pm2 start app.js --name sharelist --env prod",
     "test": "echo \"Error: no test specified\" && exit 1",
-    "build": "pkg . -t node10-win-x64 --output build/nrop_windows_amd64.exe && pkg . -t node10-macos-x64 --output build/nrop_macos_amd64 && pkg . -t node10-linux-x64 --output build/nrop_linux_amd64"
+    "build": "pkg . -t node12-win-x64 --output build/sharelist_windows_amd64.exe && pkg . -t node12-macos-x64 --output build/sharelist_macos_amd64 && pkg . -t node12-linux-x64 --output build/sharelist_linux_amd64"
   },
   "dependencies": {
     "@koa/cors": "^2.2.1",

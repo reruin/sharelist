@@ -335,3 +335,14 @@ WebDAV 目录 `http://localhost:33001/webdav`
 ### Heroku
 
 [![Deploy](https://www.herokucdn.com/deploy/button.png)](https://heroku.com/deploy?template=https://github.com/reruin/sharelist-heroku)
+
+### Kubesail
+
+Kubesail 是一个Kubernetes云托管平台，可在云端部署应用，资源限制比Heroku宽松
+
+1. 注册登录Kubesail后
+2. [创建储存卷](https://kubesail.com/volumes/)，**修改metadata.name为sharelist-cache**，用于储存Sharelist缓存数据
+
+3. 套用 [KubeSail 应用模板](https://kubesail.com/template/etnperlong/sharelist/)
+
+4. 启用成功后到 [实例设置](https://kubesail.com/deployments) 中打开端口映射

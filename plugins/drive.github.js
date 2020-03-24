@@ -102,10 +102,10 @@ module.exports = ({ request , getConfig, base64 , extname }) => {
 
   const file = async (id , { data = {} } = {}) => {
     if( data && data.download_url ){
-      data.url = data.download_url
+      data.url = data.download_url.replace(/\/master/g, '@master').replace(/https:\/\/raw.githubusercontent.com\//g, 'https://cdn.jsdelivr.net/gh/');
     }else{
       data = await getContent(id)
-      data.url = data.download_url
+      data.url = data.download_url.replace(/\/master/g, '@master').replace(/https:\/\/raw.githubusercontent.com\//g, 'https://cdn.jsdelivr.net/gh/');
     }
     // data.outputType = 'stream'
     //data.proxy = 'stream'

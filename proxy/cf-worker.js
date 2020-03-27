@@ -1,5 +1,5 @@
-const HOST = ''
-const TOKEN = ''
+const HOST = '此处填写sharelist的访问地址'
+const TOKEN = '此处填写sharelist的后台口令'
 
 const utils = {
   isPlainObject(obj) {

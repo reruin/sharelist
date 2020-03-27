@@ -22,7 +22,7 @@ const output = async (ctx , data)=>{
 
   const downloadLinkAge = config.getConfig('max_age_download')
 
-  const proxyServer = config.getConfig('custom_proxy_server')
+  const proxyServer = config.getConfig('proxy_server')
 
   const proxy_paths = config.getConfig('proxy_paths') || []
 
@@ -75,7 +75,7 @@ const output = async (ctx , data)=>{
     else{
       if(isProxy){
         if( proxyServer ){
-          ctx.redirect( proxyServer+ctx.path.substring(1) )
+          ctx.redirect( (proxyServer+ctx.path).replace(/(?<!\:)\/\//g,'/') )
         }else{
           await service.stream(ctx , url , 'url' , data.protocol , data)
         }

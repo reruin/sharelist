@@ -42,4 +42,6 @@ module.exports = {
   "custom_script":"自定义脚本",
   "reboot":"重启",
   "proxy_paths":"中转路径",
+  "proxy_server":"中转服务器",
+  "proxy_server_placeholder":"留空使用本机中转"
 }

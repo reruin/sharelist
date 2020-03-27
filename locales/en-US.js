@@ -42,4 +42,6 @@ module.exports = {
   "custom_script":"Custom Script",
   "reboot":"Reboot",
   "proxy_paths":"Proxy Paths",
+  "proxy_server":"Proxy Server",
+  "proxy_server_placeholder":""
 }

@@ -46,7 +46,7 @@ const db = createFiledb(configPath , {raw:true} , {
   //代理路径
   proxy_paths:[],
 
-  custom_proxy_server:'',
+  proxy_server:'',
 });
 
 if(process.env.PORT){

@@ -42,4 +42,6 @@ module.exports = {
   "custom_script":"自定義腳本",
   "reboot":"重啟",
   "proxy_paths":"代理路徑",
+  "proxy_server":"中轉服務器",
+  "proxy_server_placeholder":""
 }

@@ -18,6 +18,7 @@ ShareList 是一个易用的网盘工具，支持快速挂载 GoogleDrive、OneD
   * [虚拟文件](#虚拟文件) 
   * [目录加密](#目录加密) 
   * [流量中转](#流量中转) 
+  * [自定义中转](#自定义中转) 
   * [忽略文件类型](#忽略文件类型) 
   * [文件预览](#文件预览) 
   * [显示README](#显示README) 
@@ -229,6 +230,15 @@ data:
 后台管理，常规设置，将```中转（包括预览）```设为启用即可实现中转代理。设置```中转路径```可对指定的路径（含子路径）启用中转，留空表示对所有路径有效。  
 **注意，由于功能限制，以下挂载方式将强制使用中转模式：    
 ```OneDrive For Business（id挂载）、GoogleDriveAPI、GoogleDrive（id挂载）```**  
+
+***
+
+### 自定义中转
+在启用中转模式时，可在后台管理->常规设置中,设置中转服务器。设置后所有下载请求均将通过此服务器中转，目前支持[cf-worker](proxy/cf-worker.js)。     
+#### 1. cf-worker
+从[proxy/cf-worker.js](proxy/cf-worker.js)中复制脚本，修改```HOST```为sharelist的访问地址，```TOKEN```为管理后台的访问口令。以此为内容创建cf worker，之后将cf-worker地址(```https://**.workers.dev```)保存到sharelist后台。   
+
+**注意，由于Cloudflare限制，```HOST```必须是使用标准端口(80,443)的域名地址，例如 ```http://example.com/```，因而你需要为运行sharelist的IP做域名解析，同时修改其运行端口为80或443（可在app/config.js中修改），强烈建议使用nginx进行代理。** 
 
 ***
 

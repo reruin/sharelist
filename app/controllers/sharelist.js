@@ -18,7 +18,11 @@ const output = async (ctx , data)=>{
 
   const isPreview = ctx.request.querystring.indexOf('preview') >= 0
 
+  const isforward = ctx.request.querystring.indexOf('forward') >= 0
+
   const downloadLinkAge = config.getConfig('max_age_download')
+
+  const proxyServer = config.getConfig('custom_proxy_server')
 
   const proxy_paths = config.getConfig('proxy_paths') || []
 
@@ -33,6 +37,17 @@ const output = async (ctx , data)=>{
       'accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9',
       'accept-language': 'zh-CN,zh;q=0.9,en;q=0.8'
     }
+  }
+
+  //返回必要的 url 和 headers
+  if(isforward && data){
+    if( config.checkAccess(ctx.query.token) ){
+      ctx.body = { ...data }
+    }else{
+      ctx.body = { error:{status:401 , msg:'401 Unauthorized'} }
+    }
+    
+    return
   }
 
   if(isPreview){
@@ -59,7 +74,11 @@ const output = async (ctx , data)=>{
     // http
     else{
       if(isProxy){
-        await service.stream(ctx , url , 'url' , data.protocol , data)
+        if( proxyServer ){
+          ctx.redirect( proxyServer+ctx.path.substring(1) )
+        }else{
+          await service.stream(ctx , url , 'url' , data.protocol , data)
+        }
       }else{
         ctx.redirect( url )
       }

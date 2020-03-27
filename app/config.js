@@ -44,7 +44,9 @@ const db = createFiledb(configPath , {raw:true} , {
   custom_script:'',
 
   //代理路径
-  proxy_paths:[]
+  proxy_paths:[],
+
+  custom_proxy_server:'',
 });
 
 if(process.env.PORT){
@@ -140,4 +142,8 @@ const getDrives = (protocols) => {
   return ret
 }
 
-module.exports = { getConfig, setIgnorePaths, getIgnorePaths, getAllConfig, save , installed , getPath , setRuntime , getRuntime , saveDrive , getDrive , getSkin , getDrives , getPluginOption , setPluginOption }
+const checkAccess = (token) => {
+  return token === db.get('token')
+}
+
+module.exports = { getConfig, setIgnorePaths, getIgnorePaths, getAllConfig, save , installed , getPath , setRuntime , getRuntime , saveDrive , getDrive , getSkin , getDrives , getPluginOption , setPluginOption , checkAccess }

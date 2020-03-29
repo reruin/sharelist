@@ -124,6 +124,7 @@ module.exports = ({ request , getConfig , datetime , cache , retrieveSize }) => 
               ext:name.split('.').pop(),
               protocol:defaultProtocol,
               // updated_at:datetime(i.upload_at*1000),
+              updated_at: i.time,
               size:retrieveSize(i.size),
               displaySize:i.size,
               type : undefined,

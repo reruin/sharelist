@@ -357,7 +357,7 @@ module.exports = ({ request, cache, getConfig, querystring, base64, saveDrive, g
       Signature:signature,
       Date:date,
       'content-type':'application/json',
-      "accept":"application/json"
+      'accept':'application/json'
     }
     let resp
     try{
@@ -453,10 +453,15 @@ module.exports = ({ request, cache, getConfig, querystring, base64, saveDrive, g
     let r = cache.get(id)
     if (r) {
       if (
-        r.$cached_at &&
-        r.children &&
-        (Date.now() - r.$cached_at < max_age_file)
-
+        (
+          r.$expired_at && Date.now() < r.$expired_at
+        )
+        || 
+        (
+          r.$cached_at &&
+          r.children &&
+          (Date.now() - r.$cached_at < max_age_file)
+        )
       ) {
         console.log(Date.now()+' CACHE 189Cloud '+ id)
         return r
@@ -474,16 +479,18 @@ module.exports = ({ request, cache, getConfig, querystring, base64, saveDrive, g
       }
     }
 
-    let expired_at = (resp.fileDownloadUrl.match(/(?<=expired=)\d+/) || [0])[0]
-
+    let expired_at = parseInt((resp.fileDownloadUrl.match(/(?<=expired=)\d+/) || [0])[0])
+    let downloadUrl = resp.fileDownloadUrl
+    
     resp = {
       id,
       $cached_at:Date.now(),
-      url: resp.fileDownloadUrl,
+      url: downloadUrl,
       name: data.name,
       ext: data.ext,
       protocol: defaultProtocol,
       size:data.size,
+      $expired_at:expired_at - 5000
     }
 
     cache.set(id, resp)

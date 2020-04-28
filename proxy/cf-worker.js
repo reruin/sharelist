@@ -72,7 +72,8 @@ async function handleRequest({ headers, method, url }) {
       resHeaders['content-length'] = size
     }
 
-    let output = fetch(url, { method: 'GET', headers: { ...mergeHeaders, ...reqHeaders } })
+    let extraHeaders = resp.headers || {}
+    let output = fetch(url, { method: 'GET', headers: { ...mergeHeaders, ...reqHeaders, ...extraHeaders } })
     return output.then(r => new Response(r.body, {
       status: status,
       headers: { ...utils.parserHeaders(r.headers), ...resHeaders }

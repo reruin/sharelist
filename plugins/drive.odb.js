@@ -101,7 +101,7 @@ module.exports = ({ request, cache, getConfig , datetime }) => {
         data = []
       }
     }
-    console.log('result',data.length )
+    console.log('result',data )
 
     let children = data ? data.map((i) => {
       return {
@@ -110,7 +110,8 @@ module.exports = ({ request, cache, getConfig , datetime }) => {
         ext: i['.fileType'],
         protocol: defaultProtocol,
         created_at: '-',
-        updated_at: datetime(i.Modified.replace(/\//g,'-')),
+        // ref. https://www.liuquanhao.com/memory/2020/01/19/ShareList-OneDrive%E6%8F%92%E4%BB%B6bug%E4%BF%AE%E5%A4%8D.html
+        updated_at: datetime(i['Modified.'].replace(/\//g,'-')),
         size: i.FileSizeDisplay,
         type: i.FSObjType == '1' ? 'folder' : undefined,
       }

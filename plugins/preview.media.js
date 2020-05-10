@@ -5,7 +5,7 @@ const name = 'mediaParse'
 
 const version = '1.1'
 
-module.exports = ({getSource , getPluginOption , setPluginOption}) => {
+module.exports = ({getSource , getPluginOption , setPluginOption , getConfig}) => {
 
   const preview = {};
   let videoFormatKey = 'video_previewable_formats'
@@ -35,7 +35,7 @@ module.exports = ({getSource , getPluginOption , setPluginOption}) => {
 
   const video = async (data , req) => {
     let videoPlayer = (getPluginOption(videoPlayerKey) || {value:'default'}).value;
-
+    let proxyMode = getConfig('proxy_enable') == 1
     return {
       ...data,
       // body:`
@@ -47,17 +47,18 @@ module.exports = ({getSource , getPluginOption , setPluginOption}) => {
         <div id="dplayer" style="margin-top:32px;height:60vh;"></div>
         <script>
           var url = '${decodeUrl(req)}' , subtitle = url.replace(/\\.[^\\.]+?(\\?|$)/,'.vtt$1');
-          var dp = new DPlayer({
+          var options = {
             container: document.getElementById('dplayer'),
             video:{
               url: url,
             },
-            subtitle: {
-              url: subtitle,
-              fontSize: '25px',
-              bottom: '7%',
-            },
-          });
+          }
+          if(${proxyMode}) options.subtitle = {
+            url: subtitle,
+            fontSize: '25px',
+            bottom: '7%',
+          }
+          var dp = new DPlayer(options);
         </script>
       ` : `
         <iframe></iframe><script>var content='<style>video{width:100%;height:100%;background:#000;}body{margin:0;padding:0;}</style><video src="${decodeUrl(req)}" controls="controls" autoplay="autoplay"></video>';document.querySelector("iframe").contentWindow.document.write(content);</script>

@@ -144,7 +144,7 @@ module.exports = ({ request , getConfig , datetime , cache , wrapReadableStream 
     if(headers && headers.location){
       data.url = headers.location
     }else{
-      if(body && body.indexOf('Too many users') == -1){
+      if(body && body.indexOf('uc-error-subcaption') == -1){
 
         let cookie = headers['set-cookie'].join('; ')
         let url =  (body.match(/\/uc\?export=download[^"']+/i) || [''])[0]

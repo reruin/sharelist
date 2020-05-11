@@ -1,6 +1,7 @@
 const parseXML = require('xml2js').parseString
 const parsePath = require('../utils/base').parsePath
 const { setLocation , getConfig , setRuntime } = require('../config')
+const qs = require('querystring')
 
 const parser = (req, options) => {
   return new Promise((resolve, reject) => {
@@ -26,6 +27,25 @@ const guessWebDAV = (ua) => {
 
 const webdavMethods = ['options','head','trace','get','put','post','delete','mkcol','propfind','proppatch','copy','move','lock','unlock']
 
+const parseConfig = (str) => {
+  let params = new URLSearchParams(str)
+  let ret = {}
+  if(params.has('preview')){
+    ret.isPreview = true
+  }
+  if(params.has('sort')){
+    let s = params.get('sort')
+    let r = {}
+    for(let i of s.split('+')){
+      let pairs = i.split(':')
+      if(pairs.length == 2){
+        r[pairs[0]] = pairs[1]
+      }
+    }
+    ret.sort = r
+  }
+  return ret
+}
 module.exports = async(ctx, next) => {
   if (!ctx.session.access) {
     ctx.session.access = new Set()
@@ -53,7 +73,9 @@ module.exports = async(ctx, next) => {
     path:ctx.path,
     paths:paths,
     isAdmin:!!ctx.session.admin,
-    access:ctx.session.access
+    access:ctx.session.access,
+
+    ...parseConfig(ctx.querystring)
   }
 
   if( ctx.get('x-request') ){

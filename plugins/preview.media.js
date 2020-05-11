@@ -47,7 +47,7 @@ module.exports = ({getSource , getPluginOption , setPluginOption , getConfig}) =
         <div id="dplayer" style="margin-top:32px;height:60vh;"></div>
         <script>
           var url = '${decodeUrl(req)}' , subtitle = url.replace(/\\.[^\\.]+?(\\?|$)/,'.vtt$1');
-          var type=(url.split(".").pop() == "flv") ? 'flv' : 'auto';
+          var type=(url.split('?')[0].split(".").pop() == "flv") ? 'flv' : 'auto';
           var options = {
             container: document.getElementById('dplayer'),
             video:{

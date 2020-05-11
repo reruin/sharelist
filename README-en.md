@@ -1,8 +1,10 @@
 # ShareList
 
+[![Build Status](https://api.travis-ci.com/reruin/sharelist.svg?branch=master)](https://travis-ci.com/reruin/sharelist)
+
+
 ShareList is an easy-to-use netdisk tool which supports that quickly mount GoogleDrive and OneDrive, and extends functions with plugins.
 
- 
 
 ## Contents
 
@@ -538,3 +540,7 @@ WebDAV directory `http://localhost:33001/webdav`
 ### Heroku
 
 [![Deploy](https://www.herokucdn.com/deploy/button.png)](https://heroku.com/deploy?template=https://github.com/reruin/sharelist-heroku)
+
+### Vercel
+
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/import/project?template=https://github.com/reruin/sharelist)

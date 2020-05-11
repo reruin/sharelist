@@ -1,5 +1,9 @@
 # ShareList
 
+[![Build Status](https://api.travis-ci.com/reruin/sharelist.svg?branch=master)](https://travis-ci.com/reruin/sharelist)
+
+[README](README-en.md)  
+
 ShareList 是一个易用的网盘工具，支持快速挂载 GoogleDrive、OneDrive ，可通过插件扩展功能。
 
 ## 目录
@@ -345,3 +349,7 @@ WebDAV 目录 `http://localhost:33001/webdav`
 ### Heroku
 
 [![Deploy](https://www.herokucdn.com/deploy/button.png)](https://heroku.com/deploy?template=https://github.com/reruin/sharelist-heroku)
+
+### Vercel
+
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/import/project?template=https://github.com/reruin/sharelist)

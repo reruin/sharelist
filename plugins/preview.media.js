@@ -42,15 +42,17 @@ module.exports = ({getSource , getPluginOption , setPluginOption , getConfig}) =
       //   <video src="${req.path}" style="min-width: 90%;min-height: 60vh;" controls="controls" autoplay="autoplay"></video>
       // `,
        body: videoPlayer == 'dplayer' ? `
-        <link href="https://cdn.bootcss.com/dplayer/1.25.0/DPlayer.min.css" rel="stylesheet" />
-        <script src="https://cdn.bootcss.com/dplayer/1.25.0/DPlayer.min.js"></script>
+        <script src="https://cdn.bootcdn.net/ajax/libs/flv.js/1.5.0/flv.min.js"></script>
+        <script src="https://cdn.bootcss.com/dplayer/1.25.1/DPlayer.min.js"></script>
         <div id="dplayer" style="margin-top:32px;height:60vh;"></div>
         <script>
           var url = '${decodeUrl(req)}' , subtitle = url.replace(/\\.[^\\.]+?(\\?|$)/,'.vtt$1');
+          var type=(url.split(".").pop() == "flv") ? 'flv' : 'auto';
           var options = {
             container: document.getElementById('dplayer'),
             video:{
               url: url,
+              type: type
             },
           }
           if(${proxyMode}) options.subtitle = {
@@ -88,9 +90,8 @@ module.exports = ({getSource , getPluginOption , setPluginOption , getConfig}) =
     return {
       ...data,
        body: `
-        <link href="https://cdn.bootcss.com/dplayer/1.25.0/DPlayer.min.css" rel="stylesheet" />
         <script src="https://cdn.bootcss.com/hls.js/8.0.0-beta.3/hls.min.js"></script>
-        <script src="https://cdn.bootcss.com/dplayer/1.25.0/DPlayer.min.js"></script>
+        <script src="https://cdn.bootcss.com/dplayer/1.25.1/DPlayer.min.js"></script>
         <div id="dplayer" style="margin-top:32px;height:60vh;"></div>
         <script>
           var url = '${decodeUrl(req)}';

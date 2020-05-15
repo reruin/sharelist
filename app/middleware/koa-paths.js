@@ -2,6 +2,7 @@ const parseXML = require('xml2js').parseString
 const parsePath = require('../utils/base').parsePath
 const { setLocation , getConfig , setRuntime } = require('../config')
 const qs = require('querystring')
+const { URLSearchParams } = require('url')
 
 const parser = (req, options) => {
   return new Promise((resolve, reject) => {

@@ -5,7 +5,7 @@ const cache = require('../utils/cache')
 const { getVendors , reload } = require('../services/plugin')
 const service = require('../services/sharelist')
 
-const handlers = async (a, body) => {
+const handlers = async (a, body , ctx) => {
   let result = { status: 0, message: 'Success', data: '', a }
 
   if (a == 'path') {
@@ -64,7 +64,7 @@ const handlers = async (a, body) => {
     cache.clear()
     result.message = 'Success'
   } else if (a == 'cfg') {
-    let { proxy_enable, preview_enable, readme_enable, max_age_dir, max_age_file,max_age_download, webdav_path, anonymous_uplod_enable, ignore_file_extensions , ignore_paths , custom_style , custom_script , proxy_paths , proxy_server } = body
+    let { proxy_enable, preview_enable, readme_enable, max_age_dir, max_age_file,max_age_download, webdav_path, anonymous_uplod_enable, ignore_file_extensions , ignore_paths , custom_style , custom_script , proxy_paths , proxy_server , ocr_server , language } = body
     let opts = {}
     if (max_age_dir !== undefined) {
       max_age_dir = parseInt(max_age_dir)
@@ -110,6 +110,17 @@ const handlers = async (a, body) => {
     if (webdav_path) {
       opts.webdav_path = webdav_path
     }
+
+    if(ocr_server){
+      opts.ocr_server = ocr_server
+    }
+
+    if(language !== undefined){
+      opts.language = language
+      //console.log(ctx,ctx.__setLocale)
+      ctx.__setLocale(language)
+    }
+
     opts.custom_script = custom_script
     opts.custom_style = custom_style
     opts.ignore_paths = config.getConfig('ignore_paths')
@@ -164,7 +175,7 @@ module.exports = {
         result.status = 403
         result.message = 'Require Auth'
       } else {
-        result = await handlers(a, body)
+        result = await handlers(a, body , ctx)
       }
 
     }
@@ -182,7 +193,7 @@ module.exports = {
         ctx.body = JSON.stringify(config.getAllConfig())
         return
       } else {
-        result = await handlers(act, body)
+        result = await handlers(act, body,ctx)
       }
     } else {
       result.status = -1

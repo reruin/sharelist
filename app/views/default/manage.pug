@@ -30,6 +30,15 @@ block content
               input(type='hidden',name='a',value='cfg')
               .form-group
                 .col-sm-4
+                  label= __('language')
+                .col-sm-8
+                  select.form-control(name='language',value=config.language)
+                    option(value='', selected=config.language=='' ? 'selected' : null)= __('自动')
+                    option(value='zh-CN', selected=config.language=='zh-CN' ? 'selected' : null)= __('简体中文')
+                    option(value='zh-TW', selected=config.language=='zh-TW' ? 'selected' : null)= __('繁體中文')
+                    option(value='en-US', selected=config.language=='en-US' ? 'selected' : null)= __('English')
+              .form-group
+                .col-sm-4
                   label= __('proxy_enable')
                 .col-sm-8
                   select.form-control(name='proxy_enable',value=config.proxy_enable,required)
@@ -96,6 +105,11 @@ block content
                   select.form-control(name='anonymous_uplod_enable',value=config.anonymous_uplod_enable,required)
                     option(value='1', selected=config.anonymous_uplod_enable==1 ? 'selected' : null)= __('enable')
                     option(value='0', selected=config.anonymous_uplod_enable==0 ? 'selected' : null)= __('disable')
+              .form-group
+                .col-sm-4
+                  label= __('ocr_server')
+                .col-sm-8
+                  input.form-control(type='text', name='ocr_server' , value=config.ocr_server,placeholder=__('ocr_server_placeholder'))
               .form-group
                 .col-sm-4
                   label= __('custom_style')

@@ -47,6 +47,8 @@ const db = createFiledb(configPath , {raw:true} , {
   proxy_paths:[],
 
   proxy_server:'',
+
+  ocr_server:'https://api.reruin.net/ocr'
 });
 
 if(process.env.PORT){

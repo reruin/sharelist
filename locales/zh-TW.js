@@ -43,5 +43,8 @@ module.exports = {
   "reboot":"重啟",
   "proxy_paths":"代理路徑",
   "proxy_server":"中轉服務器",
-  "proxy_server_placeholder":""
+  "proxy_server_placeholder":"",
+  "ocr_server":"驗證碼識別接口",
+  "ocr_server_placeholder":"留空使用本程式內置接口",
+  "language":"切換語言"
 }

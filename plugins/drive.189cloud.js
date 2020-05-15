@@ -10,7 +10,7 @@ const { URL } = require('url')
 
 const urlFormat = require('url').format
 
-const COOKIE_MAX_AGE = 120 * 60 * 1000
+const COOKIE_MAX_AGE = 5 * 24 * 60 * 60 * 1000 // 5 days
 
 const max_age_dir = 10 * 60 * 1000
 
@@ -30,11 +30,29 @@ const install = async (msg) => {
   `
 }
 
+
 class Manager {
-  constructor(request , updateHandle) {
+  constructor(request, recognize, updateHandle) {
     this.clientMap = {}
     this.request = request
+    this.recognize = recognize
     this.updateHandle = updateHandle
+  }
+
+  async ocr(image){
+    let resp = await this.recognize(image)
+    let ret = { error:resp.error }
+    if(!resp.error){
+      let code = resp.result.replace(/[^a-z0-9]/i,'')
+      // retry
+      if(code.length == 4){
+        ret.code = code
+      }else{
+        ret.code = ''
+      }
+    }
+
+    return ret
   }
 
   init(d){
@@ -50,7 +68,7 @@ class Manager {
     if(data.username){
       let hit = this.clientMap[data.username]
       if(hit){
-        if( !hit.cookies || (Date.now() - hit.updated_at) < COOKIE_MAX_AGE ){
+        if( !hit.cookies || (Date.now() - hit.updated_at) > COOKIE_MAX_AGE ){
           let result = await this.create(hit.username , hit.password)
           if( result ){
             hit = this.clientMap[data.username]
@@ -92,6 +110,20 @@ class Manager {
       query,
     })
   }
+
+  async needcaptcha(formdata,cookies){
+    let resp = await this.request.post('https://open.e.189.cn/api/logbox/oauth2/needcaptcha.do',formdata,{
+      headers:{
+        Cookies:cookies,
+        Referer:'https://open.e.189.cn/api/logbox/oauth2/loginSubmit.do'
+      },
+    })
+    if(resp.body && resp.body == '1'){
+      return true
+    }else{
+      return false
+    }
+  }
   //create cookies
   async create(username , password){
     //0 准备工作： 获取必要数据
@@ -103,6 +135,8 @@ class Manager {
     paramId = (body.match(/var paramId = "(.*?)";/) || ['',''])[1],
     lt = (body.match(/var lt = "(.*?)";/) || ['',''])[1],
     reqId = (body.match(/reqId = "(.*?)";/) || ['',''])[1]
+    
+    let cookies = headers2['set-cookie'].join('; ')
 
     let formdata = {
       'appKey': 'cloud',
@@ -115,45 +149,113 @@ class Manager {
       'mailSuffix': '@189.cn',
       'dynamicCheck': 'FALSE',
       'clientType': '10010',
-      'cb_SaveName': '0',
+      'cb_SaveName': '1',
       'isOauth2': 'false',
       'state':'',
       'paramId':paramId 
     }
-    console.log(headers2)
-    // 1 登陆
-    let resp = await this.request.post('https://open.e.189.cn/api/logbox/oauth2/loginSubmit.do',formdata , {
-      headers:{
-        'Referer':'https://cloud.189.cn/udb/udb_login.jsp?pageId=1&redirectURL=/main.action',
-        'User-Agent':'Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/69.0.3497.100 Safari/537.36',
-        'REQID':reqId,
-        'lt':lt,
-      },
-      json:true
-    })
+    // console.log(headers2)
 
-    if( resp.body.result == -1 ){
-      return false
+    let result = false
+    let msg = ''
+    let needcaptcha = await this.needcaptcha({
+      accountType: '01',
+      userName:username,
+      appKey: 'cloud',
+    },cookies)
+    console.log('needcaptcha:',needcaptcha)
+
+    while(true){
+      // 0 验证码
+      if(needcaptcha){
+        
+        let captchaUrl = `https://open.e.189.cn/api/logbox/oauth2/picCaptcha.do?token=${formdata.captchaToken}&REQID=${reqId}&rnd=${Date.now()}`
+
+        let resp = await this.request.get(captchaUrl,{
+          headers:{
+            Cookies:cookies,
+            Referer:'https://open.e.189.cn/api/logbox/oauth2/loginSubmit.do'
+          },
+          encoding: null
+        })
+
+        let imgBase64
+
+        if(resp.body){
+          imgBase64 = "data:" + resp.headers["content-type"] + ";base64," + Buffer.from(resp.body).toString('base64');
+        }
+        let { error , code } = await this.ocr(imgBase64)
+        //服务不可用
+        if(error){
+          formdata.validateCode = ''
+          break;
+        }
+        else if(code){
+          formdata.validateCode = code
+          console.log('validateCode:['+code+']')
+        }
+        //无法有效识别
+        else{
+          continue;
+        }
+        
+      }
+
+      // 1 登陆
+      let resp = await this.request.post('https://open.e.189.cn/api/logbox/oauth2/loginSubmit.do',formdata , {
+        headers:{
+          'Referer':'https://cloud.189.cn/udb/udb_login.jsp?pageId=1&redirectURL=/main.action',
+          'User-Agent':'Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/69.0.3497.100 Safari/537.36',
+          'REQID':reqId,
+          'lt':lt,
+        },
+        json:true
+      })
+
+      //验证码错误
+      if(resp.body.result == -2){
+        console.log('validateCode:['+formdata.validateCode+'] error')
+
+        continue;
+      }
+      if( resp.body && resp.body.toUrl ){
+        resp = await this.request.get(resp.body.toUrl , { followRedirect:false, headers })
+        let cookies = resp.headers['set-cookie'].join('; ')
+        let client = { username , password , cookies , updated_at: Date.now() }
+
+        await this.updateHandle(this.stringify({username , password}))
+
+        this.clientMap[username] = client
+        console.log('cookies>>',cookies)
+        result = true
+        break;
+      }else{
+        msg = resp.body.msg
+      }
+
     }
-    if( resp.body && resp.body.toUrl ){
-      resp = await this.request.get(resp.body.toUrl , { followRedirect:false, headers })
-      let cookies = resp.headers['set-cookie'].join('; ')
-      let client = { username , password , cookies , updated_at: Date.now() }
 
-      await this.updateHandle(this.stringify({username , password}))
-
-      this.clientMap[username] = client
-
-      return true
+    if( needcaptcha && !formdata.validateCode){
+      msg = '请设置验证码识别接口！'
     }
-
+    return { result , msg }
   }
 
+  async update(id){
+    let data = this.parse(id)
+
+    if(data.username){
+      let hit = this.clientMap[data.username]
+      if(hit){
+        await this.create(hit.username , hit.password)
+      }
+    }
+  }
 }
 // fileid->app_credentials
-module.exports = ({ request, cache, getConfig, querystring, base64, saveDrive, getDrive, getDrives , getRuntime , wrapReadableStream}) => {
+module.exports = ({ request, cache, getConfig, querystring, base64, saveDrive, getDrive, getDrives , getRuntime , wrapReadableStream, recognize}) => {
 
-  const manager = new Manager(request , async (client) => {
+  const manager = new Manager(request , recognize, async (client) => {
     let paths = await getDrives()
     let data = paths
       .map(i => manager.parse(i.path , i.name))
@@ -197,11 +299,11 @@ module.exports = ({ request, cache, getConfig, querystring, base64, saveDrive, g
     }else{
       if (req.body && req.body.username && req.body.password && req.body.act == 'install') {
         let { username, password } = req.body
-        let result = await manager.create(username , password)
+        let { result , msg } = await manager.create(username , password)
         if( result ){
           return { id, type: 'folder', protocol: defaultProtocol,redirect: req.origin + req.path }
         }else{
-          return { id, type: 'folder', protocol: defaultProtocol,body: await install('请确认账号密码正确') }
+          return { id, type: 'folder', protocol: defaultProtocol,body: await install(msg || '请确认账号密码正确') }
         }
       }
 
@@ -210,6 +312,21 @@ module.exports = ({ request, cache, getConfig, querystring, base64, saveDrive, g
 
   }
 
+  const fetchData = async (...rest) => {
+    let resp , retry_times = 5
+    while(true && --retry_times){
+      resp = await request.get(...rest)
+      //cookie失效
+      if(resp.headers['Content-Type'] && resp.headers['Content-Type'].includes('text/html')){
+        await manager.update(id)
+        continue
+      }else{
+        break;
+      }
+    }
+    
+    return resp
+  }
 
   const folder = async (id, options) => {
 
@@ -233,7 +350,7 @@ module.exports = ({ request, cache, getConfig, querystring, base64, saveDrive, g
     }
    
     if(!path) path = -11
-    let resp = await request.get(`https://cloud.189.cn/v2/listFiles.action?fileId=${path}&mediaType=&keyword=&inGroupSpace=false&orderBy=1&order=ASC&pageNum=1&pageSize=9999&noCache=${Math.random()}`,{
+    let resp = await fetchData(`https://cloud.189.cn/v2/listFiles.action?fileId=${path}&mediaType=&keyword=&inGroupSpace=false&orderBy=1&order=ASC&pageNum=1&pageSize=9999&noCache=${Math.random()}`,{
       headers:{
         'User-Agent':'Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/69.0.3497.100 Safari/537.36',
         'Cookie': cookies,
@@ -241,7 +358,7 @@ module.exports = ({ request, cache, getConfig, querystring, base64, saveDrive, g
       json:true
     })
 
-    if (!resp.body) {
+    if (!resp || !resp.body) {
       return { id, type: 'folder', protocol: defaultProtocol,body:'解析错误' }
 
     }
@@ -283,13 +400,15 @@ module.exports = ({ request, cache, getConfig, querystring, base64, saveDrive, g
 
     let data = options.data || {}
 
-    let resp = await request.get(data.downloadUrl,{
+    let resp = await fetchData(data.downloadUrl,{
       followRedirect:false ,
       headers:{
         'User-Agent':'Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/69.0.3497.100 Safari/537.36',
         'Cookie': cookies,
       }
     })
+
+    if(!resp) return false
 
     let url = resp.headers.location
 

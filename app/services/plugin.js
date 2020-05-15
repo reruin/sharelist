@@ -49,6 +49,18 @@ var ready = false
 
 var resourcesCount = 0
 
+const recognize = async (image , lang) => {
+  let server = config.getConfig('ocr_server')
+  if(server){
+    let resp = await http.post(server,{ image , lang },{json:true})
+    if(resp.body){
+      return { error:false , result:resp.body.result}
+    }
+  }
+
+  return { error:true , msg:'ocr server is NOT ready!'}
+}
+
 /*
  * 根据文件id获取详情
  */
@@ -146,6 +158,7 @@ const getHelpers = (id) => {
     wrapReadableStream,
     rectifier,
     chunkStream,
+    recognize,
     getOption:()=>{
 
     },

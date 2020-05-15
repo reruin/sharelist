@@ -43,5 +43,8 @@ module.exports = {
   "reboot":"重启",
   "proxy_paths":"中转路径",
   "proxy_server":"中转服务器",
-  "proxy_server_placeholder":"留空使用本机中转"
+  "proxy_server_placeholder":"留空使用本机中转",
+  "ocr_server":"验证码识别接口",
+  "ocr_server_placeholder":"留空使用本程序内置接口",
+  "language":"切换语言"
 }

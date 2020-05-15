@@ -43,5 +43,8 @@ module.exports = {
   "reboot":"Reboot",
   "proxy_paths":"Proxy Paths",
   "proxy_server":"Proxy Server",
-  "proxy_server_placeholder":""
+  "proxy_server_placeholder":"",
+  "ocr_server":"Captcha Recognize API",
+  "ocr_server_placeholder":"",
+  "language":"Language"
 }

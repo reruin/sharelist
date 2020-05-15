@@ -49,10 +49,10 @@ var ready = false
 
 var resourcesCount = 0
 
-const recognize = async (image , lang) => {
+const recognize = async (image , type, lang) => {
   let server = config.getConfig('ocr_server')
   if(server){
-    let resp = await http.post(server,{ image , lang },{json:true})
+    let resp = await http.post(server,{ image , type, lang },{json:true})
     if(resp.body){
       return { error:false , result:resp.body.result}
     }

@@ -40,7 +40,7 @@ class Manager {
   }
 
   async ocr(image){
-    let resp = await this.recognize(image)
+    let resp = await this.recognize(image,'189cloud')
     let ret = { error:resp.error }
     if(!resp.error){
       let code = resp.result.replace(/[^a-z0-9]/i,'')

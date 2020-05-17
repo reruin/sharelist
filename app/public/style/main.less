@@ -15,8 +15,9 @@ a {
 
 iframe {
   border: none;
-  min-width: 90%;
-  min-height: 60vh;
+  width: 85%;
+  max-width: 980px;
+  height:100%;
 }
 
 .wrap {
@@ -158,7 +159,29 @@ section {
   }
 }
 
+.preview{
+  
+  header{
+    position:relative;
+    z-index: 1;
+    .detail{
+      display: flex;
+      justify-content: space-between;
+    }
+  }
 
+  section{
+    position:absolute;
+    left:0;
+    width:100%;
+    top:0;
+    height:100%;
+    padding-top:56px;
+    .detail{
+      height: 100%;
+    }
+  }
+}
 
 form,
 .menu {
@@ -182,6 +205,11 @@ footer {
   }
 }
 
+.ellipsis{
+  overflow: hidden;
+  text-overflow:ellipsis;
+  white-space: nowrap;
+}
 
 .sl-message {
   font-family: "Helvetica Neue For Number", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Helvetica Neue", Helvetica, Arial, sans-serif;

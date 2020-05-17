@@ -46,6 +46,15 @@ module.exports = ({ getSource }) => {
     }
   }
 
+  const pdf = async (data , req) => {
+    return {
+      ...data,
+      body: `
+        <iframe src="//mozilla.github.io/pdf.js/web/viewer.html?file=${encodeURIComponent(req.origin+decodeUrl(req))}"></iframe>
+      `
+    }
+  }
+
   const preview = {};
 
   ['md'].forEach(ext => {
@@ -57,6 +66,10 @@ module.exports = ({ getSource }) => {
   ['doc', 'docx', 'ppt', 'pptx', 'xls', 'xlsx'].forEach(ext => {
     preview[ext] = office
   });
+
+  ['pdf'].forEach(ext => {
+    preview[ext] = pdf
+  })
 
   return { name, version, preview }
 }

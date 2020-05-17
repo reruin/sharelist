@@ -44,7 +44,7 @@ module.exports = ({getSource , getPluginOption , setPluginOption , getConfig}) =
        body: videoPlayer == 'dplayer' ? `
         <script src="https://cdn.bootcdn.net/ajax/libs/flv.js/1.5.0/flv.min.js"></script>
         <script src="https://cdn.bootcss.com/dplayer/1.25.1/DPlayer.min.js"></script>
-        <div id="dplayer" style="margin-top:32px;height:60vh;"></div>
+        <div id="dplayer" style="height:100%;"></div>
         <script>
           var url = '${decodeUrl(req)}' , subtitle = url.replace(/\\.[^\\.]+?(\\?|$)/,'.vtt$1');
           var type=(url.split('?')[0].split(".").pop() == "flv") ? 'flv' : 'auto';

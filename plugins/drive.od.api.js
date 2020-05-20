@@ -21,7 +21,7 @@ const onedrive_max_age_dir = 3600 * 1000 * 0.9
 
 const chunkStream  = require('../app/utils/chunkStream')
 
-const isSecretUrl = (url) => {return false
+const isSecretUrl = (url) => {
   return !(url.includes('://localhost') == false && url.startsWith('https') == false)
 }
 

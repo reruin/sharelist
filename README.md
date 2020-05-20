@@ -140,7 +140,7 @@ ShareList 是一个易用的网盘工具，支持快速挂载 GoogleDrive、OneD
 
 由[drive.caiyun.js](app/plugins/drive.caiyun.js)插件实现。  
 ```
-挂载标示：ctcc
+挂载标示：cy
 挂载内容：  
     //用户名/初始文件夹ID?password=密码 
     /

@@ -2,7 +2,7 @@
 
 [![Build Status](https://api.travis-ci.com/reruin/sharelist.svg?branch=master)](https://travis-ci.com/reruin/sharelist)
 
-[README](README-en.md)  
+[ENGLISH](README-en.md)  
 
 ShareList 是一个易用的网盘工具，支持快速挂载 GoogleDrive、OneDrive ，可通过插件扩展功能。
 
@@ -13,6 +13,7 @@ ShareList 是一个易用的网盘工具，支持快速挂载 GoogleDrive、OneD
   * [挂载GoogleDrive](#挂载GoogleDrive) 
   * [挂载OneDrive（含世纪互联）](#挂载挂载OneDrive) 
   * [挂载天翼云盘（支持账号密码挂载）](#挂载天翼云盘) 
+  * [挂载和彩云](#挂载和彩云) 
   * [挂载本地文件](#挂载本地文件) 
   * [挂载GitHub](#挂载GitHub) 
   * [挂载蓝奏云](#挂载蓝奏云) 
@@ -135,7 +136,21 @@ ShareList 是一个易用的网盘工具，支持快速挂载 GoogleDrive、OneD
 
 ***
 
+### 挂载和彩云
+
+由[drive.caiyun.js](app/plugins/drive.caiyun.js)插件实现。  
+```
+挂载标示：ctcc
+挂载内容：  
+    //用户名/初始文件夹ID?password=密码 
+    /
+```
+建议填写```/```，ShareList将自动开启挂载向导，按指示填写用户名密码即可。   
+
+***
+
 ### 挂载本地文件
+
 由[drive.fs.js](app/plugins/drive.fs.js)插件实现。  
 ```
 挂载标示：fs   

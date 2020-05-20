@@ -173,7 +173,7 @@ class Manager {
 
         let resp = await this.request.get(captchaUrl,{
           headers:{
-            Cookies:cookies,
+            Cookie:cookies,
             Referer:'https://open.e.189.cn/api/logbox/oauth2/loginSubmit.do'
           },
           encoding: null
@@ -312,10 +312,10 @@ module.exports = ({ request, cache, getConfig, querystring, base64, saveDrive, g
 
   }
 
-  const fetchData = async (...rest) => {
+  const fetchData = async (id,rest) => {
     let resp , retry_times = 5
     while(true && --retry_times){
-      resp = await request.get(...rest)
+      resp = await request({async:true,...rest})
       //cookie失效
       if(resp.headers['Content-Type'] && resp.headers['Content-Type'].includes('text/html')){
         await manager.update(id)
@@ -350,7 +350,9 @@ module.exports = ({ request, cache, getConfig, querystring, base64, saveDrive, g
     }
    
     if(!path) path = -11
-    let resp = await fetchData(`https://cloud.189.cn/v2/listFiles.action?fileId=${path}&mediaType=&keyword=&inGroupSpace=false&orderBy=1&order=ASC&pageNum=1&pageSize=9999&noCache=${Math.random()}`,{
+    let resp = await fetchData(id,{
+      url:`https://cloud.189.cn/v2/listFiles.action?fileId=${path}&mediaType=&keyword=&inGroupSpace=false&orderBy=1&order=ASC&pageNum=1&pageSize=9999&noCache=${Math.random()}`,
+      method:'GET',
       headers:{
         'User-Agent':'Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/69.0.3497.100 Safari/537.36',
         'Cookie': cookies,
@@ -400,7 +402,9 @@ module.exports = ({ request, cache, getConfig, querystring, base64, saveDrive, g
 
     let data = options.data || {}
 
-    let resp = await fetchData(data.downloadUrl,{
+    let resp = await fetchData(id,{
+      url:data.downloadUrl,
+      method:'GET',
       followRedirect:false ,
       headers:{
         'User-Agent':'Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/69.0.3497.100 Safari/537.36',

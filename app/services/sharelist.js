@@ -8,21 +8,35 @@ const format = require('../utils/format')
 const { getDrive, getAuth, getStream , getSource, updateLnk, checkAuthority, updateFile, updateFolder , getPreview , isPreviewable , command } = require('./plugin')
 // const wrapReqStream = require('../utils/wrapReqStream')
 
-const diff = (a, b) => {
-  let ret = []
-  b.forEach((v, i) => {
-    if (v != a[i]) {
-      ret.push(v)
-    }
-  })
-  return ret
-}
-
-const requireAuth = (data) => !!(data.children && data.children.find(i=>(i.name == '.passwd')))
 
 class ShareList {
   constructor(root) {
+    this.passwdPaths = new Set()
+  }
 
+  async diff(a,b){
+    let ret = []
+    b.forEach((v, i) => {
+      if (v != a[i]) {
+        ret.push(v)
+      }
+    })
+    return ret
+  }
+
+  access(data){
+    return !!(data.children && data.children.find(i=>(i.name == '.passwd')))
+  }
+
+  searchPasswdPath(req){
+    for(let i = 1 ; i <= req.paths.length ; i++){
+      let path = '/'+req.paths.slice(0,i).join('/')
+      if( this.passwdPaths.has(path) && req.access.has(path) == false && !req.isAdmin){
+        return path
+      }
+    }
+    
+    return null
   }
 
   async path(req) {
@@ -59,17 +73,39 @@ class ShareList {
       }
     }
     else{
-      let data = await command('ls' , req.paths.join('/') , function(data){
-        if( requireAuth(data) && req.access.has(req.path) == false && !req.isAdmin) {
-          return true
+      let passwdPath = this.searchPasswdPath(req)
+      let targetPath = '/'+req.paths.join('/') , currentPath = ''
+      if(!passwdPath || passwdPath == targetPath || targetPath == '/'){
+        let currentPath
+        let data = await command('ls' , targetPath, (data , paths) => {
+          currentPath = '/' + paths.join('/')
+          if( this.access(data) && req.access.has(currentPath) == false) {
+            this.passwdPaths.add(currentPath)
+            return true
+          }
+        })
+        if(data.type == 'folder'){
+          if(currentPath && targetPath != currentPath){
+            return { type:'redirect', 'redirect':currentPath+'?rurl='+targetPath }
+          }else{
+            if( this.access(data) && req.access.has(req.path) == false && !req.isAdmin) {
+              this.passwdPaths.add(targetPath)
+              data.type = 'auth'
+            }else{
+              if(this.passwdPaths.has(targetPath)){
+                this.passwdPaths.delete(targetPath)
+              }
+            }
+            return data
+          }
+        }else{
+          return data
         }
-      })
-      
-      //管理员模式无需密码
-      if( requireAuth(data) && req.access.has(req.path) == false && !req.isAdmin) {
-        data.type = 'auth'
+        
+      }else{
+        return { type:'redirect', 'redirect':passwdPath+'?rurl='+targetPath }
       }
-      return data
+      
     }
     
   }

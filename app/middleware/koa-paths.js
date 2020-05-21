@@ -34,6 +34,9 @@ const parseConfig = (str) => {
   if(params.has('preview')){
     ret.isPreview = true
   }
+  if(params.has('forward')){
+    ret.isForward = true
+  }
   if(params.has('sort')){
     let s = params.get('sort')
     let r = {}

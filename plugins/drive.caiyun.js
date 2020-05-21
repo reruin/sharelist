@@ -83,9 +83,11 @@ class Manager {
       let hit = this.clientMap[data.username]
       if(hit){
         if( !hit.cookie || (Date.now() - hit.updated_at) > COOKIE_MAX_AGE ){
-          let result = await this.create(hit.username , hit.password)
+          let { result , msg } = await this.create(hit.username , hit.password)
           if( result ){
             hit = this.clientMap[data.username]
+          }else{
+            return { error: msg }
           }
         }
       }
@@ -175,6 +177,7 @@ class Manager {
         if(error){
           console.log('服务不可用')
           formdata.validateCode = ''
+          msg = '验证码识别服务不可用！'
           break;
         }
         else if(code){
@@ -241,9 +244,6 @@ class Manager {
       }
     }
 
-    if( needcaptcha && !formdata.validate){
-      msg = '请设置验证码识别接口！'
-    }
     return { result , msg }
   }
 
@@ -253,7 +253,7 @@ class Manager {
     if(data.username){
       let hit = this.clientMap[data.username]
       if(hit){
-        await this.create(hit.username , hit.password)
+        return await this.create(hit.username , hit.password)
       }
     }
   }
@@ -340,8 +340,11 @@ module.exports = ({ request, cache, getConfig, querystring, base64, saveDrive, g
 
     if (!predata.cookie) return predata
 
-    let { path, cookie , username } = await prepare(id)
+    let { path, cookie , username , error } = await prepare(id)
 
+    if(error){
+      return { id, type: 'folder', protocol: defaultProtocol,body:'异常：'+error }
+    }
     let r = cache.get(id)
     if (r) {
       if (

@@ -26,7 +26,11 @@ block content
         success:function(resp){
           $('button').removeClass('loading')
           if(resp.status == 0){
-            location.reload()
+            if(resp.rurl){
+              location.href = resp.rurl
+            }else{
+              location.reload()
+            }
           }else{
             alert(resp.message)
           }

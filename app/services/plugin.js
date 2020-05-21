@@ -52,8 +52,14 @@ var resourcesCount = 0
 const recognize = async (image , type, lang) => {
   let server = config.getConfig('ocr_server')
   if(server){
-    let resp = await http.post(server,{ image , type, lang },{json:true})
-    if(resp.body){
+    let resp 
+    try{
+      resp = await http.post(server,{ image , type, lang },{json:true})
+    }catch(e){
+      //console.log(e)
+    }
+    
+    if(resp && resp.body){
       return { error:false , result:resp.body.result}
     }
   }
@@ -64,10 +70,10 @@ const recognize = async (image , type, lang) => {
 /*
  * 根据文件id获取详情
  */
-const getSource = async (id , driverName) => {
+const getSource = async (id , driverName , data) => {
   if(driveMap.has(driverName)){
     let vendor = getDrive(driverName)
-    let d = await vendor.file(id , { req: config.getRuntime('req') } )
+    let d = await vendor.file(id , { req: config.getRuntime('req') , data } )
     if(d.outputType === 'file'){
       return await getFile(d.url)
     }

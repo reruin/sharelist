@@ -46,5 +46,7 @@ module.exports = {
   "proxy_server_placeholder":"",
   "ocr_server":"Captcha Recognize API",
   "ocr_server_placeholder":"",
-  "language":"Language"
+  "language":"Language",
+  "anonymous_enable":"Allow anonymous access",
+  "signout":"Sign Out"
 }

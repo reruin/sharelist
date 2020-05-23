@@ -88,6 +88,11 @@ const output = async (ctx , data)=>{
 
 module.exports = {
   async index(ctx){
+    if( !config.getConfig('anonymous_enable') && !ctx.runtime.isAdmin){
+      await ctx.renderSkin('manage')
+      return
+    }
+
     let downloadLinkAge = config.getConfig('max_age_download')
     let cursign = md5(config.getConfig('max_age_download_sign') + Math.floor(Date.now() / downloadLinkAge))
     //exclude folder

@@ -37,6 +37,8 @@ const db = createFiledb(configPath , {raw:true} , {
 
   anonymous_uplod_enable:0,
 
+  anonymous_enable:1,
+  
   plugin_option:[],
 
   custom_style:'',

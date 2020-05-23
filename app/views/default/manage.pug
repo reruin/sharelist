@@ -22,6 +22,9 @@ block content
           form.form-horizontal(style="display:inline-block;padding:5px;",method='post',action="/manage/api")
             input(type='hidden',name='a',value='reboot')
             button.btn.btn-danger= __('reboot')
+          form.form-horizontal(style="display:inline-block;padding:5px;",method='post',action="/manage/api")
+            input(type='hidden',name='a',value='signout')
+            button.btn.btn-danger= __('signout')
         .panel.panel-default
           .panel-heading
             span= __("general")
@@ -105,6 +108,13 @@ block content
                   select.form-control(name='anonymous_uplod_enable',value=config.anonymous_uplod_enable,required)
                     option(value='1', selected=config.anonymous_uplod_enable==1 ? 'selected' : null)= __('enable')
                     option(value='0', selected=config.anonymous_uplod_enable==0 ? 'selected' : null)= __('disable')
+              .form-group
+                .col-sm-4
+                  label= __('anonymous_enable')
+                .col-sm-8
+                  select.form-control(name='anonymous_enable',value=config.anonymous_enable,required)
+                    option(value='1', selected=config.anonymous_enable==1 ? 'selected' : null)= __('enable')
+                    option(value='0', selected=config.anonymous_enable==0 ? 'selected' : null)= __('disable')
               .form-group
                 .col-sm-4
                   label= __('ocr_server')
@@ -237,7 +247,7 @@ block content
         }
         
         if( 
-          (resp.a =='signin' || resp.a == 'token') && resp.status == 0
+          (resp.a =='signin' || resp.a == 'token' || resp.a == 'signout') && resp.status == 0
         ){
           location.reload()
         }else if(resp.status != 0){

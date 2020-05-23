@@ -46,5 +46,7 @@ module.exports = {
   "proxy_server_placeholder":"留空使用本机中转",
   "ocr_server":"验证码识别接口",
   "ocr_server_placeholder":"留空使用本程序内置接口",
-  "language":"切换语言"
+  "language":"切换语言",
+  "anonymous_enable":"允许匿名浏览",
+  "signout":"登出"
 }

@@ -1,6 +1,6 @@
 const service = require('../services/sharelist')
 const config = require('../config')
-
+const qs = require('querystring')
 // const { sendFile , sendHTTPFile } = require('../utils/sendfile')
 const { parsePath , pathNormalize , enablePreview, enableRange , isRelativePath , markdownParse , md5 } = require('../utils/base')
 
@@ -52,10 +52,21 @@ const output = async (ctx , data)=>{
 
   if(isPreview){
     //代理 或者 文件系统
-    await ctx.renderSkin('detail',{
-      data : await service.preview(data) , 
-      url : isProxy ? (ctx.path + '?' + ctx.querystring.replace(/preview&?/,'')) : url
-    })
+    let re = await service.preview(data)
+    if(re.outputType == 'stream'){
+      ctx.body = re.body
+    }else{
+      let query = ctx.query || {}
+      delete query.preview
+      let querystr = qs.stringify(query)
+      let purl = ctx.path + ( querystr ? ('?' + querystr) : '')
+
+      await ctx.renderSkin('detail',{
+        data : re , 
+        url : isProxy ? purl : url
+      })
+    }
+
   }
   else{
     // outputType = { file | redirect | url | stream }

@@ -1,5 +1,7 @@
 const md = require('markdown-it')()
 
+const qs = require('querystring')
+
 /*
  * 文档在线预览插件
  */
@@ -7,7 +9,9 @@ const name = 'documentParse'
 
 const version = '1.0'
 
-module.exports = ({ getSource }) => {
+module.exports = ({ getSource , getConfig, request }) => {
+
+  const fileMap = {}
 
   const markdown = async (data, req) => {
     let html = md.render(await getSource(data.id , data.protocol));
@@ -33,24 +37,65 @@ module.exports = ({ getSource }) => {
     }
   }
 
-  const decodeUrl = (req) => {
-    return req.path + ( req.querystring ? '?' + req.querystring.replace(/preview&?/,'') : '')
+  const createUrl = (req , withToken = false) => {
+    let query = req.query || {}
+    delete query.preview
+    if(withToken){
+      query.token = getConfig('token')
+    }
+    let querystr = qs.stringify(query)
+    console.log(querystr)
+    return req.origin + req.path + ( querystr ? ('?' + querystr) : '')
   }
 
+
   const office = async (data, req) => {
-    return {
-      ...data,
-      body: `
-        <iframe src="https://view.officeapps.live.com/op/view.aspx?src=${encodeURIComponent(req.origin+decodeUrl(req))}"></iframe>
-      `
+    if( req.query.conv && fileMap[req.path]){
+      let url = fileMap[req.path]
+      delete fileMap[req.path]
+      return {
+        ...data,
+        outputType:'stream',
+        body:request({url})
+      }
     }
+
+    let rawUrl = createUrl(req,true)
+    let WOPISrc = encodeURIComponent(`http://us1-view-wopi.wopi.live.net:808/oh/wopi/files/@/wFileId?wFileId=${encodeURIComponent(rawUrl)}`)
+
+    let url = `https://us1-word-view.officeapps.live.com/wv/wordviewerframe.aspx?ui=zh-CN&rs=zh-CN&WOPISrc=${WOPISrc}&access_token_ttl=0`
+    let resp = await request.get(url,{ headers:{'User-Agent':'Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/69.0.3497.100 Safari/537.36'}})
+    let previewUrl
+    if(resp.body){
+      let z = (resp.body.match(/(?<=z\=)[a-z0-9]+?(?=\')/i) || [''])[0]
+      if(z){
+        previewUrl = `https://us1-word-view.officeapps.live.com/wv/WordViewer/Document.pdf?WOPIsrc=${WOPISrc}&access_token=1&access_token_ttl=0&z=${z}&type=accesspdf`
+      }
+    }
+
+    if(previewUrl) {
+      fileMap[req.path] = previewUrl
+      let url = req.origin + req.path + '?' + qs.stringify({ preview:1, conv:1 })
+      let body = `<iframe src="//mozilla.github.io/pdf.js/web/viewer.html?file=${encodeURIComponent(url)}"></iframe>`
+      return {
+        ...data,
+        body
+      }
+      
+    }else{
+      return { 
+        ...data,
+        body:'无法预览'
+      }
+    }
+    
   }
 
   const pdf = async (data , req) => {
     return {
       ...data,
       body: `
-        <iframe src="//mozilla.github.io/pdf.js/web/viewer.html?file=${encodeURIComponent(req.origin+decodeUrl(req))}"></iframe>
+        <iframe src="//mozilla.github.io/pdf.js/web/viewer.html?file=${encodeURIComponent(createUrl(req))}"></iframe>
       `
     }
   }

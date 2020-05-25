@@ -61,7 +61,7 @@ http.get = (url, opts = {}) => {
     //console.log('DEBUG:', params)
   }
   return new Promise(function(resolve, reject) {
-    request(params, function(error, response, body) {
+    request(params, function(error, response, body) {console.log(error)
       if (error) {
         reject(error)
       } else {

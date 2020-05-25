@@ -64,6 +64,12 @@ module.exports = async(ctx, next) => {
   ctx.paths = paths
   ctx.paths_raw = paths_raw
 
+  let query = parseConfig(ctx.querystring)
+  let isAdmin = !!ctx.session.admin
+  //兼容 get 验证
+  if( ctx.query.token == getConfig('token')){
+    isAdmin = true
+  }
   let runtime = {
     href:ctx.href,
     path:ctx.path,
@@ -76,12 +82,10 @@ module.exports = async(ctx, next) => {
     protocol:ctx.protocol,
     path:ctx.path,
     paths:paths,
-    isAdmin:!!ctx.session.admin,
+    isAdmin,
     access:ctx.session.access,
-
-    ...parseConfig(ctx.querystring)
+    ...query
   }
-
   if( ctx.get('x-request') ){
     let data = {}
     try{

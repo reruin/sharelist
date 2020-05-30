@@ -38,6 +38,8 @@ const db = createFiledb(configPath , {raw:true} , {
   anonymous_uplod_enable:0,
 
   anonymous_enable:1,
+
+  anonymous_download:'.!(mp3)',
   
   plugin_option:[],
 

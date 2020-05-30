@@ -1,6 +1,6 @@
 const service = require('../services/sharelist')
 const config = require('../config')
-
+const qs = require('querystring')
 // const { sendFile , sendHTTPFile } = require('../utils/sendfile')
 const { parsePath , pathNormalize , enablePreview, enableRange , isRelativePath , markdownParse , md5 } = require('../utils/base')
 
@@ -14,11 +14,26 @@ const isProxyPath = (path , paths) => {
   ) ? true : false
 }
 
+const enableDownload = (ctx, data) => {
+  if(ctx.runtime.isAdmin) return true
+  let result = true
+
+  let expr = config.getConfig('anonymous_download')
+  if(data.name && expr){
+    result = false
+    try{
+      result = new RegExp(expr).test(data.name)
+    }catch(e){
+    }
+  }
+  return result
+} 
+
 const output = async (ctx , data)=>{
 
-  const isPreview = ctx.runtime.isPreview
+  const download = enableDownload(ctx, data)
 
-  const isforward = ctx.runtime.isForward
+  const { isPreview , isForward , isAdmin } = ctx.runtime
 
   const downloadLinkAge = config.getConfig('max_age_download')
 
@@ -40,8 +55,8 @@ const output = async (ctx , data)=>{
   }
 
   //返回必要的 url 和 headers
-  if(isforward && data){
-    if( config.checkAccess(ctx.query.token) ){
+  if(isForward && data){
+    if( isAdmin ){
       ctx.body = { ...data }
     }else{
       ctx.body = { error:{status:401 , msg:'401 Unauthorized'} }
@@ -50,14 +65,39 @@ const output = async (ctx , data)=>{
     return
   }
 
+  
+
   if(isPreview){
-    //代理 或者 文件系统
-    await ctx.renderSkin('detail',{
-      data : await service.preview(data) , 
-      url : isProxy ? (ctx.path + '?' + ctx.querystring.replace(/preview&?/,'')) : url
-    })
+    let re = await service.preview(data)
+    let enableDownload = true
+    if(!download){
+      if(re.isConv){
+        enableDownload = false
+      }else{
+        ctx.status = 401
+        return
+      }
+    }
+    if(re.outputType == 'stream'){
+      ctx.body = re.body
+    }else{
+      let query = ctx.query || {}
+      delete query.preview
+      let querystr = qs.stringify(query)
+      let purl = ctx.path + ( querystr ? ('?' + querystr) : '')
+
+      await ctx.renderSkin('detail',{
+        data : re , enableDownload,
+        url : isProxy ? purl : url
+      })
+    }
+
   }
   else{
+    if(!download){
+      ctx.status = 401
+      return
+    }
     // outputType = { file | redirect | url | stream }
     // ctx , url , protocol , type , data
     if(data.outputType === 'file'){
@@ -203,12 +243,11 @@ module.exports = {
       ctx.body = result
     }
     else{
-
       if( downloadLinkAge > 0 && ctx.query.t != cursign ) {
         ctx.status = 403
         return
       }
-
+      //enableDownload
       if( ignoreexts.includes(data.ext) || ignorefiles.includes(data.name) ){
         ctx.status = 404
       }else{

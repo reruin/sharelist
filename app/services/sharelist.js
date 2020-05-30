@@ -79,7 +79,7 @@ class ShareList {
         let currentPath
         let data = await command('ls' , targetPath, (data , paths) => {
           currentPath = '/' + paths.join('/')
-          if( this.access(data) && req.access.has(currentPath) == false) {
+          if( this.access(data) && req.access.has(currentPath) == false && !req.isAdmin) {
             this.passwdPaths.add(currentPath)
             return true
           }

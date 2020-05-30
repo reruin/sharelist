@@ -48,5 +48,7 @@ module.exports = {
   "ocr_server_placeholder":"留空使用本程序内置接口",
   "language":"切换语言",
   "anonymous_enable":"允许匿名浏览",
-  "signout":"登出"
+  "signout":"登出",
+  "anonymous_download":"匿名下载限制",
+  "anonymous_download_placeholder":"匹配正则表达式，留空表示允许下载任意文件。"
 }

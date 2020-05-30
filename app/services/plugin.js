@@ -51,16 +51,86 @@ var resourcesCount = 0
 
 const recognize = async (image , type, lang) => {
   let server = config.getConfig('ocr_server')
-  if(server){
-    let resp 
-    try{
-      resp = await http.post(server,{ image , type, lang },{json:true})
-    }catch(e){
-      //console.log(e)
+  let preProcess = (data) => {
+
+    let serverData = server.split('#')
+    let output = 'result'
+    let ct = 'form'
+    let options = {
+      url:serverData[0],
+      method:'POST',
     }
+    let reform = {}
+    if(serverData[1]){
+      let form = querystring.parse(serverData[1] || '') || {}
+      if(form.$noscheme){
+        data.image = data.image.split(',')[1]
+        delete form.$scheme
+      }
+      if( form.$method ) {
+        options.method == form.$method
+        delete form.$method
+      }
+      if( form.$ct ){
+        ct = form.$ct
+        delete form.$ct
+      }
+      if( form.$output ){
+        output = form.$output
+        delete form.$output
+      }
+
+      for(let i in form){
+        let value = form[i]
+        if(data[value]){
+          reform[i] = data[value]
+        }else{
+          reform[i] = value
+        }
+      }
+    }else{
+      reform = data
+    }
+
+    options[ct] = reform
     
+    if(output){
+      if( output != 'raw'){
+        options.json = true
+      }
+    }
+
+    return { options , output }
+  }
+
+  const getValue = (value , output) => {
+    if(!value) return value
+    let ret = value
+    if(output != 'raw'){
+      try{
+        let fn = new Function(`return this.${output};`);
+        ret = fn.call(value) || ''
+      }catch(e){
+        ret = ''
+      }
+    }
+    return ret
+  }
+
+  if(server){
+    let resp
+    let { options , output } = preProcess({image , type, lang })
+    // console.log(options,output)
+    try{
+      resp = await http({...options , async:true})
+    }catch(e){
+      console.log(e)
+    }
+    // console.log(options,resp.body)
     if(resp && resp.body){
-      return { error:false , result:resp.body.result}
+      return { error:false , result:getValue(resp.body , output)}
+    }else{
+      return { error:false , result:''}
     }
   }
 

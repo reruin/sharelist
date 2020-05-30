@@ -160,7 +160,7 @@ class Manager {
 
     let result = false
     let msg = ''
-    let needcaptcha = await this.needcaptcha({
+    let needcaptcha = true;await this.needcaptcha({
       accountType: '01',
       userName:username,
       appKey: 'cloud',
@@ -187,6 +187,8 @@ class Manager {
           imgBase64 = "data:" + resp.headers["content-type"] + ";base64," + Buffer.from(resp.body).toString('base64');
         }
         let { error , code } = await this.ocr(imgBase64)
+        console.log('validateCode:['+code+']')
+
         //服务不可用
         if(error){
           formdata.validateCode = ''
@@ -195,7 +197,6 @@ class Manager {
         }
         else if(code){
           formdata.validateCode = code
-          console.log('validateCode:['+code+']')
         }
         //无法有效识别
         else{
@@ -221,6 +222,7 @@ class Manager {
 
         continue;
       }
+
       if( resp.body && resp.body.toUrl ){
         resp = await this.request.get(resp.body.toUrl , { followRedirect:false, headers })
         let cookies = resp.headers['set-cookie'].join('; ')
@@ -233,6 +235,7 @@ class Manager {
         break;
       }else{
         msg = resp.body.msg
+        break;
       }
 
     }
@@ -367,7 +370,7 @@ module.exports = ({ request, cache, getConfig, querystring, base64, saveDrive, g
       },
       json:true
     })
-
+  
     if (!resp || !resp.body) {
       return { id, type: 'folder', protocol: defaultProtocol,body:resp.msg || '解析错误' }
 

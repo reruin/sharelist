@@ -17,6 +17,8 @@ module.exports = ({ request , getConfig , datetime , cache , retrieveSize }) => 
 
   const allowExt = 'd,apk,zip,rar,txt,7z,z,e,ct,doc,docx,exe,ke,db,tar,pdf,epub,mobi,azw,azw3,w3x,osk,osz,jar,xpk,cpk,lua,dmg,ppt,pptx,xls,xlsx,mp3,gz,psd,ipa,iso,ttf,txf,ttc,img,bin,gho,patch'.split(',')
 
+  const convExt = 'txt,ct'
+
   const parse = (id) => {
     let tmp = id.split('@')
     let passwd , fid
@@ -29,10 +31,10 @@ module.exports = ({ request , getConfig , datetime , cache , retrieveSize }) => 
     return { passwd , fid }
   }
 
-  const allowExtReg = new RegExp('('+allowExt.join('|')+').txt$')
+  const allowExtReg = new RegExp('('+allowExt.join('|')+').('+convExt.replace(/\,/g,'|')+')$')
   const filterExt = (name) => {
     if(!allowExtReg.test(name)){
-      return name.replace(/\.txt$/,'')
+      return name.replace(new RegExp('.('+convExt.replace(/\,/g,'|')+')$'),'')
     }else{
       return name
     }
@@ -117,7 +119,6 @@ module.exports = ({ request , getConfig , datetime , cache , retrieveSize }) => 
           let children = []
           res.body.text.forEach( i => {
             let name = filterExt(i.name_all)//.replace(/\.ct$/,'')
-
             children.push(updateFile({
               id:i.id,
               name:name,
@@ -157,9 +158,10 @@ module.exports = ({ request , getConfig , datetime , cache , retrieveSize }) => 
       code = 'var data = {}; function $c(){ return data };' + code.replace('document.getElementById','$c').replace(/document/g,'') + ';data.onfocus();return data.href;'
       url = (new Function(code))()
     }catch(e){
-
+      console.log(e)
     }
     
+    console.log(url)
     if(!url) return false
 
     let name = (body.match(/(?<="md">)[^<]+/) || [''])[0].replace(/\s*$/,'')

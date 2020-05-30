@@ -44,7 +44,6 @@ module.exports = ({ getSource , getConfig, request }) => {
       query.token = getConfig('token')
     }
     let querystr = qs.stringify(query)
-    console.log(querystr)
     return req.origin + req.path + ( querystr ? ('?' + querystr) : '')
   }
 
@@ -55,6 +54,7 @@ module.exports = ({ getSource , getConfig, request }) => {
       delete fileMap[req.path]
       return {
         ...data,
+        isConv:true,
         outputType:'stream',
         body:request({url})
       }
@@ -85,6 +85,7 @@ module.exports = ({ getSource , getConfig, request }) => {
     }else{
       return { 
         ...data,
+        isConv:true,
         body:'无法预览'
       }
     }

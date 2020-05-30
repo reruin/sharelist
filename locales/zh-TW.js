@@ -47,5 +47,8 @@ module.exports = {
   "ocr_server":"驗證碼識別接口",
   "ocr_server_placeholder":"留空使用本程式內置接口",
   "language":"切換語言",
-  "anonymous_enable":"允許匿名瀏覽"
+  "anonymous_enable":"允許匿名瀏覽",
+  "signout":"登出",
+  "anonymous_download":"匿名下载限制",
+  "anonymous_download_placeholder":"匹配正則表達式，留空表示允許下載任意文件。"
 }

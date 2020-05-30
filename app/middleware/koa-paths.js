@@ -1,6 +1,6 @@
 const parseXML = require('xml2js').parseString
 const parsePath = require('../utils/base').parsePath
-const { setLocation , getConfig , setRuntime } = require('../config')
+const { setLocation , getConfig , setRuntime , checkAccess } = require('../config')
 const qs = require('querystring')
 const { URLSearchParams } = require('url')
 
@@ -67,7 +67,7 @@ module.exports = async(ctx, next) => {
   let query = parseConfig(ctx.querystring)
   let isAdmin = !!ctx.session.admin
   //兼容 get 验证
-  if( ctx.query.token == getConfig('token')){
+  if( checkAccess(ctx.query.token) ){
     isAdmin = true
   }
   let runtime = {

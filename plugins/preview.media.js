@@ -36,7 +36,6 @@ module.exports = ({getSource , getPluginOption , setPluginOption , getConfig}) =
     let query = req.query || {}
     delete query.preview
     let querystr = qs.stringify(query)
-    console.log('>>>>>>>>>>>',req,querystr ? 1 : 0,)
     return req.path + ( querystr ? ('?' + querystr) : '')
   }
 

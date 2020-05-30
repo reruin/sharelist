@@ -48,5 +48,7 @@ module.exports = {
   "ocr_server_placeholder":"",
   "language":"Language",
   "anonymous_enable":"Allow anonymous access",
-  "signout":"Sign Out"
+  "signout":"Sign Out",
+  "anonymous_download":"Anonymous download rules",
+  "anonymous_download_placeholder":"Match regular expression, leave blank to allow downloading any files"
 }

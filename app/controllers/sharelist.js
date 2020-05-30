@@ -264,9 +264,7 @@ module.exports = {
     let ignorepaths = config.getIgnorePaths()
     let isAdmin = ctx.runtime.isAdmin
     let base_url = ctx.path == '/' ? '' : ctx.path
-    
     const data = await service.path(ctx.runtime)
-
     //data is readonly
     if( data === false || data === 401){
       ctx.status = 404

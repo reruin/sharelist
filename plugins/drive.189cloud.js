@@ -160,7 +160,7 @@ class Manager {
 
     let result = false
     let msg = ''
-    let needcaptcha = true;await this.needcaptcha({
+    let needcaptcha = await this.needcaptcha({
       accountType: '01',
       userName:username,
       appKey: 'cloud',

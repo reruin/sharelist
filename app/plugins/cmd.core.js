@@ -93,8 +93,8 @@ module.exports = ({ cache , getVendor , getConfig , getRuntime , updateFolder , 
       id: i.path.split(':').slice(1).join(':'),
       protocol: i.path.split(':')[0],
       name: i.name,
-      size: '-',
-      updated_at: '-',
+      size: 0,
+      updated_at: '',
       type: 'folder'
     }))
 

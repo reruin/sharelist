@@ -52,7 +52,7 @@ const propsCreate = (data, options) => {
       out += `<${name}:${key}>${data.name.replace(/&/g,'&amp;').replace(/\</g,'&lt;')}</${name}:${key}>`
     }
     if (key == 'getcontentlength') {
-      out += `<${name}:${key}>${parseInt(data.size)}</${name}:${key}>`
+      out += `<${name}:${key}>${parseInt(data.size || 0)}</${name}:${key}>`
     }
     if (key == 'resourcetype') {
       out += `<${name}:${key}>${data.type == 'folder' ? `<${name}:collection/>` : ''}</${name}:${key}>`
@@ -173,20 +173,18 @@ const respCreate = (data, options) => {
   return body
 }
 
-class WebDAV {
+class Request {
   constructor(ctx) {
-    this.path = null
     this.ctx = ctx
     this.davPoweredBy = null
     this.httpAuthRealm = "ShareList WebDAV"
-
     this.allows = ['GET', 'PUT', 'HEAD', 'OPTIONS', 'PROPFIND']
   }
 
-  async request(ctx, next) {
-    this.ctx = ctx
+  async exec(){
+    let { ctx } = this
 
-    this.path = /*this.ctx.protocol + '://' + this.ctx.host +*/ this.ctx.path
+    this.path = /*this.ctx.protocol + '://' + this.ctx.host +*/ ctx.path
 
     this.setHeader("X-Dav-Powered-By", this.davPoweredBy || 'ShareList')
 
@@ -194,7 +192,7 @@ class WebDAV {
 
     this.incompatibleUserAgents = /(WebDAVFS|Microsoft-WebDAV-MiniRedir)/i.test(ctx.get('user-agent'))
 
-    let method = this.ctx.method.toLowerCase()
+    let method = ctx.method.toLowerCase()
 
     const wrapperFn = "http_" + method;
     if (
@@ -207,7 +205,6 @@ class WebDAV {
       return false
     }
   }
-
   setHeader(k, v) {
     this.ctx.set(k, v)
   }
@@ -252,7 +249,6 @@ class WebDAV {
    * @return void
    */
   async http_propfind() {
-    
     let options = propfindParse(this.ctx.webdav.data)
     options.path = this.path
     options.depth = this.depth
@@ -360,4 +356,9 @@ class WebDAV {
   */
 }
 
-module.exports = new WebDAV()
+const webdav = async (ctx , next) => {
+  let req = new Request(ctx)
+  return await req.exec()
+}
+
+module.exports = webdav

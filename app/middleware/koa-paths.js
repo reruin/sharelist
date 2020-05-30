@@ -22,8 +22,8 @@ const xml2js = ( xml , options = {}) => {
   })
 }
 
-const guessWebDAV = (ua) => {
-  return /(Microsoft\-WebDAV|FileExplorer|WinSCP|WebDAVLib)/i.test(ua)
+const guessWebDAV = (ua) => {console.log(ua)
+  return /(Microsoft\-WebDAV|FileExplorer|WinSCP|WebDAVLib|WebDAVFS|rclone)/i.test(ua)
 }
 
 const webdavMethods = ['options','head','trace','get','put','post','delete','mkcol','propfind','proppatch','copy','move','lock','unlock']
@@ -139,7 +139,6 @@ module.exports = async(ctx, next) => {
     }
 
     ctx.runtime.isWebDAV = true
-    console.log(ctx.request.headers['user-agent'])
     //upload
     if(method == 'PUT'){
       //{ type: 'upload', name: file.name, size: file.size , path : opts.path }
@@ -154,7 +153,7 @@ module.exports = async(ctx, next) => {
     if(!runtime.isAdmin && ctx.get('authorization')){
       let [, value] = ctx.get('authorization').split(' ');
       let pairs = Buffer.from(value, "base64").toString("utf8").split(':')
-      if( getConfig('token') == pairs[1] ){
+      if( checkAccess(pairs[1]) ){
         ctx.session.admin = true
         runtime.isAdmin = true
       }

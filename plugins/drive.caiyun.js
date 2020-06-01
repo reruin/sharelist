@@ -236,7 +236,10 @@ class Manager {
         }else{
           let cookie = resp.headers['set-cookie'].join('; ')
           let client = { username , password , cookie , updated_at: Date.now() }
-          await this.updateHandle(this.stringify({username , password , cookie}))
+          if(this.clientMap[username]){
+            client.path = this.clientMap[username].path
+          }
+          await this.updateHandle(this.stringify(client))
           this.clientMap[username] = client
           result = true
           break;

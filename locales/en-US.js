@@ -50,5 +50,6 @@ module.exports = {
   "anonymous_enable":"Allow anonymous access",
   "signout":"Sign Out",
   "anonymous_download":"Anonymous download rules",
-  "anonymous_download_placeholder":"Match regular expression, leave blank to allow downloading any files"
+  "anonymous_download_placeholder":"Match regular expression, leave blank to allow downloading any files",
+  "index_enable":"Index"
 }

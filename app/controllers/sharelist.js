@@ -165,6 +165,11 @@ module.exports = {
       ctx.redirect(data.redirect)
     }
     else if(data.type == 'folder'){
+      //允许索引
+      if( !config.getConfig('index_enable') && !ctx.runtime.isAdmin){
+        ctx.status = 404
+        return
+      }
       let ret = { base_url , parent , data:[] }
 
       let preview_enable = config.getConfig('preview_enable')

@@ -382,9 +382,8 @@ module.exports = ({ request, cache, getConfig, querystring, base64, saveDrive, g
 
     if (!resp || !resp.body) {
       return { id, type: 'folder', protocol: defaultProtocol,body:'解析错误' }
-
     }
-    let children = [].concat(resp.body.dci.cataloginfos,resp.body.dci.contents).map( file => {
+    let children = [].concat(resp.body.dci.cataloginfos || [],resp.body.dci.contents || []).map( file => {
       let folder = !!file.ETagOprType
       let subid = path + '/' + (folder ? file.catalogID : file.contentID)
       let item = {

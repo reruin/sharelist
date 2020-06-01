@@ -64,15 +64,13 @@ const output = async (ctx , data)=>{
     
     return
   }
-
   
-
   if(isPreview){
     let re = await service.preview(data)
-    let enableDownload = true
+    let displayDownloadLabel = true
     if(!download){
-      if(re.isConv){
-        enableDownload = false
+      if(re.convertible){
+        displayDownloadLabel = false
       }else{
         ctx.status = 401
         return
@@ -87,7 +85,7 @@ const output = async (ctx , data)=>{
       let purl = ctx.path + ( querystr ? ('?' + querystr) : '')
 
       await ctx.renderSkin('detail',{
-        data : re , enableDownload,
+        data : re , displayDownloadLabel,
         url : isProxy ? purl : url
       })
     }
@@ -264,7 +262,9 @@ module.exports = {
     let ignorepaths = config.getIgnorePaths()
     let isAdmin = ctx.runtime.isAdmin
     let base_url = ctx.path == '/' ? '' : ctx.path
+    
     const data = await service.path(ctx.runtime)
+
     //data is readonly
     if( data === false || data === 401){
       ctx.status = 404

@@ -54,13 +54,14 @@ module.exports = ({ getSource , getConfig, request }) => {
       delete fileMap[req.path]
       return {
         ...data,
-        isConv:true,
+        convertible:true,
         outputType:'stream',
         body:request({url})
       }
     }
 
     let rawUrl = createUrl(req,true)
+    rawUrl = 'https://sharelist.reruin.net/%E6%9C%AC%E5%9C%B0%E6%96%87%E4%BB%B6/preview/work.docx'
     let WOPISrc = encodeURIComponent(`http://us1-view-wopi.wopi.live.net:808/oh/wopi/files/@/wFileId?wFileId=${encodeURIComponent(rawUrl)}`)
 
     let url = `https://us1-word-view.officeapps.live.com/wv/wordviewerframe.aspx?ui=zh-CN&rs=zh-CN&WOPISrc=${WOPISrc}&access_token_ttl=0`
@@ -79,13 +80,14 @@ module.exports = ({ getSource , getConfig, request }) => {
       let body = `<iframe src="//mozilla.github.io/pdf.js/web/viewer.html?file=${encodeURIComponent(url)}"></iframe>`
       return {
         ...data,
+        convertible:true,
         body
       }
       
     }else{
       return { 
         ...data,
-        isConv:true,
+        convertible:true,
         body:'无法预览'
       }
     }

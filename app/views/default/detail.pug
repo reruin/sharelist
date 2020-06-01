@@ -5,7 +5,7 @@ block content
     header
       .wrap.detail
         a.home.ellipsis #{data.name}
-        -if(enableDownload)
+        -if(displayDownloadLabel)
           a.download-menu(href=url)
             i.ic.ic-download
     section

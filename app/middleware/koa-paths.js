@@ -22,7 +22,7 @@ const xml2js = ( xml , options = {}) => {
   })
 }
 
-const guessWebDAV = (ua) => {console.log(ua)
+const guessWebDAV = (ua) => {
   return /(Microsoft\-WebDAV|FileExplorer|WinSCP|WebDAVLib|WebDAVFS|rclone)/i.test(ua)
 }
 

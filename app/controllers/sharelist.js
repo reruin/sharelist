@@ -1,7 +1,7 @@
 const service = require('../services/sharelist')
 const config = require('../config')
 const qs = require('querystring')
-// const { sendFile , sendHTTPFile } = require('../utils/sendfile')
+const { sendRedirect } = require('../utils/sendfile')
 const { parsePath , pathNormalize , enablePreview, enableRange , isRelativePath , markdownParse , md5 } = require('../utils/base')
 
 const requireAuth = (data) => !!(data.children && data.children.find(i=>(i.name == '.passwd')))
@@ -35,13 +35,13 @@ const output = async (ctx , data)=>{
 
   const { isPreview , isForward , isAdmin } = ctx.runtime
 
-  const downloadLinkAge = config.getConfig('max_age_download')
+  //const downloadLinkAge = config.getConfig('max_age_download')
 
   const proxyServer = config.getConfig('proxy_server')
 
   const proxy_paths = config.getConfig('proxy_paths') || []
 
-  const isProxy = (config.getConfig('proxy_enable') && isProxyPath(ctx.path , proxy_paths)) || data.proxy || downloadLinkAge > 0 || !!ctx.webdav
+  const isProxy = (config.getConfig('proxy_enable') && isProxyPath(ctx.path , proxy_paths)) || data.proxy
 
   let url = data.url
   //部分webdav客户端不被正常识别
@@ -98,24 +98,28 @@ const output = async (ctx , data)=>{
     }
     // outputType = { file | redirect | url | stream }
     // ctx , url , protocol , type , data
-    if(data.outputType === 'file'){
-      await service.stream(ctx , url , data.outputType , data.protocol)
+    let { outputType = 'url' , protocol } = data
+
+    let headers = {}
+    //https://www.ietf.org/rfc/rfc4437.txt
+    if(ctx.runtime.isWebdav){
+      headers['Redirect-Ref'] = ''
+    }
+
+    if( outputType == 'file'  || outputType == 'stream'){
+      await service.stream(ctx , url , outputType , protocol , data)
     }
     
-    else if( data.outputType == 'redirect'){
+    else if( outputType == 'redirect'){
       ctx.redirect( url )
     }
-    
-    else if( data.outputType == 'stream' ){
-      await service.stream(ctx , url , data.outputType , data.protocol , data)
-    }
-    // http
-    else{
-      if(isProxy){
+    // url
+    else if(outputType == 'url'){
+      if(isProxy || (data.$octetStream && ctx.runtime.isWebdav)){
         if( proxyServer ){
           ctx.redirect( (proxyServer+ctx.path).replace(/(?<!\:)\/\//g,'/') )
         }else{
-          await service.stream(ctx , url , 'url' , data.protocol , data)
+          await service.stream(ctx , url , 'url' , protocol , data)
         }
       }else{
         ctx.redirect( url )

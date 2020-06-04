@@ -24,7 +24,7 @@ class ShareList {
     return ret
   }
 
-  access(data){
+  hasPasswdFile(data){
     return !!(data.children && data.children.find(i=>(i.name == '.passwd')))
   }
 
@@ -75,20 +75,24 @@ class ShareList {
     else{
       let passwdPath = this.searchPasswdPath(req)
       let targetPath = '/'+req.paths.join('/') , currentPath = ''
+      let qs = req.querystring ? ('?' + req.querystring) : ''
+      let targetFullPath = encodeURIComponent(targetPath+qs)
+
       if(!passwdPath || passwdPath == targetPath || targetPath == '/'){
         let currentPath
         let data = await command('ls' , targetPath, (data , paths) => {
           currentPath = '/' + paths.join('/')
-          if( this.access(data) && req.access.has(currentPath) == false && !req.isAdmin) {
+          if( this.hasPasswdFile(data) && req.access.has(currentPath) == false && !req.isAdmin) {
             this.passwdPaths.add(currentPath)
+            // console.log(currentPath,true,req.access,encodeURIComponent(currentPath))
             return true
           }
         })
         if(data.type == 'folder'){
           if(currentPath && targetPath != currentPath){
-            return { type:'redirect', 'redirect':currentPath+'?rurl='+targetPath }
+            return { type:'redirect', 'redirect':currentPath+'?rurl='+targetFullPath}
           }else{
-            if( this.access(data) && req.access.has(req.path) == false && !req.isAdmin) {
+            if( this.hasPasswdFile(data) && req.access.has(decodeURIComponent(req.path)) == false && !req.isAdmin) {
               this.passwdPaths.add(targetPath)
               data.type = 'auth'
             }else{
@@ -103,7 +107,7 @@ class ShareList {
         }
         
       }else{
-        return { type:'redirect', 'redirect':passwdPath+'?rurl='+targetPath }
+        return { type:'redirect', 'redirect':passwdPath+'?rurl='+targetFullPath }
       }
       
     }
@@ -119,7 +123,7 @@ class ShareList {
     if (auth) {
       let ra = await auth(req.body.user, req.body.passwd, body.data)
       if(ra){
-        req.access.add(req.path)
+        req.access.add(decodeURIComponent(req.path))
         return true
       }
     } 

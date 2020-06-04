@@ -242,7 +242,7 @@ module.exports = {
       })
     }
     else if(data.type == 'auth_response'){
-      let result = {status:0 , message:"success" , rurl:ctx.query.rurl}
+      let result = {status:0 , message:"success" , rurl:decodeURIComponent(ctx.query.rurl)}
       if(!data.result){
         result.status = 403
         result.message = '验证失败'

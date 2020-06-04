@@ -138,8 +138,8 @@ class ShareList {
     return await getStream(ctx , id , type , protocol ,  data)
   }
 
-  async source(id , protocol){
-    return await getSource(id , protocol)
+  async source(id , protocol , data){
+    return await getSource(id , protocol , data)
   }
 
   async exec(v , path){

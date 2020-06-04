@@ -222,7 +222,7 @@ module.exports = {
       if( readme_enable ){
         let readmeFile = data.children.find(i => i.name.toLocaleUpperCase() == 'README.MD')
         if(readmeFile){
-          ret.readme = markdownParse(await service.source(readmeFile.id , readmeFile.protocol))
+          ret.readme = markdownParse(await service.source(readmeFile.id , readmeFile.protocol , readmeFile))
         }
       }
       

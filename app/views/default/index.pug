@@ -39,10 +39,11 @@ block content
     section.wrap(style="margin-top:64px;border-top:1px solid #eee;")
       article.markdown-body(style="padding:32px;")
         | !{readme}
+  script(src='https://cdn.bootcss.com/jquery/3.3.1/jquery.min.js')
+  script(src='/script/sort.js')
+
   -if(writeable)
-    script(src='https://cdn.bootcss.com/jquery/3.3.1/jquery.min.js')
     script(src='/script/upload.js')
-    script(src='/script/sort.js')
   include partial/footer
 
 

@@ -364,38 +364,54 @@ module.exports = ({ request, cache, getConfig, querystring, base64, saveDrive, g
     }
    
     if(!path) path = -11
-    let resp = await fetchData(id,{
-      url:`https://cloud.189.cn/v2/listFiles.action?fileId=${path}&mediaType=&keyword=&inGroupSpace=false&orderBy=1&order=ASC&pageNum=1&pageSize=9999&noCache=${Math.random()}`,
-      method:'GET',
-      headers:{
-        'User-Agent':'Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/69.0.3497.100 Safari/537.36',
-        'Cookie': cookies,
-      },
-      json:true
-    })
-  
-    if (!resp || !resp.body) {
-      return { id, type: 'folder', protocol: defaultProtocol,body:resp.msg || '解析错误' }
+
+    let children = [] , pageNum = 1
+    while(true){
+      let resp = await fetchData(id,{
+        url:`https://cloud.189.cn/v2/listFiles.action?fileId=${path}&mediaType=&keyword=&inGroupSpace=false&orderBy=1&order=ASC&pageNum=${pageNum}&pageSize=9999&noCache=${Math.random()}`,
+        method:'GET',
+        headers:{
+          'User-Agent':'Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/69.0.3497.100 Safari/537.36',
+          'Cookie': cookies,
+        },
+        json:true
+      })
+    
+      if (!resp || !resp.body) {
+        return { id, type: 'folder', protocol: defaultProtocol,body:resp.msg || '解析错误' }
+      }
+
+      for(let file of resp.body.data){
+        let item = {
+          id: manager.stringify({username , path:file.fileId}),
+          name: file.fileName,
+          protocol: defaultProtocol,
+          created_at: file.createTime,
+          updated_at: file.lastOpTime,
+          type: file.isFolder ? 'folder' : 'file',
+        }
+        if( item.type != 'folder' ){
+          item.ext = file.fileType
+          item.size = parseInt(file.fileSize)
+          item.url = 'https:'+file.downloadUrl
+
+          if(file.icon) item.icon = file.icon.smallUrl
+        }
+        children.push(item)
+      }
+      
+      let count = resp.body.recordCount
+      let currentCount = resp.body.pageNum * resp.body.pageSize
+
+      if( currentCount < count ){
+        //翻页
+        pageNum++
+        continue
+      }else{
+        break;
+      }
     }
-    let children = resp.body.data.map( file => {
-      let item = {
-        id: manager.stringify({username , path:file.fileId}),
-        name: file.fileName,
-        protocol: defaultProtocol,
-        created_at: file.createTime,
-        updated_at: file.lastOpTime,
-        type: file.isFolder ? 'folder' : 'file',
-      }
-      if( item.type != 'folder' ){
-        item.ext = file.fileType
-        item.size = parseInt(file.fileSize)
-        item.url = 'https:'+file.downloadUrl
-
-        if(file.icon) item.icon = file.icon.smallUrl
-      }
-
-      return item
-    })
+    
     let result = { id, type: 'folder', protocol: defaultProtocol }
     result.$cached_at = Date.now()
     result.children = children

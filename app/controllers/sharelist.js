@@ -17,12 +17,12 @@ const isProxyPath = (path , paths) => {
 const enableDownload = (ctx, data) => {
   if(ctx.runtime.isAdmin) return true
   let result = true
-
+  let path = decodeURIComponent(ctx.path)
   let expr = config.getConfig('anonymous_download')
-  if(data.name && expr){
+  if(path && expr){
     result = false
     try{
-      result = new RegExp(expr).test(data.name)
+      result = new RegExp(expr).test(path)
     }catch(e){
     }
   }
@@ -72,6 +72,7 @@ const output = async (ctx , data)=>{
       if(re.convertible){
         displayDownloadLabel = false
       }else{
+        console.log('hit 401',re)
         ctx.status = 401
         return
       }
@@ -93,6 +94,7 @@ const output = async (ctx , data)=>{
   }
   else{
     if(!download){
+      console.log('hit 401 here',ctx.runtime)
       ctx.status = 401
       return
     }
@@ -242,7 +244,7 @@ module.exports = {
       })
     }
     else if(data.type == 'auth_response'){
-      let result = {status:0 , message:"success" , rurl:decodeURIComponent(ctx.query.rurl)}
+      let result = {status:0 , message:"success" , rurl:ctx.query.rurl ? decodeURIComponent(ctx.query.rurl) : ''}
       if(!data.result){
         result.status = 403
         result.message = '验证失败'

@@ -2,6 +2,9 @@ const md = require('markdown-it')()
 
 const qs = require('querystring')
 
+const urlFormat = require('url').format
+
+
 /*
  * 文档在线预览插件
  */
@@ -14,7 +17,7 @@ module.exports = ({ getSource , getConfig, request }) => {
   const fileMap = {}
 
   const markdown = async (data, req) => {
-    let html = md.render(await getSource(data.id , data.protocol));
+    let html = md.render(await getSource(data.id , data.protocol , data));
     //<iframe style="width:auto;height:auto;"></iframe><script>document.querySelector("iframe").contentWindow.document.write(`'+html+'`);</script>
     return {
       ...data,
@@ -30,7 +33,7 @@ module.exports = ({ getSource , getConfig, request }) => {
       }
     }
 
-    let html = await getSource(data.id , data.protocol)
+    let html = await getSource(data.id , data.protocol, data)
     return {
       ...data,
       body: '<link href="https://cdn.bootcss.com/github-markdown-css/3.0.1/github-markdown.min.css" rel="stylesheet"><article class="markdown-body" style="text-align:left;padding:16px;" itemprop="text"><p style="font-size:13px;line-height:1.8em;">'+html+'</p></article>'
@@ -38,12 +41,10 @@ module.exports = ({ getSource , getConfig, request }) => {
   }
 
   const createUrl = (req , withToken = false , append = {}) => {
-    let query = req.query || {}
-    delete query.preview
+    let query = { ...append }
     if(withToken){
       query.token = getConfig('token')
     }
-    query = Object.assign(query , append)
     let querystr = qs.stringify(query)
     return req.origin + req.path + ( querystr ? ('?' + querystr) : '')
   }
@@ -77,8 +78,8 @@ module.exports = ({ getSource , getConfig, request }) => {
 
     if(previewUrl) {
       fileMap[req.path] = previewUrl
-      let url = createUrl(req , false , { preview:1, conv : 1})
-      let body = `<iframe src="//mozilla.github.io/pdf.js/web/viewer.html?file=${encodeURIComponent(url)}"></iframe>`
+      let url = createUrl(req , false , { preview:1, conv: 1})
+      let body = `<iframe src="//mozilla.github.io/pdf.js/es5/web/viewer.html?file=${encodeURIComponent(url)}"></iframe>`
       return {
         ...data,
         convertible:true,
@@ -101,13 +102,14 @@ module.exports = ({ getSource , getConfig, request }) => {
         ...data,
         convertible:true,
         outputType:'stream',
-        body:request({url:createUrl(req)})
+        body:request({url:createUrl(req , true)})
       }
     }else{
       return {
         ...data,
+        convertible:true,
         body: `
-          <iframe src="//mozilla.github.io/pdf.js/web/viewer.html?file=${encodeURIComponent(createUrl(req , false , { preview:1, conv : 1}))}"></iframe>
+          <iframe src="//mozilla.github.io/pdf.js/es5/web/viewer.html?file=${encodeURIComponent(createUrl(req , false , { preview:1, conv : 1}))}"></iframe>
         `
       }
     }

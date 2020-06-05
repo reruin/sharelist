@@ -376,7 +376,6 @@ module.exports = ({ request, cache, getConfig, querystring, base64, saveDrive, g
   
     if (!resp || !resp.body) {
       return { id, type: 'folder', protocol: defaultProtocol,body:resp.msg || '解析错误' }
-
     }
     let children = resp.body.data.map( file => {
       let item = {
@@ -390,7 +389,7 @@ module.exports = ({ request, cache, getConfig, querystring, base64, saveDrive, g
       if( item.type != 'folder' ){
         item.ext = file.fileType
         item.size = parseInt(file.fileSize)
-        item.downloadUrl = 'https:'+file.downloadUrl
+        item.url = 'https:'+file.downloadUrl
 
         if(file.icon) item.icon = file.icon.smallUrl
       }
@@ -415,9 +414,8 @@ module.exports = ({ request, cache, getConfig, querystring, base64, saveDrive, g
     let { path, cookies , username } = await prepare(id)
 
     let data = options.data || {}
-
     let resp = await fetchData(id,{
-      url:data.downloadUrl,
+      url:data.url,
       method:'GET',
       followRedirect:false ,
       headers:{
@@ -429,7 +427,6 @@ module.exports = ({ request, cache, getConfig, querystring, base64, saveDrive, g
     if(!resp) return false
 
     let url = resp.headers.location
-
     resp = {
       id,
       url,

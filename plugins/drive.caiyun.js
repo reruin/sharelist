@@ -400,7 +400,7 @@ module.exports = ({ request, cache, getConfig, querystring, base64, saveDrive, g
       if( !folder ){
         item.ext = file.contentSuffix
         item.size = parseInt(file.contentSize)
-        item.downloadUrl = 'https:'+file.downloadUrl
+        item.url = 'https:'+file.downloadUrl
         item.thumb = file.thumbnailURL
       }
 

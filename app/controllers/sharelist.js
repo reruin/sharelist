@@ -43,6 +43,8 @@ const output = async (ctx , data)=>{
 
   const isProxy = (config.getConfig('proxy_enable') && isProxyPath(ctx.path , proxy_paths)) || data.proxy
 
+  const preview_enable = config.getConfig('preview_enable')
+
   let url = data.url
   //部分webdav客户端不被正常识别
   if( ctx.webdav ){
@@ -65,14 +67,13 @@ const output = async (ctx , data)=>{
     return
   }
   
-  if(isPreview){
+  if(isPreview && preview_enable){
     let re = await service.preview(data)
     let displayDownloadLabel = true
     if(!download){
       if(re.convertible){
         displayDownloadLabel = false
       }else{
-        console.log('hit 401',re)
         ctx.status = 401
         return
       }
@@ -94,7 +95,6 @@ const output = async (ctx , data)=>{
   }
   else{
     if(!download){
-      console.log('hit 401 here',ctx.runtime)
       ctx.status = 401
       return
     }
@@ -132,11 +132,6 @@ const output = async (ctx , data)=>{
 
 module.exports = {
   async index(ctx){
-    if( !config.getConfig('anonymous_enable') && !ctx.runtime.isAdmin){
-      await ctx.renderSkin('manage')
-      return
-    }
-
     let downloadLinkAge = config.getConfig('max_age_download')
     let cursign = md5(config.getConfig('max_age_download_sign') + Math.floor(Date.now() / downloadLinkAge))
     //exclude folder

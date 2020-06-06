@@ -29,7 +29,7 @@ module.exports = {
   "max_age_file":"链接缓存时长(秒)",
   "max_age_download":"下载链接有效期(秒)",
   "max_age_download_placeholder":"设置为0时永久有效",
-  "anonymous_uplod_enable":"匿名上传",
+  "anonymous_uplod_enable":"开放上传",
   "virtual_path":"虚拟路径",
   "general":"常规",
   "webdav_path":"WebDAV路径",
@@ -49,7 +49,7 @@ module.exports = {
   "language":"切换语言",
   "anonymous_enable":"匿名访问",
   "signout":"登出",
-  "anonymous_download":"匿名下载限制",
+  "anonymous_download":"下载限制",
   "anonymous_download_placeholder":"匹配正则表达式，留空表示允许下载任意文件。",
   "index_enable":"目录索引"
 }

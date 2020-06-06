@@ -154,6 +154,9 @@ module.exports = ({ cache , getVendor , getConfig , getRuntime , updateFolder , 
       }
 
       if(hit.protocol == 'root' ){
+        if(filter && filter(hit , [])){
+          return hit;
+        }
         continue
       }
       

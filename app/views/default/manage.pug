@@ -61,6 +61,18 @@ block content
                   select.form-control(name='readme_enable',value=config.readme_enable,required)
                     option(value='1', selected=config.readme_enable==1 ? 'selected' : null)= __('enable')
                     option(value='0', selected=config.readme_enable==0 ? 'selected' : null)= __('disable')
+              .form-group
+                .col-sm-4
+                  label= __('anonymous_uplod_enable')
+                .col-sm-8
+                  select.form-control(name='anonymous_uplod_enable',value=config.anonymous_uplod_enable,required)
+                    option(value='1', selected=config.anonymous_uplod_enable==1 ? 'selected' : null)= __('enable')
+                    option(value='0', selected=config.anonymous_uplod_enable==0 ? 'selected' : null)= __('disable')
+              .form-group
+                .col-sm-4
+                  label= __('anonymous_download')
+                .col-sm-8
+                  input.form-control(type='text', name='anonymous_download' , value=config.anonymous_download,placeholder=__('anonymous_download_placeholder'))
               hr
               .form-group
                 .col-sm-4
@@ -105,26 +117,6 @@ block content
                   label= __('ignore_paths')
                 .col-sm-8
                   input.form-control(type='text', name='ignore_paths' , value=config.ignore_paths.__root__.join(','),placeholder=__('ignore_paths_placeholder'))
-              hr
-              .form-group
-                .col-sm-4
-                  label= __('anonymous_uplod_enable')
-                .col-sm-8
-                  select.form-control(name='anonymous_uplod_enable',value=config.anonymous_uplod_enable,required)
-                    option(value='1', selected=config.anonymous_uplod_enable==1 ? 'selected' : null)= __('enable')
-                    option(value='0', selected=config.anonymous_uplod_enable==0 ? 'selected' : null)= __('disable')
-              .form-group
-                .col-sm-4
-                  label= __('anonymous_enable')
-                .col-sm-8
-                  select.form-control(name='anonymous_enable',value=config.anonymous_enable,required)
-                    option(value='1', selected=config.anonymous_enable==1 ? 'selected' : null)= __('enable')
-                    option(value='0', selected=config.anonymous_enable==0 ? 'selected' : null)= __('disable')
-              .form-group
-                .col-sm-4
-                  label= __('anonymous_download')
-                .col-sm-8
-                  input.form-control(type='text', name='anonymous_download' , value=config.anonymous_download,placeholder=__('anonymous_download_placeholder'))
               hr
               .form-group
                 .col-sm-4

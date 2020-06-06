@@ -68,7 +68,7 @@ const handlers = async (a, body , ctx) => {
     cache.clear()
     result.message = 'Success'
   } else if (a == 'cfg') {
-    let { proxy_enable, preview_enable, readme_enable, max_age_dir, max_age_file,max_age_download, webdav_path, anonymous_uplod_enable, ignore_file_extensions , ignore_paths , custom_style , custom_script , proxy_paths , proxy_server , ocr_server , language,anonymous_enable, anonymous_download, index_enable } = body
+    let { proxy_enable, preview_enable, readme_enable, max_age_dir, max_age_file,max_age_download, webdav_path, anonymous_uplod_enable, ignore_file_extensions , ignore_paths , custom_style , custom_script , proxy_paths , proxy_server , ocr_server , language, anonymous_download, index_enable } = body
     let opts = {}
     if (max_age_dir !== undefined) {
       max_age_dir = parseInt(max_age_dir)
@@ -113,11 +113,6 @@ const handlers = async (a, body , ctx) => {
     if (anonymous_uplod_enable) {
       anonymous_uplod_enable = anonymous_uplod_enable == '1' ? 1 : 0
       opts.anonymous_uplod_enable = anonymous_uplod_enable
-    }
-
-    if (anonymous_enable) {
-      anonymous_enable = anonymous_enable == '1' ? 1 : 0
-      opts.anonymous_enable = anonymous_enable
     }
     
     if (webdav_path) {

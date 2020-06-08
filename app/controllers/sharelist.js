@@ -85,7 +85,7 @@ const output = async (ctx , data)=>{
       delete query.preview
       let querystr = qs.stringify(query)
       let purl = ctx.path + ( querystr ? ('?' + querystr) : '')
-
+      
       await ctx.renderSkin('detail',{
         data : re , displayDownloadLabel,
         url : isProxy ? purl : url
@@ -154,7 +154,7 @@ module.exports = {
       ctx.status = 404
     }
     else if(data.type == 'body' || data.body){
-      if( typeof data.body == 'object' ){
+      if( typeof data.body == 'object'){
         ctx.body = data.body
       }else{
         await ctx.renderSkin('custom',{

@@ -45,6 +45,8 @@ const whenReady = (handler) => {
   }
 }
 
+const isClass = fn => typeof fn == 'function' && /^\s*class/.test(fn.toString());
+
 var ready = false
 
 var resourcesCount = 0
@@ -300,56 +302,75 @@ const load = (options) => {
         const type = name.split('.')[0]
         const id = 'plugin_' + pluginName.replace(/\./g,'_')
         const helpers = getHelpers(id)
-        const resource = require(filepath).call(helpers,helpers)
-
+        let ins = require(filepath)
         console.log('Load Plugins: ',pluginName)
 
-        resources[id] = resource
-
-        if( resource.auth ){
-          for(let key in resource.auth){
-            authMap.set(key , id)
+        let resource
+        if( isClass(ins) ){
+          let driver = new ins()
+          let { protocol , mountable , createReadStream , createWriteStream } = driver
+          driver.helper = helpers
+          resources[id] = {
+            label:driver.label,
+            mountable,protocol,
+            drive:driver,
+            name:driver.name
           }
-        }
+          driveMap.set(protocol , id)
 
-        if( resource.drive ){
-          let protocols = [].concat(resource.drive.protocols || [])
-          let mountable = resource.drive.mountable !== false
-          protocols.forEach( protocol => {
-            driveMap.set(protocol,id)
-            if(mountable) driveMountableMap.set(protocol , id)
-          })
+          if(mountable) driveMountableMap.set(protocol , id)
+          if(createReadStream) readstreamMap.set(protocol , driver.createReadStream)
+        }else{
+          resource = ins.call(helpers,helpers)
 
-          if( resource.drive.createReadStream ){
-            protocols.forEach( protocol => {
-              readstreamMap.set(protocol , resource.drive.createReadStream)
-            })
+          resources[id] = resource
+
+          if( resource.auth ){
+            for(let key in resource.auth){
+              authMap.set(key , id)
+            }
           }
 
-          if( resource.drive.createWriteStream ){
+          if( resource.drive ){
+            let protocols = [].concat(resource.drive.protocols || [])
+            let mountable = resource.drive.mountable !== false
             protocols.forEach( protocol => {
-              writestreamMap.set(protocol , resource.drive.createWriteStream)
+              driveMap.set(protocol,id)
+              if(mountable) driveMountableMap.set(protocol , id)
             })
+
+            if( resource.drive.createReadStream ){
+              protocols.forEach( protocol => {
+                readstreamMap.set(protocol , resource.drive.createReadStream)
+              })
+            }
+
+            if( resource.drive.createWriteStream ){
+              protocols.forEach( protocol => {
+                writestreamMap.set(protocol , resource.drive.createWriteStream)
+              })
+            }
+          }
+          
+          if(resource.format){
+            for(let key in resource.format){
+              formatMap.set(key , id)
+            }
+          }
+
+          if(resource.preview){
+            for(let key in resource.preview){
+              previewMap.set(key , id)
+            }
+          }
+
+          if(resource.cmd){
+            for(let key in resource.cmd){
+              cmdMap.set(key , id)
+            }
           }
         }
         
-        if(resource.format){
-          for(let key in resource.format){
-            formatMap.set(key , id)
-          }
-        }
-
-        if(resource.preview){
-          for(let key in resource.preview){
-            previewMap.set(key , id)
-          }
-        }
-
-        if(resource.cmd){
-          for(let key in resource.cmd){
-            cmdMap.set(key , id)
-          }
-        }
       }
     }
   }
@@ -365,7 +386,7 @@ const reload = () => {
   load(loadOptions)
 }
 /**
- * 根据扩展名获取可处理的驱动
+ * 根据协议获取可处理的驱动
  */
 const getDrive = (protocol) => {
   if( driveMap.has(protocol)){
@@ -512,7 +533,7 @@ const getVendors = () => [...new Set(driveMountableMap.values())].map(id => {
   return {
     name : resources[id].name,
     label: resources[id].label || resources[id].name,
-    protocol : resources[id].drive.protocols[0]
+    protocol : resources[id].protocol || resources[id].drive.protocols[0]
   }
 })
 
@@ -548,7 +569,11 @@ const createReadStream = async (options) => {
 
 const createWriteStream = async (options) => {
   let { id , protocol } = options
-  if( writestreamMap.has(protocol) ){
+          
+  let drive = getDrive(protocol)
+  if(drive.createWriteStream){
+    return await drive.createWriteStream(options)
+  }else if( writestreamMap.has(protocol) ){
     return await writestreamMap.get(protocol)(options)
   }
 }

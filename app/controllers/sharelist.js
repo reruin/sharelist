@@ -4,8 +4,13 @@ const qs = require('querystring')
 const { sendRedirect } = require('../utils/sendfile')
 const { parsePath , pathNormalize , enablePreview, enableRange , isRelativePath , markdownParse , md5 } = require('../utils/base')
 
-const requireAuth = (data) => !!(data.children && data.children.find(i=>(i.name == '.passwd')))
-
+/**
+ * Check path 
+ * 
+ * @param {string} [path] current path
+ * @param {array} [paths] allow proxy paths
+ * @return [boolean]
+ */
 const isProxyPath = (path , paths) => {
   return (
     path == '' ||  path == '/' || 
@@ -14,6 +19,13 @@ const isProxyPath = (path , paths) => {
   ) ? true : false
 }
 
+/**
+ * Check download condition 
+ * 
+ * @param {object} [ctx]
+ * @param {object} [data] folder/file data
+ * @return [boolean]
+ */
 const enableDownload = (ctx, data) => {
   if(ctx.runtime.isAdmin) return true
   let result = true
@@ -29,6 +41,12 @@ const enableDownload = (ctx, data) => {
   return result
 } 
 
+/**
+ * Output handler
+ *
+ * @param {object} [ctx]
+ * @param {object} [data] folder/file data
+ */
 const output = async (ctx , data)=>{
 
   const download = enableDownload(ctx, data)
@@ -131,6 +149,9 @@ const output = async (ctx , data)=>{
 }
 
 module.exports = {
+  /**
+   * Index handler
+   */
   async index(ctx){
     let downloadLinkAge = config.getConfig('max_age_download')
     let cursign = md5(config.getConfig('max_age_download_sign') + Math.floor(Date.now() / downloadLinkAge))
@@ -261,6 +282,9 @@ module.exports = {
     
   },
 
+  /**
+   * API handler
+   */
   async api(ctx){
     let ignoreexts = (config.getConfig('ignore_file_extensions') || '').split(',')
     let ignorefiles = (config.getConfig('ignore_files') || '').split(',')

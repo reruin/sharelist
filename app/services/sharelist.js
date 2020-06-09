@@ -14,6 +14,14 @@ class ShareList {
     this.passwdPaths = new Set()
   }
 
+ /**
+   * Path diff
+   *
+   * @param  {string} [a] path_a
+   * @param  {string} [b] path_b
+   * @return {boolean} 
+   * @api private
+   */
   async diff(a,b){
     let ret = []
     b.forEach((v, i) => {
@@ -24,10 +32,24 @@ class ShareList {
     return ret
   }
 
+  /**
+   * Check folder contain passwd file
+   *
+   * @param  {object} [data]
+   * @return {boolean} 
+   * @api private
+   */
   hasPasswdFile(data){
     return !!(data.children && data.children.find(i=>(i.name == '.passwd')))
   }
 
+  /**
+   * Search the first serect path
+   *
+   * @param  {object} [req]
+   * @return {mixed} 
+   * @api private
+   */
   searchPasswdPath(req){
     for(let i = 1 ; i <= req.paths.length ; i++){
       let path = '/'+req.paths.slice(0,i).join('/')
@@ -39,12 +61,19 @@ class ShareList {
     return null
   }
 
+  /**
+   * Find the folder(file) data by path
+   *
+   * @param  {object} [req]
+   * @return {object} 
+   * @api public
+   */
   async path(req) {
     if( req.body && req.body.act == 'auth' ){
       let ra = await this.auth(req)
       return { type:'auth_response' , result: ra }
     }
-    //上传
+    // upload request
     else if(req.upload){
       if(!req.upload.enable){
         return {
@@ -113,7 +142,13 @@ class ShareList {
     }
     
   }
-
+  /**
+   * Verify auth by path
+   *
+   * @param  {object} [req]
+   * @return {boolean} 
+   * @api private
+   */
   async auth(req) {
     let data = await command('ls' , req.paths.join('/'))
     let hit = data.children.find(i => i.name == '.passwd')
@@ -129,31 +164,64 @@ class ShareList {
     } 
     return false
   }
-  /*
-   * 获取文件预览页面
+
+  /**
+   * Get previewable data
+   * 
+   * @param {object}
+   * @return {object} 
+   * @api public
    */
   async preview(data){
     return await getPreview(data)
   }
-  /*
-   * 根据文件ID和协议获取可读流
+
+  /**
+   * Get readable stream by file id
+   *
+   * @param {object} [ctx]  * required
+   * @param {string} [id]   * required file id
+   * @param {type}   [type] * required stream type
+   * @return {stream}
+   * @api public
    */
   async stream(ctx , id , type , protocol , data){
     return await getStream(ctx , id , type , protocol ,  data)
   }
 
+  /**
+   * Get file content by file id
+   *
+   * @param  {string} [id]       * required file id
+   * @param  {type}   [protocol] * required stream type
+   * @param  {object} [data]     file data
+   * @return {stream}
+   * @api public
+   */
   async source(id , protocol , data){
     return await getSource(id , protocol , data)
   }
 
+  /**
+   * Execute core command
+   * 
+   * @param {string} [v] command and args
+   * @param {string} [path] command execution path
+   * @return {mixed}
+   * @api public
+   */
   async exec(v , path){
     // TODO yargs
     let [cmd , ...options] = v.split(/\s+/)
     return await command(cmd , path , options , true) 
   }
 
-  /*
-   * 检测文件是否支持预览
+  /**
+   * Check the file support preview
+   * 
+   * @param  {object} [data] file data
+   * @return {boolean}
+   * @api public
    */
   async isPreviewable(data){
     return await isPreviewable(data)

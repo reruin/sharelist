@@ -1,16 +1,6 @@
-/*
- * 提供对本地文件系统的支持
- * file:linux风格路径
+/**
+ * Mount file system
  */
-
-
-const name = 'FileSystem'
-
-const version = '1.0'
-
-const protocols = ['fs' , 'file']
-
-const defaultProtocol = 'fs'
 
 const path = require('path')
 const fs = require('fs')
@@ -18,96 +8,131 @@ const os = require('os')
 
 const isWinOS = os.platform() == 'win32'
 
-const l2w = (p) => p.replace(/^\/([^\/]+?)/,'$1:\\').replace(/\//g,'\\').replace(/(?<!\:)\\+$/,'').replace(/\\{2,}/g,'\\')
+/**
+ * Convert posix style path to windows style
+ * 
+ * @param {string} [p]
+ * @return {string}
+ */
+const winStyle = (p) => p.replace(/^\/([^\/]+?)/, '$1:\\').replace(/\//g, '\\').replace(/(?<!\:)\\+$/, '').replace(/\\{2,}/g, '\\')
 
-const realpath = (p) => (isWinOS ? l2w(p) : p)
+/**
+ * Convert windows style path to posix style
+ * 
+ * @param {string} [p]
+ * @return {string}
+ */
+const posixStyle = (p) => p.split('\\').join('/').replace(/^([a-z])\:/i,'/$1')
 
-module.exports = ({datetime , extname , pathNormalize}) => {
+/**
+ * normalize path(posix style) and replace current path
+ * 
+ * @param {string} [p]
+ * @return {string}
+ */
+const normalize = (p) => path.posix.normalize(p.replace(/^\.\//, slpath(process.cwd()) + '/'))
 
-  const normalize = (p) => pathNormalize(p).replace(/^\.\//,process.cwd()+'/')
+const slpath = (p) => (isWinOS ? posixStyle(p) : p)
 
-  const folder = async(id , {_path=[]} = {}) => {
-    let dir = normalize(id)
-    if( _path.length > 0) {
-      dir = _path.length.join('/')
+const realpath = (p) => (isWinOS ? winStyle(p) : p)
+
+
+class FileSystem {
+  constructor() {
+    this.name = 'FileSystem'
+    this.label = '本地文件'
+    this.mountable = true
+    this.cache = false
+
+    this.version = '1.0'
+    this.protocol = 'fs'
+  }
+
+  mkdir(p) {
+    if (fs.existsSync(p) == false) {
+      this.mkdir(path.dirname(p));
+      fs.mkdirSync(p);
     }
+  }
 
-    let resp = { id : dir , type:'folder', protocol:defaultProtocol}
+  path(id) {
+    let { datetime, extname } = this.helper
+
+    let { protocol } = this
+
+    let dir = normalize(id)
+
     let realdir = realpath(dir)
-    if( fs.existsSync(realdir) ){
-      let children = []
 
-      fs.readdirSync(realdir).forEach(function(filename){
-        let path = normalize(dir) + '/' + filename
+    let stat = fs.statSync(realdir)
+
+    if (stat.isDirectory()) {
+      let children = []
+      fs.readdirSync(realdir).forEach((filename) => {
+        let path = normalize(dir + '/' + filename)
         let stat
-        try{
+        try {
           stat = fs.statSync(realpath(path))
-        }catch(e){}
+        } catch (e) {}
 
         let obj = {
-          id:path , 
-          name:filename,
-          protocol:defaultProtocol,
-          type:'other'
+          id: path,
+          name: filename,
+          protocol: this.protocol,
+          type: 'other'
         }
 
-        if(stat){
+        if (stat) {
           obj.created_at = datetime(stat.ctime)
           obj.updated_at = datetime(stat.mtime)
-          if(stat.isDirectory()){
+          if (stat.isDirectory()) {
             obj.type = 'folder'
-          }
-          else if(stat.isFile()){
+          } else if (stat.isFile()) {
             obj.ext = extname(filename)
             obj.size = stat.size
           }
         }
         children.push(obj)
       })
-      resp.children = children
-      return resp
-    }else{
+
+      return { id: dir, type: 'folder', protocol: this.protocol , children }
+
+    } else if (stat.isFile()) {
+      return {
+        id,
+        name: path.basename(id),
+        protocol: this.protocol,
+        ext: extname(id),
+        url: realpath(id),
+        size: stat.size,
+        outputType: 'file',
+        proxy: true
+      }
+    } else {
       return false
     }
+
   }
 
-  const file = async(id)=>{
-    let realdir = realpath(normalize(id))
-    let stat = {}
-    try{
-      stat = fs.statSync(realpath(realdir))
-    }catch(e){}
-
-    return {
-      id,
-      name: path.basename(id),
-      ext: extname(id),
-      url: realpath(id),
-      size:stat.size,
-      protocol:defaultProtocol,
-      outputType:'file',
-      proxy:true
-    }
+  folder(id) {
+    return this.path(id)
   }
 
-  const createReadStream = ({id , options = {}} = {}) => {
-    return fs.createReadStream(realpath(id) , {...options,highWaterMark:64*1024})
+  file(id) {
+    return this.path(id)
   }
 
-  const mkdir = (p) => {
-    if (fs.existsSync(p) == false) {
-      mkdir(path.dirname(p));
-      fs.mkdirSync(p);
-    }
-  };
-
-
-  const createWriteStream = async ({ id , options = {} , target = ''} = {}) => {
-    let fullpath = pathNormalize(id +'/' + target)
-    let parent = (fullpath.split('/').slice(0,-1).join('/') + '/').replace(/\/+$/g,'/')
-    mkdir(parent)
-    return fs.createWriteStream(realpath(fullpath) , options)
+  async createReadStream({ id, options = {} } = {}) {
+    return fs.createReadStream(realpath(id), { ...options, highWaterMark: 64 * 1024 })
   }
 
-  return { name , label:'本地文件',version , drive:{ protocols , folder , file , cache:false , createReadStream , createWriteStream } }
+  async createWriteStream({ id, options = {}, target = '' } = {}) {
+    let fullpath = path.join(id , target)
+    let parent = (fullpath.split('/').slice(0, -1).join('/') + '/').replace(/\/+$/g, '/')
+    this.mkdir(parent)
+    return fs.createWriteStream(realpath(fullpath), options)
+  }
 }
+
+
+module.exports = FileSystem

@@ -5,6 +5,14 @@ const cache = require('../utils/cache')
 const { getVendors , reload } = require('../services/plugin')
 const service = require('../services/sharelist')
 
+/**
+ * Hanlders hub
+ * 
+ * @param {string} [a] action
+ * @param {object} [body] formdata
+ * @param {object} [ctx] ctx
+ * @return {object}
+ */
 const handlers = async (a, body , ctx) => {
   let result = { status: 0, message: 'Success', data: '', a }
 
@@ -144,6 +152,9 @@ const handlers = async (a, body , ctx) => {
 
 module.exports = {
 
+  /**
+   * Manage page index handler
+   */
   async home(ctx, next) {
 
     let token = ctx.request.body.token
@@ -162,6 +173,9 @@ module.exports = {
 
   },
 
+  /**
+   * API router handler
+   */
   async api(ctx) {
 
     let body = ctx.request.body
@@ -210,6 +224,9 @@ module.exports = {
 
   },
 
+  /**
+   * Shell page handler
+   */
   async shell(ctx){
     let access = !!ctx.session.admin
     if(access){
@@ -219,6 +236,12 @@ module.exports = {
     }
   },
 
+  /**
+   * Shell exection
+   * 
+   * @param {object} [ctx]
+   * @return {void}
+   */
   async shell_exec(ctx){
     let body = ctx.request.body
     let { command , path = '/' } = body

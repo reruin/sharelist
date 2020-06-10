@@ -134,6 +134,17 @@ ShareList 是一个易用的网盘工具，支持快速挂载 GoogleDrive、OneD
 建议填写```/```，ShareList将自动开启挂载向导，按指示操作即可。  
 **注意：access_token每隔30天需手动更新一次，到期前24小时内访问对应路径时会有更新提示。**   
 
+#### 3. 企业盘挂载
+由[drive.189cloud.business.js](app/plugins/drive.189cloud.business.js)插件实现。  
+```
+挂载标示：ctcb
+挂载内容：  
+    //用户名/初始文件夹ID?password=密码 
+    /
+```
+建议填写```/```，ShareList将自动开启挂载向导，按指示填写用户名密码即可。    
+
+
 ***
 
 ### 挂载和彩云

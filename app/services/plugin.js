@@ -250,20 +250,30 @@ const getHelpers = (id) => {
     },
     saveDrive : (path , name) => {
       let resource = resources[id]
+      let protocols = []
       if( resource && resource.drive && resource.drive.protocols){
-        let protocol = path.split(':')[0]
-        if(resource.drive.protocols.includes(protocol)){
-          config.saveDrive(path , name)
-        }
+        protocols = resource.drive.protocols
+      }else if( resource.protocol ){
+        protocols = [ resource.protocol ]
+      }
+      
+      let protocol = path.split(':')[0]
+      if(protocols.includes(protocol)){
+        config.saveDrive(path , name)
       }
     },
 
     getDrives : () => {
       return  whenReady( () => {
         let resource = resources[id]
+        let protocols = []
         if( resource && resource.drive && resource.drive.protocols){
-          return ( config.getDrives(resource.drive.protocols) )
+          protocols = resource.drive.protocols
+        }else if( resource.protocol ){
+          protocols = [ resource.protocol ]
         }
+
+        return config.getDrives(protocols)
       })
     }
   }
@@ -307,7 +317,7 @@ const load = (options) => {
 
         let resource
         if( isClass(ins) ){
-          let driver = new ins()
+          let driver = new ins(helpers)
           let { protocol , mountable , createReadStream , createWriteStream } = driver
           driver.helper = helpers
           resources[id] = {

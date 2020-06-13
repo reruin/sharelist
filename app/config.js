@@ -12,6 +12,8 @@ const db = createFiledb(configPath , {raw:true} , {
 
   preview_enable : 1,
 
+  index_enable:1,
+
   webdav_path : '/webdav/',
   //目录刷新时间 15分钟getDrive
   max_age_dir: 15 * 60 * 1000,
@@ -37,6 +39,8 @@ const db = createFiledb(configPath , {raw:true} , {
 
   anonymous_uplod_enable:0,
 
+  anonymous_download:'',
+
   plugin_option:[],
 
   custom_style:'',
@@ -47,6 +51,8 @@ const db = createFiledb(configPath , {raw:true} , {
   proxy_paths:[],
 
   proxy_server:'',
+
+  ocr_server:'https://api.reruin.net/ocr'
 });
 
 if(process.env.PORT){

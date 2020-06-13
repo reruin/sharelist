@@ -1,15 +1,17 @@
 extends partial/layout
 
 block content
-  header
-    .wrap.detail
-      a.home #{data.name}
-      a.download-menu(href=url)
-        i.ic.ic-download
-  section.wrap
-    .detail
-      -if(data.body)
-        | !{data.body}
-      -else
-        p= __('unable_to_preview')   
-  include partial/footer
+  .preview
+    header
+      .wrap.detail
+        a.home.ellipsis #{data.name}
+        -if(displayDownloadLabel)
+          a.download-menu(href=url)
+            i.ic.ic-download
+    section
+      .detail
+        -if(data.body)
+          | !{data.body}
+        -else
+          p= __('unable_to_preview')   
+  // include partial/footer

@@ -43,5 +43,13 @@ module.exports = {
   "reboot":"Reboot",
   "proxy_paths":"Proxy Paths",
   "proxy_server":"Proxy Server",
-  "proxy_server_placeholder":""
+  "proxy_server_placeholder":"",
+  "ocr_server":"Captcha Recognize API",
+  "ocr_server_placeholder":"",
+  "language":"Language",
+  "anonymous_enable":"Allow anonymous access",
+  "signout":"Sign Out",
+  "anonymous_download":"Anonymous download rules",
+  "anonymous_download_placeholder":"Match regular expression, leave blank to allow downloading any files",
+  "index_enable":"Index"
 }

@@ -70,7 +70,7 @@ class oauth2ForOD {
       opts.state = redirect_uri
     }
 
-    this.pathAppMap[redirect_uri] = { client_id, client_secret, redirect_uri, create_time: Date.now() }
+    this.pathAppMap[redirect_uri] = { client_id, client_secret, redirect_uri:opts.redirect_uri, create_time: Date.now() }
 
     return `${this.OAUTH2_AUTH_BASE_URL}?${this.qs.stringify(opts)}`;
   }
@@ -192,7 +192,7 @@ const install = async (redirect_uri , createLink) => {
   return `
     <div class="auth">
       <h3>OneDrive 挂载向导</h3>
-      <p style="font-size:12px;"><a target="_blank" style="font-size:12px;margin-right:5px;color:#337ab7;" href="${createLink}">访问此链接</a>获取 应用机密 和 应用ID。请注意：个人Microsoft需前往 <a href="https://portal.azure.com/#blade/Microsoft_AAD_RegisteredApps/ApplicationsListBlade" target="_blank" style="font-size:12px;margin-right:5px;color:#337ab7;">Azure管理后台</a> 注册应用才能获取应用机密 和 应用ID。可参考</p>
+      <p style="font-size:12px;"><a target="_blank" style="font-size:12px;margin-right:5px;color:#337ab7;" href="${createLink}">访问此链接</a>获取 应用机密 和 应用ID。请注意：个人账号需前往 <a href="https://portal.azure.com/#blade/Microsoft_AAD_RegisteredApps/ApplicationsListBlade" target="_blank" style="font-size:12px;margin-right:5px;color:#337ab7;">Azure管理后台</a> 注册应用才能获取应用机密 和 应用ID。</p>
       <div>
         <form class="form-horizontal" method="post">
           <input type="hidden" name="act" value="install" />

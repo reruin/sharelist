@@ -22,12 +22,58 @@ block content
           form.form-horizontal(style="display:inline-block;padding:5px;",method='post',action="/manage/api")
             input(type='hidden',name='a',value='reboot')
             button.btn.btn-danger= __('reboot')
+          form.form-horizontal(style="display:inline-block;padding:5px;",method='post',action="/manage/api")
+            input(type='hidden',name='a',value='signout')
+            button.btn.btn-danger= __('signout')
         .panel.panel-default
           .panel-heading
             span= __("general")
           .panel-body
             form.form-horizontal(method='post',action="/manage/api")
               input(type='hidden',name='a',value='cfg')
+              .form-group
+                .col-sm-4
+                  label= __('language')
+                .col-sm-8
+                  select.form-control(name='language',value=config.language)
+                    option(value='', selected=config.language=='' ? 'selected' : null)= __('自动')
+                    option(value='zh-CN', selected=config.language=='zh-CN' ? 'selected' : null)= __('简体中文')
+                    option(value='zh-TW', selected=config.language=='zh-TW' ? 'selected' : null)= __('繁體中文')
+                    option(value='en-US', selected=config.language=='en-US' ? 'selected' : null)= __('English')
+              .form-group
+                .col-sm-4
+                  label= __('index_enable')
+                .col-sm-8
+                  select.form-control(name='index_enable',value=config.index_enable,required)
+                    option(value='1', selected=config.index_enable==1 ? 'selected' : null)= __('enable')
+                    option(value='0', selected=config.index_enable==0 ? 'selected' : null)= __('disable')
+              .form-group
+                .col-sm-4
+                  label= __('preview_enable')
+                .col-sm-8
+                  select.form-control(name='preview_enable',value=config.preview_enable,required)
+                    option(value='1', selected=config.preview_enable==1 ? 'selected' : null)= __('enable')
+                    option(value='0', selected=config.preview_enable==0 ? 'selected' : null)= __('disable')
+              .form-group
+                .col-sm-4
+                  label= __('readme_enable')
+                .col-sm-8
+                  select.form-control(name='readme_enable',value=config.readme_enable,required)
+                    option(value='1', selected=config.readme_enable==1 ? 'selected' : null)= __('enable')
+                    option(value='0', selected=config.readme_enable==0 ? 'selected' : null)= __('disable')
+              .form-group
+                .col-sm-4
+                  label= __('anonymous_uplod_enable')
+                .col-sm-8
+                  select.form-control(name='anonymous_uplod_enable',value=config.anonymous_uplod_enable,required)
+                    option(value='1', selected=config.anonymous_uplod_enable==1 ? 'selected' : null)= __('enable')
+                    option(value='0', selected=config.anonymous_uplod_enable==0 ? 'selected' : null)= __('disable')
+              .form-group
+                .col-sm-4
+                  label= __('anonymous_download')
+                .col-sm-8
+                  input.form-control(type='text', name='anonymous_download' , value=config.anonymous_download,placeholder=__('anonymous_download_placeholder'))
+              hr
               .form-group
                 .col-sm-4
                   label= __('proxy_enable')
@@ -45,13 +91,7 @@ block content
                   label= __('proxy_server')
                 .col-sm-8
                   input.form-control(type='text', name='proxy_server' , value=config.proxy_server,placeholder=__('proxy_server_placeholder'))
-              .form-group
-                .col-sm-4
-                  label= __('preview_enable')
-                .col-sm-8
-                  select.form-control(name='preview_enable',value=config.preview_enable,required)
-                    option(value='1', selected=config.preview_enable==1 ? 'selected' : null)= __('enable')
-                    option(value='0', selected=config.preview_enable==0 ? 'selected' : null)= __('disable')
+              hr
               .form-group
                 .col-sm-4
                   label= __('max_age_dir')
@@ -69,11 +109,6 @@ block content
                   input.form-control(placeholder=__('max_age_download_placeholder'),type='text', name='max_age_download' , value=config.max_age_download / 1000,required)
               .form-group
                 .col-sm-4
-                  label= __('webdav_path')
-                .col-sm-8
-                  input.form-control(type='text', name='webdav_path' , value=config.webdav_path,required)
-              .form-group
-                .col-sm-4
                   label= __('ignore_file_extensions')
                 .col-sm-8
                   input.form-control(type='text', name='ignore_file_extensions' , value=config.ignore_file_extensions,placeholder=__('ignore_file_extensions_placeholder'))
@@ -82,20 +117,17 @@ block content
                   label= __('ignore_paths')
                 .col-sm-8
                   input.form-control(type='text', name='ignore_paths' , value=config.ignore_paths.__root__.join(','),placeholder=__('ignore_paths_placeholder'))
+              hr
               .form-group
                 .col-sm-4
-                  label= __('readme_enable')
+                  label= __('webdav_path')
                 .col-sm-8
-                  select.form-control(name='readme_enable',value=config.readme_enable,required)
-                    option(value='1', selected=config.readme_enable==1 ? 'selected' : null)= __('enable')
-                    option(value='0', selected=config.readme_enable==0 ? 'selected' : null)= __('disable')
+                  input.form-control(type='text', name='webdav_path' , value=config.webdav_path,required)
               .form-group
                 .col-sm-4
-                  label= __('anonymous_uplod_enable')
+                  label= __('ocr_server')
                 .col-sm-8
-                  select.form-control(name='anonymous_uplod_enable',value=config.anonymous_uplod_enable,required)
-                    option(value='1', selected=config.anonymous_uplod_enable==1 ? 'selected' : null)= __('enable')
-                    option(value='0', selected=config.anonymous_uplod_enable==0 ? 'selected' : null)= __('disable')
+                  input.form-control(type='text', name='ocr_server' , value=config.ocr_server,placeholder=__('ocr_server_placeholder'))
               .form-group
                 .col-sm-4
                   label= __('custom_style')
@@ -223,7 +255,7 @@ block content
         }
         
         if( 
-          (resp.a =='signin' || resp.a == 'token') && resp.status == 0
+          (resp.a =='signin' || resp.a == 'token' || resp.a == 'signout') && resp.status == 0
         ){
           location.reload()
         }else if(resp.status != 0){

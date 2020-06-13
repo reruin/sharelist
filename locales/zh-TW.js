@@ -28,7 +28,7 @@ module.exports = {
   "max_age_dir":"資料夾快取周期(秒)",
   "max_age_file":"檔案快取周期(秒)",
   "max_age_download":"下載鏈接有效期(秒)",
-  "anonymous_uplod_enable":"允許匿名上載",
+  "anonymous_uplod_enable":"匿名上載",
   "max_age_download_placeholder":"設置為0時永久有效",
   "virtual_path":"虛擬路徑",
   "general":"通用設定",
@@ -43,5 +43,13 @@ module.exports = {
   "reboot":"重啟",
   "proxy_paths":"代理路徑",
   "proxy_server":"中轉服務器",
-  "proxy_server_placeholder":""
+  "proxy_server_placeholder":"",
+  "ocr_server":"驗證碼識別接口",
+  "ocr_server_placeholder":"留空使用本程式內置接口",
+  "language":"切換語言",
+  "anonymous_enable":"匿名瀏覽",
+  "signout":"登出",
+  "anonymous_download":"匿名下载限制",
+  "anonymous_download_placeholder":"匹配正則表達式，留空表示允許下載任意文件。",
+  "index_enable":"目錄索引"
 }

@@ -18,6 +18,8 @@ const { createClient } = require("webdav");
 
 const { URL } = require("url")
 
+const urlFormat = require('url').format
+
 const { Writable } = require('stream')
 
 const clientMap = {}
@@ -41,11 +43,19 @@ module.exports = ({ getConfig, cache, base64, extname }) => {
       clientMap[remote_url] = hit = { client , options }
     }
     
-    return hit;
+    return { ...hit , path:searchParams.get('path') || '/' };
+  }
+
+  const createId = (id , path) => {
+    let obj = new URL(id)
+    let searchParams = obj.searchParams
+    // let basepath = searchParams.get('path') || ''
+    searchParams.set('path' , path)
+    obj.search = searchParams.toString()
+    return obj.href
   }
 
   const folder = async (id) => {
-    let [server , path] = id.split('>');
     let resp = { id : id, type: 'folder', protocol: defaultProtocol }
 
     /*
@@ -65,17 +75,14 @@ module.exports = ({ getConfig, cache, base64, extname }) => {
       }
     }
     */
-
-    let { client } = await getClient(server)
-    // console.log(path)
+    let { client , path } = await getClient(id)
     if (client) {
-      let data = await client.getDirectoryContents(path || '',{withCredentials:false});
-
+      let data = await client.getDirectoryContents(path);
       let children = [];
       data.forEach(i => {
-        let path = (server + '>' + i.filename)
+        let fid = createId(id , i.filename)
         let obj = {
-          id: path,
+          id: fid,
           name: i.basename,
           protocol: defaultProtocol,
           size: i.size,
@@ -99,18 +106,19 @@ module.exports = ({ getConfig, cache, base64, extname }) => {
     }
   }
 
-  const file = async (id , data = {}) => {
-    
-    data.url = id
+  const file = async (id , { data = {} }) => {
+    let { client , path } = await getClient(id)
+    if(client){
+      data.url = client.getFileDownloadLink(path)
+    }
     data.outputType = 'url'
-    //data.proxy = 'stream'
+    data.proxy = 'stream'
 
     return data
   }
 
-  const stream = async (url, options = {}) => {
-    let [server, path] = url.split('>');
-    let { client , options:clientOptions } = await getClient(server)
+  const stream = async (id, options = {}) => {
+    let { client , options:clientOptions , path} = await getClient(id)
 
     if (client) {
 

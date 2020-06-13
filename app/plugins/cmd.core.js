@@ -93,8 +93,8 @@ module.exports = ({ cache , getVendor , getConfig , getRuntime , updateFolder , 
       id: i.path.split(':').slice(1).join(':'),
       protocol: i.path.split(':')[0],
       name: i.name,
-      size: '-',
-      updated_at: '-',
+      size: 0,
+      updated_at: '',
       type: 'folder'
     }))
 
@@ -114,21 +114,26 @@ module.exports = ({ cache , getVendor , getConfig , getRuntime , updateFolder , 
 
     let hit = root()
     let paths = (p == '' || p == '/') ? [] : p.replace(/^\//,'').split('/').map(i => decodeURIComponent(i))
-    let idx = paths.length
-    let isRoot = idx == 0
+    let idx = 0
+    let isRoot = paths.length == 0
 
-    //逆向查询节点
+    //逆向查询节点 path -> filemeta { protocol , id , type } -> filedata
     while( idx >= 0 ){
       let cur = '/' + paths.slice(0,idx).join('/')
       let content = nodeCache[cur]
       if( content ){
         hit = content
+        //过滤器拦截      
+        if(filter && filter(hit , paths.slice(0,idx+1))){
+          return hit;
+        }
         idx--
         break
       }else{
         idx--
       }
     }
+    
 
     if(hit.protocol == 'root'){
       if( hit.children && hit.children.length == 1 ){
@@ -149,10 +154,12 @@ module.exports = ({ cache , getVendor , getConfig , getRuntime , updateFolder , 
       }
 
       if(hit.protocol == 'root' ){
+        if(filter && filter(hit , [])){
+          return hit;
+        }
         continue
       }
       
-
       let vendor = getVendor(hit.protocol)
 
       if (hit.lnk) {
@@ -200,6 +207,11 @@ module.exports = ({ cache , getVendor , getConfig , getRuntime , updateFolder , 
         }else{
           return false
         }
+      }
+
+      //过滤器拦截      
+      if(filter && filter(hit , paths.slice(0,idx+1))){
+        return hit;
       }
 
     }

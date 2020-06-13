@@ -5,7 +5,15 @@ const cache = require('../utils/cache')
 const { getVendors , reload } = require('../services/plugin')
 const service = require('../services/sharelist')
 
-const handlers = async (a, body) => {
+/**
+ * Hanlders hub
+ * 
+ * @param {string} [a] action
+ * @param {object} [body] formdata
+ * @param {object} [ctx] ctx
+ * @return {object}
+ */
+const handlers = async (a, body , ctx) => {
   let result = { status: 0, message: 'Success', data: '', a }
 
   if (a == 'path') {
@@ -51,6 +59,10 @@ const handlers = async (a, body) => {
   } else if(a == 'reboot'){
     reload()
     result.message = 'Success'
+  }
+  else if(a == 'signout'){
+    ctx.session.admin = false
+    result.message = 'Success'
   } else if (a == 'title') {
     let title = body.title
     if (title) {
@@ -64,7 +76,7 @@ const handlers = async (a, body) => {
     cache.clear()
     result.message = 'Success'
   } else if (a == 'cfg') {
-    let { proxy_enable, preview_enable, readme_enable, max_age_dir, max_age_file,max_age_download, webdav_path, anonymous_uplod_enable, ignore_file_extensions , ignore_paths , custom_style , custom_script , proxy_paths , proxy_server } = body
+    let { proxy_enable, preview_enable, readme_enable, max_age_dir, max_age_file,max_age_download, webdav_path, anonymous_uplod_enable, ignore_file_extensions , ignore_paths , custom_style , custom_script , proxy_paths , proxy_server , ocr_server , language, anonymous_download, index_enable } = body
     let opts = {}
     if (max_age_dir !== undefined) {
       max_age_dir = parseInt(max_age_dir)
@@ -96,6 +108,10 @@ const handlers = async (a, body) => {
       preview_enable = preview_enable == '1' ? 1 : 0
       opts.preview_enable = preview_enable
     }
+    if (index_enable) {
+      index_enable = index_enable == '1' ? 1 : 0
+      opts.index_enable = index_enable
+    }
 
     if (readme_enable) {
       readme_enable = readme_enable == '1' ? 1 : 0
@@ -110,6 +126,13 @@ const handlers = async (a, body) => {
     if (webdav_path) {
       opts.webdav_path = webdav_path
     }
+
+    if(language !== undefined){
+      opts.language = language
+      //console.log(ctx,ctx.__setLocale)
+      ctx.__setLocale(language)
+    }
+
     opts.custom_script = custom_script
     opts.custom_style = custom_style
     opts.ignore_paths = config.getConfig('ignore_paths')
@@ -117,6 +140,9 @@ const handlers = async (a, body) => {
     opts.ignore_paths.__root__ = ignore_paths.split(',')
     opts.proxy_paths = proxy_paths.split(',')
     opts.proxy_server = proxy_server
+    opts.anonymous_download = anonymous_download
+    opts.ocr_server = ocr_server || ''
+
     await config.save(opts)
     result.message = 'Success'
   }
@@ -126,6 +152,9 @@ const handlers = async (a, body) => {
 
 module.exports = {
 
+  /**
+   * Manage page index handler
+   */
   async home(ctx, next) {
 
     let token = ctx.request.body.token
@@ -144,6 +173,9 @@ module.exports = {
 
   },
 
+  /**
+   * API router handler
+   */
   async api(ctx) {
 
     let body = ctx.request.body
@@ -164,7 +196,7 @@ module.exports = {
         result.status = 403
         result.message = 'Require Auth'
       } else {
-        result = await handlers(a, body)
+        result = await handlers(a, body , ctx)
       }
 
     }
@@ -182,7 +214,7 @@ module.exports = {
         ctx.body = JSON.stringify(config.getAllConfig())
         return
       } else {
-        result = await handlers(act, body)
+        result = await handlers(act, body,ctx)
       }
     } else {
       result.status = -1
@@ -192,6 +224,9 @@ module.exports = {
 
   },
 
+  /**
+   * Shell page handler
+   */
   async shell(ctx){
     let access = !!ctx.session.admin
     if(access){
@@ -201,6 +236,12 @@ module.exports = {
     }
   },
 
+  /**
+   * Shell exection
+   * 
+   * @param {object} [ctx]
+   * @return {void}
+   */
   async shell_exec(ctx){
     let body = ctx.request.body
     let { command , path = '/' } = body

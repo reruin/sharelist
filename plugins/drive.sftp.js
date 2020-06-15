@@ -4,13 +4,13 @@
 
 const { PassThrough } = require('stream')
 
-const SFTP = require('ssh2-sftp-client');
+const SFTPClient = require('ssh2-sftp-client');
 
 const { URL } = require("url")
 
 const CLOSED = Symbol('client_closed')
 
-class FTP {
+class SFTP {
   constructor() {
     this.name = 'sftp'
     this.label = 'SFTP'
@@ -32,7 +32,7 @@ class FTP {
       return { client : clientMap[key] , path:pathname }
     } 
 
-    let client = new SFTP();
+    let client = new SFTPClient();
 
     let options = {
       host:hostname
@@ -147,4 +147,4 @@ class FTP {
 }
 
 
-module.exports = FTP
+module.exports = SFTP

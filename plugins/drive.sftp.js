@@ -61,7 +61,17 @@ class SFTP {
     return parent.replace(/\/$/,'') +  '/' + current
   }
 
-  async folder(id) {
+  async mkdir(id) {
+    let { protocol } = this
+
+    let { client , path } = await this.getClient(id)
+
+    if( client ){
+      await client.mkdir(path , true);
+    }
+  }
+
+  async path(id) {
     let { datetime, extname , getConfig , cache } = this.helper
 
     let { protocol } = this
@@ -71,60 +81,55 @@ class SFTP {
     let { client , path } = await this.getClient(id)
 
     if (client) {
-      let data = await client.list(path);
+      let info = await client.stat(path)
 
-      let children = data.map(i => {
-        let obj = {
-          id: this.createId(id , i.name),
-          name: i.name,
-          protocol,
-          size: i.size,
-          created_at: null,
-          updated_at: datetime(i.modifyTime),
-          ext: extname(i.name),
-          type: 'other'
+      if( info ){
+        if(info.isDirectory){
+          let data = await client.list(path);
+
+          let children = data.map(i => {
+            let obj = {
+              id: this.createId(id , i.name),
+              name: i.name,
+              protocol,
+              size: i.size,
+              created_at: null,
+              updated_at: datetime(i.modifyTime),
+              ext: extname(i.name),
+              type: 'other'
+            }
+            /*
+              d / l / -
+            */
+            if (i.type == 'd') {
+              obj.type = 'folder'
+            }
+
+            return obj
+          })
+
+          return { id: id, type: 'folder', protocol , children }
         }
-        /*
-          d / l / -
-        */
-        if (i.type == 'd') {
-          obj.type = 'folder'
+        else{
+          return {
+            id,protocol,
+            name: id.split('/').pop(),
+            ext: extname(id),
+            size: info.size,
+            url: id,
+            outputType: 'stream',
+            proxy: true
+          }
         }
-
-        return obj
-      })
-
-      return { id: id, type: 'folder', protocol , children }
-    } else {
-      return false
+      }
     }
-
+  }
+  async folder(id) {
+    return await this.path(id)
   }
 
-
   async file(id) {
-    let { basename , extname } = this.helper
-    let { protocol } = this
-
-    let { client , path } = await this.getClient(id)
-
-    let resp = {
-      id,
-      ext: extname(id),
-      url: id,
-      protocol,
-      outputType: 'stream',
-      proxy: true
-    }
-
-    if(client){
-      let info = await client.stat(path)
-      resp.size = info.size
-    }
-    
-    resp.name = id.split('/').pop()
-
-    return resp
+    return await this.path(id)
   }
 
   async createReadStream({id , size , options = {}} = {}) {
@@ -142,6 +147,22 @@ class SFTP {
     } else {
       return null
     }
+  }
+
+  async createWriteStream({ id, options = {}, target = '' } = {}) {
+    let newId = this.createId(id , target)
+
+    let { client , path } = await this.getClient(newId)
+
+    let parentId = newId.split('/').slice(0,-1).join('/')
+    
+    await this.mkdir(parentId)
+
+    let writeStream = new PassThrough()
+
+    client.put(writeStream , path , { autoClose:false })
+
+    return writeStream
   }
 
 }

@@ -29,7 +29,7 @@ class SFTP {
     let { username, password, hostname, port, pathname } = new URL(url);
 
     if (clientMap[key] && clientMap[key][CLOSED] !== true) {
-      return { client : clientMap[key] , path:pathname }
+      return { client : clientMap[key] , path:decodeURIComponent(pathname) }
     } 
 
     let client = new SFTPClient();
@@ -49,7 +49,7 @@ class SFTP {
         client[CLOSED] = true
       })
       clientMap[key] = client
-      return { client , path:pathname }
+      return { client , path:decodeURIComponent(pathname) }
     } catch (err) {
       console.log(err)
       return { }

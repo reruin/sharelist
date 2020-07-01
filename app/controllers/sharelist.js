@@ -12,10 +12,11 @@ const { parsePath , pathNormalize , enablePreview, enableRange , isRelativePath 
  * @return [boolean]
  */
 const isProxyPath = (path , paths) => {
+  const decodePath = decodeURIComponent(path)
   return (
-    path == '' ||  path == '/' || 
+    decodePath == '' ||  decodePath == '/' || 
     paths.length == 0 ||
-    paths.some(p => path.startsWith(p))
+    paths.some(p => decodePath.startsWith(decodeURIComponent(p)))
   ) ? true : false
 }
 

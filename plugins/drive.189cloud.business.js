@@ -409,7 +409,6 @@ class CTCB {
     while(true && --retry_times){
       resp = await this.helper.request({async:true,...rest})
       //cookie失效
-      console.log(resp.headers)
       if(resp.headers['Content-Type'] && resp.headers['Content-Type'].includes('text/html')){
         let { result , msg } = await manager.update(id)
         if( result ){
@@ -532,15 +531,24 @@ class CTCB {
 
     // ctcb://username/:type/corp/:corpId/:folderId/:fileId
     let pathArgs = path.replace(/(^\/|\/$)/,'').split('/')
-    let [type, _, corpId,folderId = '',fileId = ''] = pathArgs
-    type = type.charAt(0).toUpperCase() + type.substring(1)
-    console.log(type,corpId,folderId,fileId)
+    let [type, _, corpId, folderId, fileId] = pathArgs
+    let basePath = '/'+[type, _, corpId].join('/')
+
+    const pathsMap = {
+      'companyFiles':'listCompanyFiles',
+      'workFiles':'listWorkFiles',
+      'shareFolders':'listJoinCorpCoshare',
+    }
+
+    type = pathsMap[type]
+
+    // console.log(type,corpId,folderId,fileId)
     if( corpId && !fileId ){
       let children = [],pageNum = 1
 
       while (true) {
         let resp = await this.fetchData(id, {
-          url: `https://b.cloud.189.cn/user/list${type}.action?corpId=${corpId}&fileId=${folderId}&mediaType=&orderBy=1&order=ASC&pageNum=1&pageSize=9999&recursive=false&noCache=${Math.random()}`,
+          url: `https://b.cloud.189.cn/user/${type}.action?corpId=${corpId}&fileId=${folderId || ''}&mediaType=&orderBy=1&order=ASC&pageNum=1&pageSize=9999&recursive=false&noCache=${Math.random()}`,
           method: 'GET',
           headers: {
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/69.0.3497.100 Safari/537.36',
@@ -548,27 +556,27 @@ class CTCB {
           },
           json: true
         })
-        console.log(path,type,`https://b.cloud.189.cn/user/list${type}.action?corpId=${corpId}&fileId=&mediaType=&orderBy=1&order=ASC&pageNum=1&pageSize=9999&recursive=false&noCache=${Math.random()}`)
         if (!resp || !resp.body) {
           return { id, type: 'folder', protocol: protocol, body: resp.msg || '解析错误' }
         }
-
         for (let file of resp.body.data) {
+          let isFolder = file.isFolder
           let item = {
-            id: manager.stringify({ username, path: path + '/' + file.fileId }),
+            id: manager.stringify({ username, path: (isFolder ? basePath : path) + '/' + file.fileId }),
             name: file.fileName,
             protocol: protocol,
             created_at: file.createTime,
             updated_at: file.lastOpTime,
             type: file.isFolder ? 'folder' : 'file',
           }
-          if (item.type != 'folder') {
+
+          if (!isFolder) {
             item.ext = file.fileType
             item.size = parseInt(file.fileSize)
             item.url = 'https:' + file.downloadUrl
-
             if (file.icon) item.icon = file.icon.smallUrl
           }
+
           children.push(item)
         }
 
@@ -593,7 +601,9 @@ class CTCB {
     }
     else if(folderId && fileId){
       let parentId = manager.stringify({ username, path: pathArgs.slice(0,-1).join('/') })
+
       let parentData = await this.path(parentId)
+
       let data = parentData.children.find(i => i.id == id )
       if( !data ) return false
       let resp = await this.fetchData(id,{

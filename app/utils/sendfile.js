@@ -141,7 +141,7 @@ const getHTTPFile = async (url ,headers = {}) => {
   return body
 }
 
-const sendStream = async (ctx , url , adapter , data = {}) => {
+const sendStream = async (ctx , id , adapter , data = {}) => {
   let fileSize = null , start , range = {};
 
   headers = mergeHeaders(ctx.req.headers , data.headers || {})
@@ -161,20 +161,19 @@ const sendStream = async (ctx , url , adapter , data = {}) => {
     }
   }
 
-  let opts = { ...data , reqHeaders:headers , range , ctx:ctx}
-
-  const { stream  , acceptRanges } = await adapter(url , opts)
+  let opts = { ...data , id , reqHeaders:headers , range , ctx:ctx}
+  const stream = await adapter(opts)
 
   if(havaSize){
-    if(acceptRanges){
-      ctx.status = 206
-      ctx.set('Accept-Ranges', 'bytes')
-      ctx.set('Content-Range', 'bytes ' + `${range.start}-${range.end}/${range.chunksize}`)
-      ctx.length = range.chunksize
-    }else{
+    // if(acceptRanges){
+    //   ctx.status = 206
+    //   ctx.set('Accept-Ranges', 'bytes')
+    //   ctx.set('Content-Range', 'bytes ' + `${range.start}-${range.end}/${range.chunksize}`)
+    //   ctx.length = range.chunksize
+    // }else{
       ctx.set('Accept-Ranges', 'none')
       ctx.length = fileSize
-    }
+    // }
   }else{
     ctx.set('Accept-Ranges', 'none')
   }

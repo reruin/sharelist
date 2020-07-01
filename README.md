@@ -19,6 +19,7 @@ ShareList 是一个易用的网盘工具，支持快速挂载 GoogleDrive、OneD
   * [挂载蓝奏云](#挂载蓝奏云) 
   * [挂载h5ai](#挂载h5ai) 
   * [挂载WebDAV](#挂载WebDAV) 
+  * [挂载SFTP](#挂载SFTP) 
   * [虚拟目录](#虚拟目录) 
   * [虚拟文件](#虚拟文件) 
   * [目录加密](#目录加密) 
@@ -217,6 +218,16 @@ ShareList 是一个易用的网盘工具，支持快速挂载 GoogleDrive、OneD
   https://username:password@webdavserver.com:1222/?acceptRanges=none
 ```
 **注意：若服务端不支持断点续传，需追加```acceptRanges=none```** 
+
+***
+
+### 挂载SFTP
+由[drive.sftp.js](plugins/drive.sftp.js)插件实现，用于访问支持SSH文件传输协议的服务。  
+```
+挂载标示：sftp  
+挂载路径：  
+  //username:password@server:port/path   
+```
 
 ***
 

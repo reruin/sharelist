@@ -133,6 +133,20 @@ const md5 = (v) => {
   return crypto.createHash('md5').update(v).digest('hex')
 }
 
+const { StringDecoder } = require('string_decoder');
+
+const parseStream = (stream , encoding = 'utf-8') => new Promise((resolve , reject) => {
+  let str = ''
+  const decoder = new StringDecoder(encoding);
+  stream.on('data' , (chunk) => {
+    str += decoder.write(chunk);
+  })
+
+  stream.on('end' , () => {
+    resolve(str)
+  })
+})
+
 module.exports = {
   parsePath,
   getFileType,
@@ -156,6 +170,7 @@ module.exports = {
   extname,
   markdownParse,
   md5,
+  parseStream,
   params(url) {
     url = url.split('?')[1]
     let reg = /(?:&)?([^=]+)=([^&]*)/ig,

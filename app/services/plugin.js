@@ -1,7 +1,7 @@
 const fs = require('fs')
 const path = require('path')
 const querystring = require('querystring')
-const {getFileType , getMIME , isArray , isObject , params , base64 , getRandomIP , retrieveSize , extname , pathNormalize } = require('../utils/base')
+const {getFileType , getMIME , isArray , isObject , params , base64 , getRandomIP , retrieveSize , extname , pathNormalize, parseStream } = require('../utils/base')
 const format = require('../utils/format')
 const cache = require('../utils/cache')
 const http = require('../utils/http')
@@ -44,6 +44,8 @@ const whenReady = (handler) => {
     })
   }
 }
+
+
 
 const isClass = fn => typeof fn == 'function' && /^\s*class/.test(fn.toString());
 
@@ -149,8 +151,10 @@ const getSource = async (id , driverName , data) => {
     if(d.outputType === 'file'){
       return await getFile(d.url)
     }
-    else if(d.outputType === 'stream' && vendor.stream){
-      return await vendor.stream(id , {contentFormat:true});
+    else if(d.outputType === 'stream'){
+      if(vendor.createReadStream){
+        return await parseStream( await vendor.createReadStream({id}) )
+      }
     }
     else{
       return await getHTTPFile(d.url , d.headers || {})
@@ -169,8 +173,8 @@ const getStream = async (ctx , id ,type, protocol , data) => {
   }
   else if(type === 'stream'){
     let vendor = getDrive(protocol)
-    if(vendor && vendor.stream){
-      return await sendStream(ctx , id , vendor.stream , data);
+    if(vendor && vendor.createReadStream){
+      return await sendStream(ctx , id , (...rest) => vendor.createReadStream(...rest) , data);
     }
   }
   else{

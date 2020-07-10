@@ -247,6 +247,7 @@ class Lanzou {
                 ext:helper.extname(name),
                 protocol,
                 // updated_at:datetime(i.upload_at*1000),
+                updated_at:i.time,
                 size:helper.retrieveSize(i.size),
                 displaySize:i.size,
                 type : undefined,

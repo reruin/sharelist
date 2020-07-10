@@ -72,7 +72,6 @@ module.exports = async(ctx, next) => {
   }
   let runtime = {
     href:ctx.href,
-    path:ctx.path,
     querystring:ctx.querystring,
     query:ctx.query,
     body:ctx.request.body,
@@ -84,6 +83,7 @@ module.exports = async(ctx, next) => {
     paths:paths,
     isAdmin,
     access:ctx.session.access,
+    session:ctx.session,
     ...query
   }
   if( ctx.get('x-request') ){
@@ -106,7 +106,7 @@ module.exports = async(ctx, next) => {
   }
 
   ctx.runtime = runtime
-  setRuntime('req' , runtime)
+  setRuntime(runtime)
   /*
   setLocation({
     href:ctx.href,

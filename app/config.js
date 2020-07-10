@@ -3,7 +3,7 @@ const os = require('os')
 const { createFiledb } = require('./utils/db/filedb');
 const configPath = process.cwd() +'/cache/config.json'
 const port = process.env.PORT || 33001
-const runtime = {}
+var runtime = {}
 
 const db = createFiledb(configPath , {raw:true} , {
   port , 
@@ -82,8 +82,10 @@ const getAllConfig = (key) => db.all
 
 const getPath = () => [].concat( db.get('path') || [] )
 
-const getRuntime = (key) => {
-  return runtime[key]
+const getRuntime = () => runtime
+
+const setRuntime = (value) => {
+  runtime = value
 }
 
 const getSkin = (key) => {
@@ -107,9 +109,6 @@ const setPluginOption = (key , value) => {
   db.save()
 }
 
-const setRuntime = (key , value) => {
-  runtime[key] = value
-}
 
 const saveDrive = (value , name) => {
   if(!name) name = decodeURIComponent(runtime.req.path.replace(/^\//g,''))

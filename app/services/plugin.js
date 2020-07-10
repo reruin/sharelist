@@ -147,7 +147,7 @@ const recognize = async (image , type, lang) => {
 const getSource = async (id , driverName , data) => {
   if(driveMap.has(driverName)){
     let vendor = getDrive(driverName)
-    let d = await vendor.file(id , { req: config.getRuntime('req') , data } )
+    let d = await vendor.file(id , { req: config.getRuntime() , data } )
     if(d.outputType === 'file'){
       return await getFile(d.url)
     }
@@ -190,7 +190,7 @@ const getStream = async (ctx , id ,type, protocol , data) => {
 const getPreview = async (data) => {
   let ext = data.ext
   let name = previewMap.get(ext)
-  return name ? await resources[name].preview[ext](data , config.getRuntime('req')) : null
+  return name ? await resources[name].preview[ext](data , config.getRuntime()) : null
 }
 
 const isPreviewable = async (data) => {
@@ -552,10 +552,15 @@ const getVendors = () => [...new Set(driveMountableMap.values())].map(id => {
 })
 
 const getAuth = (type) => {
-  if( authMap.has(type) ){
-    return resources[ authMap.get(type) ].auth[type]
+  let drive = getDrive(protocol)
+  if(drive.auth){
+    return drive.auth
   }else{
-    return false
+    if( authMap.has(type) ){
+      return resources[ authMap.get(type) ].auth[type]
+    }else{
+      return false
+    }
   }
 }
 //

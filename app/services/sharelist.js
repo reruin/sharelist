@@ -111,7 +111,7 @@ class ShareList {
         let currentPath
         let data = await command('ls' , targetPath, (data , paths) => {
           currentPath = '/' + paths.join('/')
-          if( this.hasPasswdFile(data) && req.access.has(currentPath) == false && !req.isAdmin) {
+          if( data.auth || (this.hasPasswdFile(data) && req.access.has(currentPath) == false && !req.isAdmin)) {
             this.passwdPaths.add(currentPath)
             // console.log(currentPath,true,req.access,encodeURIComponent(currentPath))
             return true
@@ -151,17 +151,30 @@ class ShareList {
    */
   async auth(req) {
     let data = await command('ls' , req.paths.join('/'))
-    let hit = data.children.find(i => i.name == '.passwd')
-    let content = await getSource(hit.id, hit.protocol , hit)
-    let body = yaml.parse(content)
-    let auth = getAuth(body.type)
-    if (auth) {
-      let ra = await auth(req.body.user, req.body.passwd, body.data)
-      if(ra){
-        req.access.add(decodeURIComponent(req.path))
-        return true
-      }
-    } 
+    // //自定义验证
+    // if(data.auth){
+    //   let authHelper = getAuth(data.protocol)
+    //   if(authHelper){
+    //     let ra = await authHelper(data.id, req.body)
+    //     if(ra){
+    //       req.access.add(decodeURIComponent(req.path))
+    //       return true
+    //     }
+    //   }
+    // }else{
+      let hit = data.children.find(i => i.name == '.passwd')
+      let content = await getSource(hit.id, hit.protocol , hit)
+      let body = yaml.parse(content)
+      let auth = getAuth(body.type)
+      if (auth) {
+        let ra = await auth(req.body.user, req.body.passwd, body.data)
+        if(ra){
+          req.access.add(decodeURIComponent(req.path))
+          return true
+        }
+      } 
+    // }
+    
     return false
   }
 

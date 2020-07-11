@@ -150,7 +150,7 @@ class Lanzou {
       fid = id
     }
 
-    let isFolder = fid.startsWith('b')
+    let isFolder = fid.startsWith('b') || fid.includes('/')
     return { passwd , fid , isFolder }
   }
 
@@ -192,7 +192,7 @@ class Lanzou {
       let require_auth = false
 
       //需要密码
-      if( body && body.includes('id="pwdload')){
+      if( body && body.includes('id="pwdload') && !passwd ){
         require_auth = true
         //判断当前用户此路径是否已过验证
         if( accessCache[id] && ctx.session.access.has(id) ){

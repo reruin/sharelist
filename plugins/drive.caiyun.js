@@ -18,6 +18,40 @@ const RSAUtils = (function(){var $w={};if(typeof $w.RSAUtils==="undefined"){var 
 }return result};RSAUtils.biNumBits=function(x){var n=RSAUtils.biHighIndex(x);var d=x.digits[n];var m=(n+1)*bitsPerDigit;var result;for(result=m;result>m-bitsPerDigit;--result){if((d&32768)!=0){break}d<<=1}return result};RSAUtils.biMultiply=function(x,y){var result=new BigInt();var c;var n=RSAUtils.biHighIndex(x);var t=RSAUtils.biHighIndex(y);var u,uv,k;for(var i=0;i<=t;++i){c=0;k=i;for(j=0;j<=n;++j,++k){uv=result.digits[k]+x.digits[j]*y.digits[i]+c;result.digits[k]=uv&maxDigitVal;c=uv>>>biRadixBits}result.digits[i+n+1]=c}result.isNeg=x.isNeg!=y.isNeg;return result};RSAUtils.biMultiplyDigit=function(x,y){var n,c,uv;result=new BigInt();n=RSAUtils.biHighIndex(x);c=0;for(var j=0;j<=n;++j){uv=result.digits[j]+x.digits[j]*y+c;result.digits[j]=uv&maxDigitVal;c=uv>>>biRadixBits}result.digits[1+n]=c;return result};RSAUtils.arrayCopy=function(src,srcStart,dest,destStart,n){var m=Math.min(srcStart+n,src.length);for(var i=srcStart,j=destStart;i<m;++i,++j){dest[j]=src[i]}};var highBitMasks=[0,32768,49152,57344,61440,63488,64512,65024,65280,65408,65472,65504,65520,65528,65532,65534,65535];RSAUtils.biShiftLeft=function(x,n){var digitCount=Math.floor(n/bitsPerDigit);var result=new BigInt();RSAUtils.arrayCopy(x.digits,0,result.digits,digitCount,result.digits.length-digitCount);var bits=n%bitsPerDigit;var rightBits=bitsPerDigit-bits;for(var i=result.digits.length-1,i1=i-1;i>0;--i,--i1){result.digits[i]=((result.digits[i]<<bits)&maxDigitVal)|((result.digits[i1]&highBitMasks[bits])>>>(rightBits))}result.digits[0]=((result.digits[i]<<bits)&maxDigitVal);result.isNeg=x.isNeg;return result};var lowBitMasks=[0,1,3,7,15,31,63,127,255,511,1023,2047,4095,8191,16383,32767,65535];RSAUtils.biShiftRight=function(x,n){var digitCount=Math.floor(n/bitsPerDigit);var result=new BigInt();RSAUtils.arrayCopy(x.digits,digitCount,result.digits,0,x.digits.length-digitCount);var bits=n%bitsPerDigit;var leftBits=bitsPerDigit-bits;for(var i=0,i1=i+1;i<result.digits.length-1;++i,++i1){result.digits[i]=(result.digits[i]>>>bits)|((result.digits[i1]&lowBitMasks[bits])<<leftBits)}result.digits[result.digits.length-1]>>>=bits;result.isNeg=x.isNeg;return result};RSAUtils.biMultiplyByRadixPower=function(x,n){var result=new BigInt();RSAUtils.arrayCopy(x.digits,0,result.digits,n,result.digits.length-n);return result};RSAUtils.biDivideByRadixPower=function(x,n){var result=new BigInt();RSAUtils.arrayCopy(x.digits,n,result.digits,0,result.digits.length-n);return result};RSAUtils.biModuloByRadixPower=function(x,n){var result=new BigInt();RSAUtils.arrayCopy(x.digits,0,result.digits,0,n);return result};RSAUtils.biCompare=function(x,y){if(x.isNeg!=y.isNeg){return 1-2*Number(x.isNeg)}for(var i=x.digits.length-1;i>=0;--i){if(x.digits[i]!=y.digits[i]){if(x.isNeg){return 1-2*Number(x.digits[i]>y.digits[i])}else{return 1-2*Number(x.digits[i]<y.digits[i])}}}return 0};RSAUtils.biDivideModulo=function(x,y){var nb=RSAUtils.biNumBits(x);var tb=RSAUtils.biNumBits(y);var origYIsNeg=y.isNeg;var q,r;if(nb<tb){if(x.isNeg){q=RSAUtils.biCopy(bigOne);q.isNeg=!y.isNeg;x.isNeg=false;y.isNeg=false;r=biSubtract(y,x);x.isNeg=true;y.isNeg=origYIsNeg}else{q=new BigInt();r=RSAUtils.biCopy(x)}return[q,r]}q=new BigInt();r=x;var t=Math.ceil(tb/bitsPerDigit)-1;var lambda=0;while(y.digits[t]<biHalfRadix){y=RSAUtils.biShiftLeft(y,1);++lambda;++tb;t=Math.ceil(tb/bitsPerDigit)-1}r=RSAUtils.biShiftLeft(r,lambda);nb+=lambda;var n=Math.ceil(nb/bitsPerDigit)-1;var b=RSAUtils.biMultiplyByRadixPower(y,n-t);while(RSAUtils.biCompare(r,b)!=-1){++q.digits[n-t];r=RSAUtils.biSubtract(r,b)}for(var i=n;i>t;--i){var ri=(i>=r.digits.length)?0:r.digits[i];var ri1=(i-1>=r.digits.length)?0:r.digits[i-1];var ri2=(i-2>=r.digits.length)?0:r.digits[i-2];var yt=(t>=y.digits.length)?0:y.digits[t];var yt1=(t-1>=y.digits.length)?0:y.digits[t-1];if(ri==yt){q.digits[i-t-1]=maxDigitVal}else{q.digits[i-t-1]=Math.floor((ri*biRadix+ri1)/yt)}var c1=q.digits[i-t-1]*((yt*biRadix)+yt1);var c2=(ri*biRadixSquared)+((ri1*biRadix)+ri2);while(c1>c2){--q.digits[i-t-1];c1=q.digits[i-t-1]*((yt*biRadix)|yt1);c2=(ri*biRadix*biRadix)+((ri1*biRadix)+ri2)}b=RSAUtils.biMultiplyByRadixPower(y,i-t-1);r=RSAUtils.biSubtract(r,RSAUtils.biMultiplyDigit(b,q.digits[i-t-1]));if(r.isNeg){r=RSAUtils.biAdd(r,b);--q.digits[i-t-1]}}r=RSAUtils.biShiftRight(r,lambda);q.isNeg=x.isNeg!=origYIsNeg;if(x.isNeg){if(origYIsNeg){q=RSAUtils.biAdd(q,bigOne)}else{q=RSAUtils.biSubtract(q,bigOne)}y=RSAUtils.biShiftRight(y,lambda);r=RSAUtils.biSubtract(y,r)}if(r.digits[0]==0&&RSAUtils.biHighIndex(r)==0){r.isNeg=false}return[q,r]};RSAUtils.biDivide=function(x,y){return RSAUtils.biDivideModulo(x,y)[0]};RSAUtils.biModulo=function(x,y){return RSAUtils.biDivideModulo(x,y)[1]};RSAUtils.biMultiplyMod=function(x,y,m){return RSAUtils.biModulo(RSAUtils.biMultiply(x,y),m)};RSAUtils.biPow=function(x,y){var result=bigOne;var a=x;while(true){if((y&1)!=0){result=RSAUtils.biMultiply(result,a)}y>>=1;if(y==0){break}a=RSAUtils.biMultiply(a,a)}return result};RSAUtils.biPowMod=function(x,y,m){var result=bigOne;
 var a=x;var k=y;while(true){if((k.digits[0]&1)!=0){result=RSAUtils.biMultiplyMod(result,a,m)}k=RSAUtils.biShiftRight(k,1);if(k.digits[0]==0&&RSAUtils.biHighIndex(k)==0){break}a=RSAUtils.biMultiplyMod(a,a,m)}return result};$w.BarrettMu=function(m){this.modulus=RSAUtils.biCopy(m);this.k=RSAUtils.biHighIndex(this.modulus)+1;var b2k=new BigInt();b2k.digits[2*this.k]=1;this.mu=RSAUtils.biDivide(b2k,this.modulus);this.bkplus1=new BigInt();this.bkplus1.digits[this.k+1]=1;this.modulo=BarrettMu_modulo;this.multiplyMod=BarrettMu_multiplyMod;this.powMod=BarrettMu_powMod};function BarrettMu_modulo(x){var $dmath=RSAUtils;var q1=$dmath.biDivideByRadixPower(x,this.k-1);var q2=$dmath.biMultiply(q1,this.mu);var q3=$dmath.biDivideByRadixPower(q2,this.k+1);var r1=$dmath.biModuloByRadixPower(x,this.k+1);var r2term=$dmath.biMultiply(q3,this.modulus);var r2=$dmath.biModuloByRadixPower(r2term,this.k+1);var r=$dmath.biSubtract(r1,r2);if(r.isNeg){r=$dmath.biAdd(r,this.bkplus1)}var rgtem=$dmath.biCompare(r,this.modulus)>=0;while(rgtem){r=$dmath.biSubtract(r,this.modulus);rgtem=$dmath.biCompare(r,this.modulus)>=0}return r}function BarrettMu_multiplyMod(x,y){var xy=RSAUtils.biMultiply(x,y);return this.modulo(xy)}function BarrettMu_powMod(x,y){var result=new BigInt();result.digits[0]=1;var a=x;var k=y;while(true){if((k.digits[0]&1)!=0){result=this.multiplyMod(result,a)}k=RSAUtils.biShiftRight(k,1);if(k.digits[0]==0&&RSAUtils.biHighIndex(k)==0){break}a=this.multiplyMod(a,a)}return result}var RSAKeyPair=function(encryptionExponent,decryptionExponent,modulus){var $dmath=RSAUtils;this.e=$dmath.biFromHex(encryptionExponent);this.d=$dmath.biFromHex(decryptionExponent);this.m=$dmath.biFromHex(modulus);this.chunkSize=2*$dmath.biHighIndex(this.m);this.radix=16;this.barrett=new $w.BarrettMu(this.m)};RSAUtils.getKeyPair=function(encryptionExponent,decryptionExponent,modulus){return new RSAKeyPair(encryptionExponent,decryptionExponent,modulus)};if(typeof $w.twoDigit==="undefined"){$w.twoDigit=function(n){return(n<10?"0":"")+String(n)}}RSAUtils.encryptedString=function(key,s){var a=[];var sl=s.length;var i=0;while(i<sl){a[i]=s.charCodeAt(i);i++}while(a.length%key.chunkSize!=0){a[i++]=0}var al=a.length;var result="";var j,k,block;for(i=0;i<al;i+=key.chunkSize){block=new BigInt();j=0;for(k=i;k<i+key.chunkSize;++j){block.digits[j]=a[k++];block.digits[j]+=a[k++]<<8}var crypt=key.barrett.powMod(block,key.e);var text=key.radix==16?RSAUtils.biToHex(crypt):RSAUtils.biToString(crypt,key.radix);result+=text+" "}return result.substring(0,result.length-1)};RSAUtils.decryptedString=function(key,s){var blocks=s.split(" ");var result="";var i,j,block;for(i=0;i<blocks.length;++i){var bi;if(key.radix==16){bi=RSAUtils.biFromHex(blocks[i])}else{bi=RSAUtils.biFromString(blocks[i],key.radix)}block=key.barrett.powMod(bi,key.d);for(j=0;j<=RSAUtils.biHighIndex(block);++j){result+=String.fromCharCode(block.digits[j]&255,block.digits[j]>>8)}}if(result.charCodeAt(result.length-1)==0){result=result.substring(0,result.length-1)}return result};RSAUtils.setMaxDigits(200);return RSAUtils})();
 
+const errorCode = {
+    "300": "请输入正确图形验证码",
+    "301": "请输入图形验证码",
+    "400": "请输入正确的手机号码",
+    "401": "密码错误，请输入正确的密码",
+    "404": "用户不存在",
+    "410": "图形验证码已失效，请刷新图形验证码",
+    "420": "图形验证码错误，请重新输入",
+    "421": "请您输入验证码",
+    "431": "用户正在更换飞信号，暂时无法登陆",
+    "432": "该飞信号已停止使用，请使用新帐号登录",
+    "435": "用户手机已销号，未绑定安全邮箱",
+    "490": "已发送短信验证码，请1分钟后重试！",
+    "500": "系统繁忙，请稍后再试",
+    AAS_9103: "帐号或密码不正确，请重新输入",
+    CUSTOM_AAS_9103: "帐号或密码不正确，请重新输入",
+    AAS_9431: "仅支持中国移动用户",
+    AAS_9441: "帐号或密码不正确，请重新输入",
+    CUSTOM_AAS_9441: "短信验证码错误",
+    AAS_9442: "短信验证码失效，请重新获取",
+    AAS_9999: "用户名或密码错误，请重试",
+    AAS_200059504: "帐号或密码不正确，请重新输入",
+    AAS_200059508: "今日验证码短信已达上限",
+    AAS_200059505: "帐号已被冻结，请24小时后再试",
+    AAS_200050401: "帐号或密码不正确，请重新输入",
+    AAS_200050411: '为保障帐号安全，请<a id="umc_url_bindphone" style="color:#5b28ad;" href="https://www.cmpassport.com" target="_blank">绑定手机号</a>后重试',
+    AAS_200050422: "验证码错误，请重新输入",
+    AAS_200050423: "请您输入验证码",
+    AAS_200050432: "您已关闭和彩云业务，如需使用请重新开启",
+    AAS_200050434: "移动通行证被锁定，请稍后再试",
+    AAS_200059512: "验证码错误，请重新输入",
+    AAS_200059521: "帐号或密码不正确，请重新输入",
+    AAS_200050442: ""
+}
 //https://github.com/nodejs/node/issues/24471
 const install = async (msg) => {
   return `
@@ -35,6 +69,26 @@ const install = async (msg) => {
   `
 }
 
+const captchaPage = async (data) => {
+  return `
+    <div class="auth">
+      <h3>和彩云 挂载向导</h3>
+      <p style="font-size:12px;">请输入验证码
+        <img src="${data.img}" />
+      </p>
+      <div>
+        <form class="form-horizontal" method="post">
+          <input type="hidden" name="act" value="install" />
+          <input type="hidden" name="username" value="${data.username}" />
+          <input type="hidden" name="password" value="${data.password}" />
+          <input type="hidden" name="key" value="${data.key}" />
+          <div class="form-group"><input class="sl-input" type="text" placeholder="验证码" name="captcha" value="" /></div>
+          <button class="sl-button btn-primary" id="signin" type="submit">确定</button></form>
+      </div>
+    </div>
+  `
+}
+
 const encrypt = (exponent, modulus , data) => {
   let key = RSAUtils.getKeyPair(exponent,"",modulus);
   return Buffer.from(RSAUtils.encryptedString(key, data.split("").reverse().join(""))).toString('base64')
@@ -46,11 +100,14 @@ const convTime = (d) => {
 }
 
 class Manager {
-  constructor(request, recognize, updateHandle) {
+  constructor(request, recognize, updateHandle, codeHandle) {
     this.clientMap = {}
     this.request = request
     this.recognize = recognize
     this.updateHandle = updateHandle
+    this.codeHandle = codeHandle
+
+    this.captchaProcess = {}
   }
 
   async ocr(image){
@@ -129,15 +186,29 @@ class Manager {
   }
 
   //create cookie
-  async create(username , password){
-    //0 准备工作： 获取必要数据
-    let headers = {'User-Agent':'Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/69.0.3497.100 Safari/537.36'}
-    let { body , headers:headers2} = await this.request.get('https://caiyun.feixin.10086.cn/',{headers})
+  async create(username , password, captchaId, captcha){
 
-    let publicKeyExponent = (body.match(/var publicKeyExponent = ['"](.*?)['"];/) || ['',''])[1]
-    let publicKeyModulus = (body.match(/var publicKeyModulus = ['"](.*?)['"];/) || ['',''])[1]
+    let publicKeyExponent, publicKeyModulus, cookie
+    let needcaptcha = false, retry = 0
+    if( captchaId && this.captchaProcess[captchaId]){
+      let d = this.captchaProcess[captchaId]
+      publicKeyExponent = d.publicKeyExponent
+      publicKeyModulus = d.publicKeyModulus
+      cookie = d.cookie
 
-    let cookie = headers2['set-cookie'].join('; ')
+      retry = 0
+      needcaptcha = true
+    }else{
+      //0 准备工作： 获取必要数据
+      let headers = {'User-Agent':'Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/69.0.3497.100 Safari/537.36'}
+      let { body , headers:headers2} = await this.request.get('https://caiyun.feixin.10086.cn/',{headers})
+
+      publicKeyExponent = (body.match(/var publicKeyExponent = ['"](.*?)['"];/) || ['',''])[1]
+      publicKeyModulus = (body.match(/var publicKeyModulus = ['"](.*?)['"];/) || ['',''])[1]
+
+      cookie = headers2['set-cookie'].join('; ')
+    }
+
 
     let formdata = {
       'autotype': '1',
@@ -149,13 +220,13 @@ class Manager {
       'encodeType':'1',
       'validate':'',//验证码
     }
+    if( captcha ) formdata.validate = captcha
     let result = false
     let msg = ''
-    let needcaptcha = false
 
     while(true){
       // 0 验证码
-      if(needcaptcha){
+      if(needcaptcha && !formdata.validate){
         
         let captchaUrl = `https://caiyun.feixin.10086.cn/Mcloud/sso/passverifycode.action?date=${Date.now()}&errorpwd=1&account=${encrypt(publicKeyExponent,publicKeyModulus,username)}`
         let resp = await this.request.get(captchaUrl,{
@@ -172,7 +243,14 @@ class Manager {
         if(resp.body){
           imgBase64 = "data:" + resp.headers["content-type"] + ";base64," + Buffer.from(resp.body).toString('base64');
         }
+        if(retry <= 0){
+          let key = captchaId || Math.random()
+          this.captchaProcess[key] = { publicKeyExponent,publicKeyModulus,cookie }
+          return { result:false , custom:{key , img:imgBase64} }
+        }
+        retry--
         let { error , code } = await this.ocr(imgBase64)
+        console.log(error,code)
         //服务不可用
         if(error){
           console.log('服务不可用')
@@ -192,6 +270,7 @@ class Manager {
         
       }
 
+      delete this.captchaProcess[captchaId]
       // 1 登陆
       let resp = await this.request({
         url:'https://caiyun.feixin.10086.cn/sso/cmlogin.action',
@@ -227,8 +306,12 @@ class Manager {
             continue;
           }else if(['AAS_200059512','AAS_200050422'].includes(code)){
             console.log('validateCode:['+formdata.validate+'] error')
+            formdata.validate = ''
             //验证码错误
             continue;
+          }else if(errorCode[code]){
+            msg = errorCode[code]
+            break;
           }else{
             msg = '错误：'+code
             break;
@@ -307,12 +390,17 @@ module.exports = ({ request, cache, getConfig, querystring, base64, saveDrive, g
 
     }else{
       if (req.body && req.body.username && req.body.password && req.body.act == 'install') {
-        let { username, password } = req.body
-        let { result , msg } = await manager.create(username , password)
+        let { username, password,key,captcha} = req.body
+        let { result , msg , custom } = await manager.create(username , password,key,captcha)
         if( result ){
           return { id, type: 'folder', protocol: defaultProtocol,redirect: req.origin + req.path }
         }else{
-          return { id, type: 'folder', protocol: defaultProtocol,body: await install(msg || '请确认账号密码正确') }
+          if( custom ){
+            return { id, type: 'folder', protocol: defaultProtocol,body: await captchaPage({username,password,...custom}) }
+          }
+          else {
+            return { id, type: 'folder', protocol: defaultProtocol,body: await install(msg || '请确认账号密码正确') }
+          }
         }
       }
 

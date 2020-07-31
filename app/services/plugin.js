@@ -552,12 +552,12 @@ const getVendors = () => [...new Set(driveMountableMap.values())].map(id => {
 })
 
 const getAuth = (type) => {
-  let drive = getDrive(protocol)
-  if(drive.auth){
-    return drive.auth
+  if( authMap.has(type) ){
+    return resources[ authMap.get(type) ].auth[type]
   }else{
-    if( authMap.has(type) ){
-      return resources[ authMap.get(type) ].auth[type]
+    let drive = getDrive(type)
+    if(drive && drive.auth){
+      return drive.auth
     }else{
       return false
     }

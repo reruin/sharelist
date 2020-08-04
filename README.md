@@ -393,3 +393,7 @@ WebDAV 目录 `http://localhost:33001/webdav`
 ### Heroku
 
 [![Deploy](https://www.herokucdn.com/deploy/button.png)](https://heroku.com/deploy?template=https://github.com/reruin/sharelist-heroku)
+
+### Kubesail
+
+[![Deploy](https://img.shields.io/badge/deploy%20to-kubesail-blue?style=for-the-badge)](https://kubesail.com/template/reruin/sharelist)

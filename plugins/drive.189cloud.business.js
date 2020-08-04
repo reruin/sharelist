@@ -106,7 +106,7 @@ class Manager {
       if (hit) {
         return { ...hit, path: data.path }
       } else {
-        return { error: '挂在失败，请确保账号或者密码正确' }
+        return { error: '挂载失败，请确保账号或者密码正确' }
       }
     }
 

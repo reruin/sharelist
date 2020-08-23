@@ -188,9 +188,15 @@ module.exports = ({ cache , getVendor , getConfig , getRuntime , updateFolder , 
             }
           }
           else if(t.type == 'redir') {
-            hit = await process_fast(t.path)
-            //不再参与后续
-            break;
+            hit = await process_fast(t.path , (d , p) => {
+              let t = [...p]
+              t[idx] = paths[idx]
+              if(filter && filter(d , t)){
+                return hit;
+              }
+            })
+            
+            return hit
           }
           else{
             hit = await updateFile(t)

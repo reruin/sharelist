@@ -49,7 +49,6 @@ const enableDownload = (ctx, data) => {
  * @param {object} [data] folder/file data
  */
 const output = async (ctx , data)=>{
-
   const download = enableDownload(ctx, data)
 
   const { isPreview , isForward , isAdmin } = ctx.runtime
@@ -193,6 +192,18 @@ module.exports = {
         ctx.status = 404
         return
       }
+
+      // feat: #256
+      if( ctx.runtime.download ){
+        if( data.url ){
+          data.outputType = 'url'
+          await output(ctx , data)
+        }else{
+          ctx.status = 404
+        }
+        return
+      }
+
       let ret = { base_url , parent , data:[] }
 
       let preview_enable = config.getConfig('preview_enable')
@@ -246,7 +257,7 @@ module.exports = {
       }
       
       ret.writeable = data.writeable && (isAdmin || anonymous_uplod_enable)
-      
+      ret.downloadable = data.downloadable
       if( !ctx.webdav ){
         await ctx.renderSkin('index',ret)
       }

@@ -447,7 +447,6 @@ module.exports = ({ request, cache, getConfig, querystring, base64, saveDrive, g
   }
 
   const folder = async (id, options) => {
-
     let predata = await prepare(id)
 
     if (!predata.cookie) return predata
@@ -518,6 +517,9 @@ module.exports = ({ request, cache, getConfig, querystring, base64, saveDrive, g
     let result = { id, type: 'folder', protocol: defaultProtocol }
     result.$cached_at = Date.now()
     result.children = children
+
+    result.downloadable = path != '00019700101000000001'
+
     cache.set(id, result)
 
     return result
@@ -566,5 +568,31 @@ module.exports = ({ request, cache, getConfig, querystring, base64, saveDrive, g
     }
   }
 
-  return { name, label:'和彩云 账号登录版', version, drive: { protocols, folder, file , createReadStream  } }
+  const downloadFolder = async (id , name) => {
+    let predata = await prepare(id)
+    if (!predata.cookie) return predata
+
+    let { path, cookie , username } = await prepare(id)
+
+    let resp = await fetchData(id,{
+      url:`https://caiyun.feixin.10086.cn/webdisk2/downLoadAction!downLoadZipPackage.action?t=${Date.now()}`,
+      method:'POST',
+      form:{
+        catalogList: path.split('/').pop()+'|0',
+        contentList: '',
+        recursive: '1',
+        zipFileName: name || path.split('/').pop()
+      },
+      headers:{
+        'User-Agent':'Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/69.0.3497.100 Safari/537.36',
+        'Cookie': cookie,
+      },
+      json:true
+    })
+    console.log(name)
+    if(!resp || resp.message) return false
+    return resp.body.downloadUrl
+  }
+
+  return { name, label:'和彩云 账号登录版', version, drive: { protocols, folder, file , createReadStream , downloadFolder } }
 }

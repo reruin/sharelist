@@ -140,11 +140,11 @@ class Manager {
       let hit = this.clientMap[data.username]
       if(hit){
         if( !hit.cookie || (Date.now() - hit.updated_at) > COOKIE_MAX_AGE ){
-          let { result , msg } = await this.create(hit.username , hit.password)
+          let { result , msg , ...rest } = await this.create(hit.username , hit.password)
           if( result ){
             hit = this.clientMap[data.username]
           }else{
-            return { error: msg }
+            return { error: msg, ...rest }
           }
         }
       }
@@ -153,7 +153,7 @@ class Manager {
         let p = (data.path == '/' || data.path == '') ? '00019700101000000001' : data.path
         return { ...hit, path:p }
       }else{
-        return { error:'挂在失败，请确保账号或者密码正确' }
+        return { error:'挂载失败，请确保账号或者密码正确' }
       }
     }
 
@@ -185,9 +185,17 @@ class Manager {
     })
   }
 
+  hasCaptchaTask(id){
+    return id in this.captchaProcess
+  }
+
+  async resumeCaptchaTask(id , captcha){
+    let {username , password} = this.captchaProcess[id]
+    return await this.create(username , password,id , captcha)
+  }
+
   //create cookie
   async create(username , password, captchaId, captcha){
-
     let publicKeyExponent, publicKeyModulus, cookie
     let needcaptcha = false, retry = 0
     if( captchaId && this.captchaProcess[captchaId]){
@@ -220,7 +228,10 @@ class Manager {
       'encodeType':'1',
       'validate':'',//验证码
     }
-    if( captcha ) formdata.validate = captcha
+    if( captcha ) {
+      formdata.validate = captcha
+      formdata.hidden_verfycode = 'true'
+    }
     let result = false
     let msg = ''
 
@@ -245,7 +256,7 @@ class Manager {
         }
         if(retry <= 0){
           let key = captchaId || Math.random()
-          this.captchaProcess[key] = { publicKeyExponent,publicKeyModulus,cookie }
+          this.captchaProcess[key] = { username,password,publicKeyExponent,publicKeyModulus,cookie }
           return { result:false , custom:{key , img:imgBase64} }
         }
         retry--
@@ -288,7 +299,6 @@ class Manager {
         async:true,
         followRedirect:false
       })
-      
       if(resp.headers && resp.headers['location']){
         let success = false , code
         try{
@@ -374,6 +384,20 @@ module.exports = ({ request, cache, getConfig, querystring, base64, saveDrive, g
     manager.init(resp)
   })
 
+  const afterPrepare = async (data = {},id,req) => {
+    let { result , msg , custom } = data
+    if( result ){
+      return { id, type: 'folder', protocol: defaultProtocol,redirect: req.origin + req.path }
+    }else{
+      if( custom ){
+        return { id, type: 'folder', protocol: defaultProtocol,body: await captchaPage({username:data.username,password:data.password,...custom}) }
+      }
+      else {
+        return { id, type: 'folder', protocol: defaultProtocol,body: await install(msg || '请确认账号密码正确') }
+      }
+    }
+  }
+
   const prepare = async (id) => {
     if(!id.startsWith(defaultProtocol)){
       id = defaultProtocol + ':' + id
@@ -382,26 +406,23 @@ module.exports = ({ request, cache, getConfig, querystring, base64, saveDrive, g
 
     let baseUrl = req.origin + req.path
 
-    let { path, cookie, username, error } = await manager.get(id)
+    //验证码
+    if( req.body && req.body.key && req.body.captcha && manager.hasCaptchaTask(req.body.key)){
+      return await afterPrepare(await manager.resumeCaptchaTask(req.body.key,req.body.captcha ),id , req) 
+    }
+
+    let { path, cookie, username, password, error , custom } = await manager.get(id)
 
     if( cookie ) {
-
       return { cookie , path , username }
-
     }else{
       if (req.body && req.body.username && req.body.password && req.body.act == 'install') {
         let { username, password,key,captcha} = req.body
-        let { result , msg , custom } = await manager.create(username , password,key,captcha)
-        if( result ){
-          return { id, type: 'folder', protocol: defaultProtocol,redirect: req.origin + req.path }
-        }else{
-          if( custom ){
-            return { id, type: 'folder', protocol: defaultProtocol,body: await captchaPage({username,password,...custom}) }
-          }
-          else {
-            return { id, type: 'folder', protocol: defaultProtocol,body: await install(msg || '请确认账号密码正确') }
-          }
-        }
+        let data = await manager.create(username , password,key,captcha)
+        return await afterPrepare(data,id , req)
+      }
+      else if(custom){
+        return { id, type: 'folder', protocol: defaultProtocol,body: await captchaPage({username,password,...custom}) }
       }
 
       return { id, type: 'folder', protocol: defaultProtocol,body: await install(error) }
@@ -426,7 +447,6 @@ module.exports = ({ request, cache, getConfig, querystring, base64, saveDrive, g
   }
 
   const folder = async (id, options) => {
-
     let predata = await prepare(id)
 
     if (!predata.cookie) return predata
@@ -497,6 +517,9 @@ module.exports = ({ request, cache, getConfig, querystring, base64, saveDrive, g
     let result = { id, type: 'folder', protocol: defaultProtocol }
     result.$cached_at = Date.now()
     result.children = children
+
+    result.downloadable = path != '00019700101000000001'
+
     cache.set(id, result)
 
     return result
@@ -505,7 +528,6 @@ module.exports = ({ request, cache, getConfig, querystring, base64, saveDrive, g
   // 无临时链接 强制中转
   const file = async (id, options) => {
     let predata = await prepare(id)
-
     if (!predata.cookie) return predata
 
     let { path, cookie , username } = await prepare(id)
@@ -546,5 +568,31 @@ module.exports = ({ request, cache, getConfig, querystring, base64, saveDrive, g
     }
   }
 
-  return { name, label:'和彩云 账号登录版', version, drive: { protocols, folder, file , createReadStream  } }
+  const downloadFolder = async (id , name) => {
+    let predata = await prepare(id)
+    if (!predata.cookie) return predata
+
+    let { path, cookie , username } = await prepare(id)
+
+    let resp = await fetchData(id,{
+      url:`https://caiyun.feixin.10086.cn/webdisk2/downLoadAction!downLoadZipPackage.action?t=${Date.now()}`,
+      method:'POST',
+      form:{
+        catalogList: path.split('/').pop()+'|0',
+        contentList: '',
+        recursive: '1',
+        zipFileName: name || path.split('/').pop()
+      },
+      headers:{
+        'User-Agent':'Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/69.0.3497.100 Safari/537.36',
+        'Cookie': cookie,
+      },
+      json:true
+    })
+    console.log(name)
+    if(!resp || resp.message) return false
+    return resp.body.downloadUrl
+  }
+
+  return { name, label:'和彩云 账号登录版', version, drive: { protocols, folder, file , createReadStream , downloadFolder } }
 }

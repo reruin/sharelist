@@ -6,7 +6,13 @@ const { URL } = require('url')
 
 const urlFormat = require('url').format
 
-const protocol = 'ctcb'
+const protocol = 'ctch'
+
+const crypto = require('crypto')
+
+const hmac = (v , key) => {
+  return crypto.createHmac('sha1', key).update(v).digest('hex')
+}
 
 /**
  * auth manager class
@@ -93,7 +99,7 @@ class Manager {
     if (data.username) {
       let hit = this.clientMap[data.username]
       if (hit) {
-        if (!hit.cookie || (Date.now() - hit.updated_at) > this.max_age_cookie) {
+        if (!hit.sessionKey || (Date.now() - hit.updated_at) > this.max_age_cookie) {
           let { result, msg } = await this.create(hit.username, hit.password)
           if (result) {
             hit = this.clientMap[data.username]
@@ -127,7 +133,9 @@ class Manager {
       name,
       username: data.hostname,
       password: data.searchParams.get('password'),
-      cookie: data.searchParams.get('cookie'),
+      sessionKey: data.searchParams.get('sessionKey'),
+      sessionSecret: data.searchParams.get('sessionSecret'),
+      familyId: data.searchParams.get('familyId'),
       protocol: data.protocol.split(':')[0],
       path: data.pathname.replace(/^\//, ''),
     }
@@ -140,14 +148,12 @@ class Manager {
    * @param {string} [agrs]
    * @param {string} [agrs.username]
    * @param {string} [agrs.password]
-   * @param {string} [agrs.cookie]
+   * @param {string} [agrs.sessionKey]
+   * @param {string} [agrs.sessionSecret]
    * @return {string}
    * @api public
    */
-  stringify({ path, username, password, cookie }) {
-    let query = {}
-    if (password) query.password = password
-    if (cookie) query.cookie = cookie
+  stringify({ path, username, ...query }) {
     return urlFormat({
       protocol: protocol,
       hostname: username,
@@ -160,7 +166,7 @@ class Manager {
   async install(msg) {
     return `
       <div class="auth">
-        <h3>天翼企业云 挂载向导</h3>
+        <h3>天翼家庭云 挂载向导</h3>
         ${ msg ? '<p style="font-size:12px;">'+msg+'</p>' : '' }
         <div>
           <form class="form-horizontal" method="post">
@@ -207,7 +213,7 @@ class Manager {
   async create(username, password, path = '/') {
     //0 准备工作： 获取必要数据
     let headers = { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/69.0.3497.100 Safari/537.36' }
-    let { body, headers: headers2 } = await this.helper.request.get('https://b.cloud.189.cn/unifyLogin.action?source=2&redirectURL=/main.action', { headers })
+    let { body, headers: headers2 } = await this.helper.request.get(`https://cloud.189.cn/unifyLoginForPC.action?appId=8025431004&clientType=10020&returnURL=https%3A%2F%2Fm.cloud.189.cn%2Fzhuanti%2F2020%2FloginErrorPc%2Findex.html&timeStamp=${Date.now()}`, { headers })
 
     let captchaToken = (body.match(/name='captchaToken' value='(.*?)'>/) || ['', ''])[1],
       returnUrl = (body.match(/returnUrl = '(.*?)'\,/) || ['', ''])[1],
@@ -228,15 +234,14 @@ class Manager {
       'returnUrl': returnUrl,
       'mailSuffix': '',
       'dynamicCheck': 'FALSE',
-      'clientType': '10100',
-      'cb_SaveName': '1',
+      'clientType': '10020',
+      'cb_SaveName': '0',
       'isOauth2': 'false',
       'state': '',
       'paramId': paramId
     }
 
-    let result = false
-    let msg = ''
+    let result = false, msg = ''
     let needcaptcha = await this.needcaptcha({
       accountType: '02',
       userName: username,
@@ -299,25 +304,57 @@ class Manager {
         continue;
       }
 
-      if (resp.body && resp.body.toUrl) {
-        resp = await this.helper.request.get(resp.body.toUrl, { followRedirect: false, headers })
-        let cookie = resp.headers['set-cookie'].join('; ')
-        let client = { username, password, cookie, updated_at: Date.now(), path }
-        if (this.clientMap[username]) {
-          client.path = this.clientMap[username].path
-        }
-
-        this.clientMap[username] = client
-
-        await this.updateDrives(this.stringify({ username, password, path: client.path }))
-
-        result = true
-        break;
-      } else {
+      if (resp.body && !resp.body.toUrl){
         msg = resp.body.msg
         break;
       }
 
+      // get Session
+      try{
+        resp = await this.helper.request.post( `https://api.cloud.189.cn/getSessionForPC.action?redirectURL=${encodeURIComponent(resp.body.toUrl)}&clientType=TELEPC&version=6.2.5.0&channelId=web_cloud.189.cn`)
+      }catch(e){
+        msg = '无法登录'
+        break;
+      }
+
+      resp = await this.helper.xml2json(resp.body)
+
+      let sessionKey = resp.userSession.familySessionKey[0]
+      let sessionSecret = resp.userSession.familySessionSecret[0]
+
+      //获取 family id
+
+      let date = new Date().toGMTString()
+      let signature = hmac(`SessionKey=${sessionKey}&Operate=GET&RequestURI=/family/manage/getFamilyList.action&Date=${date}`,sessionSecret)
+      resp = await this.helper.request.get('https://api.cloud.189.cn/family/manage/getFamilyList.action?clientType=TELEPC&version=6.3.0.0&channelId=web_cloud.189.cn&rand='+Math.random(),{
+        headers:{
+          'Date':date,
+          'SessionKey':sessionKey,
+          'Signature': signature,
+        }
+      })
+      if(!( resp && resp.body && resp.body.includes('<familyId>')) ){
+        msg = '无法获取到家庭云'
+        break
+      }
+
+      let familyId = (resp.body.match(/<familyId>(\d+)<\/familyId>/) || ['',''])[1]
+      
+      let client = { 
+        username, password, updated_at: Date.now(), 
+        path : '/'+familyId,
+        familyId,
+        sessionKey,
+        sessionSecret
+      }
+
+      this.clientMap[username] = client
+
+      await this.updateDrives(this.stringify({ username, password, path: client.path , sessionKey, sessionSecret,familyId }))
+
+      result = true
+
+      break;
     }
 
     return { result, msg }
@@ -349,14 +386,14 @@ class Manager {
 
     let baseUrl = req.origin + req.path
 
-    let { path, cookie, username, error } = await this.get(id)
-
+    let { path, sessionKey, sessionSecret, username, error } = await this.get(id)
+    console.log('>>>>',id,path, sessionKey, sessionSecret, username, error)
     if (error) {
       return { id, type: 'folder', protocol, body: this.install(error) }
     }
 
-    if (cookie) {
-      return { cookie, path, username }
+    if (sessionKey) {
+      return { sessionKey, sessionSecret, path, username }
     } else {
       if (req.body && req.body.username && req.body.password && req.body.act == 'install') {
         let { username, password } = req.body
@@ -379,10 +416,10 @@ class Manager {
  * 
  * 
  */
-class CTCB {
+class CTCH {
   constructor(helper) {
-    this.name = '189CloudBusinessCookie'
-    this.label = '天翼企业云 账号密码版'
+    this.name = '189CloudHomeCookie'
+    this.label = '天翼家庭云 账号密码版'
     this.mountable = true
     this.cache = true
 
@@ -404,64 +441,38 @@ class CTCB {
     this.manager.init(drives)
   }
 
-  async fetchData(id,rest) {
-    let resp , retry_times = 5
-    while(true && --retry_times){
-      resp = await this.helper.request({async:true,...rest})
-      //cookie失效
-      if(resp.headers['Content-Type'] && resp.headers['Content-Type'].includes('text/html')){
-        let { result , msg } = await manager.update(id)
-        if( result ){
-          resp = { msg }
-          break;
-        }else{
-          continue
-        }
-      }else{
-        break;
+  async fetch(operate = 'GET' , url , credentials , qs) {
+    let { sessionKey, sessionSecret } = credentials
+    let date = new Date().toGMTString()
+    let signature = hmac(`SessionKey=${sessionKey}&Operate=${operate}&RequestURI=${url}&Date=${date}`,sessionSecret)
+
+    let headers = {
+      'Date':date,
+      'SessionKey': sessionKey,
+      'Signature': signature,
+    }
+    let resp
+    try{
+      let r = await this.helper.request({
+        url:`https://api.cloud.189.cn${url}`,
+        headers,
+        method:operate,
+        qs, json:true,
+        async:true,
+      })
+
+      resp = await this.helper.xml2json(r.body)
+      if(resp.error){
+        resp.error = resp.error.message[0]
       }
+    }catch(e){
+      resp = { error:'request error' }
     }
-    
+
     return resp
+    
   }
-
-  /**
-   * Create root data 
-   *
-   * @param {string} [id] path id
-   * @param {string} [username] username
-   * @param {string} [corpId] company ID
-   * @return {object}
-   * @api private
-   */
-  getComapanyRoot(id, username, corpId) {
-    let { protocol , manager } = this
-    return {
-      id,
-      type: 'folder',
-      protocol,
-      children: [{
-          id: manager.stringify({ username, path: `/companyFiles/corp/${corpId}` }),
-          name: '企业空间',
-          type: 'folder',
-          protocol,
-        },
-        {
-          id: manager.stringify({ username, path: `/shareFolders/corp/${corpId}` }),
-          name: '协作空间',
-          type: 'folder',
-          protocol,
-        },
-        {
-          id: manager.stringify({ username, path: `/workFiles/corp/${corpId}` }),
-          name: '工作空间',
-          type: 'folder',
-          protocol,
-        }
-      ]
-    }
-  }
-
+  
   /**
    * Get data by path
    *
@@ -470,126 +481,98 @@ class CTCB {
    * @api private
    */
   async path(id) {
-    let { manager , protocol , helper } = this
+    let { manager , protocol , helper , max_age_dir } = this
 
     let data = await manager.prepare(id)
 
-    if (!data.cookie) return data
+    if (!data.sessionKey) return data
 
-    let { path, cookie, username } = data
+    let { path, sessionKey, sessionSecret, username } = data
 
     let r = helper.cache.get(id)
+
     if (r) {
       if (
-        r.$cached_at &&
-        r.children &&
-        (Date.now() - r.$cached_at < this.max_age_dir)
-
+        (
+          r.$expired_at && Date.now() < r.$expired_at
+        )
+        || 
+        (
+          r.$cached_at &&
+          r.children &&
+          (Date.now() - r.$cached_at < max_age_dir)
+        )
       ) {
-        console.log(Date.now() + ' CACHE 189CloudBusiness ' + id)
+        console.log(Date.now()+' CACHE 189CloudHome '+ id)
         return r
       }
     }
 
 
-    // list company
-    if (!path) {
-      let resp = await this.fetchData(id, {
-        url: `https://b.cloud.189.cn/user/listCorp.action`,
-        method: 'GET',
-        headers: {
-          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/69.0.3497.100 Safari/537.36',
-          'Cookie': cookie,
-        },
-        json: true
-      })
-
-      if (resp.body.data.length) {
-        return {
-          id,
-          type: 'folder',
-          protocol: protocol,
-          children: resp.body.data.map(i => {
-            return {
-              id: manager.stringify({ username, path: i.corpId }),
-              name: i.corpName,
-              type: 'folder',
-              protocol: protocol,
-              created_at: i.createTime,
-              updated_at: i.modifyTime
-            }
-          })
-        }
-
-      }
-      return false
-    } 
-    // ctcb://username/:corpId?password
-    else if (path.includes('/') == false) {
-      return this.getComapanyRoot(id, username, path)
-    }
-
-    // ctcb://username/:type/corp/:corpId/:folderId/:fileId
     let pathArgs = path.replace(/(^\/|\/$)/,'').split('/')
-    let [type, _, corpId, folderId, fileId] = pathArgs
-    let basePath = '/'+[type, _, corpId].join('/')
 
-    const pathsMap = {
-      'companyFiles':'listCompanyFiles',
-      'workFiles':'listWorkFiles',
-      'shareFolders':'listJoinCorpCoshare',
-    }
+    let [familyId, folderId = -1, fileId] = pathArgs
 
-    type = pathsMap[type]
-
-    // console.log(type,corpId,folderId,fileId)
-    if( corpId && !fileId ){
+    if( !fileId ){
       let children = [],pageNum = 1
-
       while (true) {
-        let resp = await this.fetchData(id, {
-          url: `https://b.cloud.189.cn/user/${type}.action?corpId=${corpId}&fileId=${folderId || ''}&mediaType=&orderBy=1&order=ASC&pageNum=1&pageSize=9999&recursive=false&noCache=${Math.random()}`,
-          method: 'GET',
-          headers: {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/69.0.3497.100 Safari/537.36',
-            'Cookie': cookie,
-          },
-          json: true
+        let resp = await this.fetch('GET','/family/file/listFiles.action', data , {
+          folderId:folderId == -1 ? '':folderId , 
+          familyId, 
+          fileType:0,
+          iconOption:1,
+          mediaAttr:22,
+          orderBy:1,
+          descending:false,
+          pageNum:pageNum,
+          pageSize:9999,
+          clientType:'TELEPC',
+          version:'6.3.0.0',
+          channelId:'web_cloud.189.cn',
+          rand:Math.random()
         })
-        if (!resp || !resp.body) {
-          return { id, type: 'folder', protocol: protocol, body: resp.msg || '解析错误' }
+
+        if (resp.error) {
+          return {
+            id, type: 'folder', protocol: protocol,body:resp.error
+          }
         }
-        for (let file of resp.body.data) {
+
+        ;(resp.listFiles.fileList[0].folder || [])
+        .map(i => ({...i , isFolder:1}))
+        .concat(resp.listFiles.fileList[0].file || [])
+        .forEach( file => {
           let isFolder = file.isFolder
           let item = {
-            id: manager.stringify({ username, path: (isFolder ? basePath : path) + '/' + file.fileId }),
-            name: file.fileName,
+            id: manager.stringify({ username, path: (isFolder ? `/${familyId}` : `/${familyId}/${folderId}`) + '/' + file.id[0] }),
+            name: file.name[0],
             protocol: protocol,
-            created_at: file.createTime,
-            updated_at: file.lastOpTime,
+            created_at: file.createDate[0],
+            updated_at: file.lastOpTime[0],
             type: file.isFolder ? 'folder' : 'file',
           }
 
           if (!isFolder) {
-            item.ext = file.fileType
-            item.size = parseInt(file.fileSize)
-            item.url = 'https:' + file.downloadUrl
-            if (file.icon) item.icon = file.icon.smallUrl
+            item.ext = file.name[0].split('.').pop()
+            item.size = parseInt(file.size[0])
+            item.md5 = file.md5[0]
+            if (file.icon) item.icon = file.icon[0].smallUrl
           }
 
           children.push(item)
-        }
+        })
 
-        let count = resp.body.recordCount
-        let currentCount = resp.body.pageNum * resp.body.pageSize
+        break;
+        // let count = parseInt(resp.listFiles.fileList[0].count)
+        // let currentCount = resp.body.pageNum * resp.body.pageSize
 
-        if (currentCount < count) {
-          //翻页
-          pageNum++
-          continue
-        } else {
-          break;
-        }
+        // if (currentCount < count) {
+        //   //翻页
+        //   pageNum++
+        //   continue
+        // } else {
+        //   break;
+        // }
       }
 
       let result = { id, type: 'folder', protocol }
@@ -599,33 +582,46 @@ class CTCB {
 
       return result
     }
-    else if(folderId && fileId){
+    else if(fileId){
+
       let parentId = manager.stringify({ username, path: pathArgs.slice(0,-1).join('/') })
 
       let parentData = await this.path(parentId)
 
-      let data = parentData.children.find(i => i.id == id )
-      if( !data ) return false
-      let resp = await this.fetchData(id,{
-        url:data.url,
-        method:'GET',
-        followRedirect:false ,
-        headers:{
-          'User-Agent':'Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/69.0.3497.100 Safari/537.36',
-          'Cookie': cookie,
-        }
-      })
-      if(!resp) return false
+      let hit = parentData.children.find(i => i.id == id )
 
-      let url = resp.headers.location
+      if( !hit ) return false
+
+      let resp = await this.fetch('GET','/family/file/getFileDownloadUrl.action',data,{
+        familyId,
+        fileId,
+        clientType:'TELEPC',
+        version:'6.3.0.0',
+        channelId:'web_cloud.189.cn',
+        rand:Math.random()
+      })
+
+      if (resp.error) {
+        return {
+          id, type: 'folder', protocol: protocol,body:resp.error
+        }
+      }
+
+      let expired_at = parseInt((resp.fileDownloadUrl.match(/(?<=expired=)\d+/) || [0])[0])
+      let downloadUrl = resp.fileDownloadUrl
+      console.log( downloadUrl )
       resp = {
         id,
-        url,
-        name: data.name,
-        ext: data.ext,
+        url: downloadUrl,
+        name: hit.name,
+        ext: hit.ext,
         protocol: protocol,
-        size:data.size,
+        size:hit.size,
+        $expired_at:expired_at - 5000,
+        $cached_at:Date.now(),
       }
+
+      helper.cache.set(id, resp)
 
       return resp
     }
@@ -656,11 +652,48 @@ class CTCB {
     return await this.path(id)
   }
 
-  async createReadStream({ id, options = {} } = {}) {
+  async mkdir(id , name){
+    let { protocol , manager , helper } = this
+
+    let data = await manager.prepare(id)
+
+    if (!data.sessionKey) return data
+
+    let { path, sessionKey, sessionSecret, username } = data
+
+    let [familyId , parentId = -1] = path.replace(/(^\/|\/$)/,'').split('/')
+
+    let resp = await this.fetch('GET','/family/file/createFolder.action', data , {
+      familyId, 
+      parentId:parentId == -1 ? '':parentId, 
+      folderName:name,
+      relativePath:'',
+      clientType:'TELEPC',
+      version:'6.3.0.0',
+      channelId:'web_cloud.189.cn',
+      rand:Math.random()
+    })
+
+    if (resp.error) {
+      return false
+    }
+
+    //success
+    return true
     
+  }
+
+  async createReadStream({ id, options = {} } = {}) {
+    let resp = await this.file(id)
+    if(resp.body){
+      return resp
+    }else{
+      let readstream = request({url:resp.url , method:'get'})
+      return this.helper.wrapReadableStream(readstream , { size: resp.size } )
+    }
   }
 
 }
 
 
-module.exports = CTCB
+module.exports = CTCH

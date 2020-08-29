@@ -71,7 +71,7 @@ http.get = (url, opts = {}) => {
   })
 }
 
-http.post = (url, form, opts) => {
+http.post = (url, form = {}, opts = {}) => {
   let params = { ...opts }
   params.headers = Object.assign({}, headers, params.headers || {})
   params.url = url

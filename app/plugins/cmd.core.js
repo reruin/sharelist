@@ -65,7 +65,7 @@ module.exports = ({ cache , getVendor , getConfig , getRuntime , updateFolder , 
     if(resp.downloadable && getRuntime().download){
       let vendor = getVendor(resp.protocol)
       if( vendor && vendor.downloadFolder ){
-          resp.url = await vendor.downloadFolder(resp.id , p.split('/').pop())
+        resp.url = await vendor.downloadFolder(resp.id , p.split('/').pop())
       }
     }
     let ret = clone(resp)

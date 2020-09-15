@@ -30,6 +30,7 @@
     "lowdb": "^1.0.0",
     "markdown-it": "^10.0.0",
     "mime": "^2.4.2",
+    "node-rsa": "^1.1.1",
     "pug": "^2.0.4",
     "ssh2-sftp-client": "^5.1.2",
     "webdav": "^2.6.0",

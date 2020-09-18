@@ -781,7 +781,7 @@ class CY {
         }
       }
 
-      let expired_at = Date.now() + 15 * 60 * 1000
+      let expired_at = Date.now() + 50 * 1000
       let downloadUrl = resp.body.data
 
       resp = {

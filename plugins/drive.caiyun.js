@@ -705,30 +705,37 @@ class CY {
           }
         }
 
-        ;
-        (resp.body.data.catalogList.catalogInfo || [])
-        .map(i => ({ ...i, isFolder: 1 }))
-          .concat(resp.body.data.contentList.contentInfo || [])
-          .forEach(file => {
-            let isFolder = file.isFolder
-            let item = {
-              id: manager.stringify({ username, path: isFolder ? `/${file.catalogID}` : `/${folderId}/${file.contentID}` }),
-              name: file.catalogName || file.contentName,
+        let content = resp.body.data
+        if( content.catalogList){
+          for(let file of content.catalogList.catalogInfo){
+            children.push({
+              id: manager.stringify({ username, path: `/${file.catalogID}`}),
+              name: file.catalogName,
               protocol: protocol,
               created_at: datetimeFormat(file.uploadTime),
               updated_at: datetimeFormat(file.updateTime),
-              type: file.isFolder ? 'folder' : 'file',
+              type: 'folder',
+            })
+          }
+        }
+        if( content.contentList ){
+          for(let file of content.contentList.contentInfo){
+            let item = {
+              id: manager.stringify({ username, path: `/${folderId}/${file.contentID}`}),
+              name: file.contentName,
+              protocol: protocol,
+              created_at: datetimeFormat(file.uploadTime),
+              updated_at: datetimeFormat(file.updateTime),
+              type: 'file',
+              ext:file.contentSuffix,
+              size:file.contentSize,
+              md5:file.digest,
             }
-
-            if (!isFolder) {
-              item.ext = file.contentSuffix
-              item.size = file.contentSize
-              item.md5 = file.digest
-              if (file.bigthumbnailURL) item.icon = file.bigthumbnailURL
-            }
-
-            children.push(item)
-          })
+            if (file.bigthumbnailURL) item.icon = file.bigthumbnailURL
+            children.push(item)  
+          }
+        }
+        
 
         break;
         // let count = parseInt(resp.listFiles.fileList[0].count)

@@ -221,6 +221,10 @@ module.exports = {
           let r = sort.time == 'desc' ? 1 : -1
           data.children = data.children.sort((a,b) => a.updated_at > b.updated_at ? r : -r)
         }
+        if(sort.name){
+          let r = sort.time == 'desc' ? 1 : -1
+          data.children = data.children.sort((a,b) => a.name > b.name ? r : -r)
+        }
       }
 
       for(let i of data.children){

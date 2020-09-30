@@ -313,6 +313,7 @@ class Manager {
             <input type="hidden" name="act" value="install" />
             <div class="form-group"><input class="sl-input" type="text" name="username" value="" placeholder="用户名" /></div>
             <div class="form-group"><input class="sl-input" type="password" name="password" value="" placeholder="密码" /></div>
+            <div class="form-group"><input class="sl-input" type="text" name="path" value="" placeholder="挂载目录，根目录请留空" /></div>
             <button class="sl-button btn-primary" id="signin" type="submit">验证</button></form>
         </div>
       </div>
@@ -331,6 +332,7 @@ class Manager {
             <input type="hidden" name="act" value="install" />
             <input type="hidden" name="username" value="${data.username}" />
             <input type="hidden" name="password" value="${data.password}" />
+            <input type="hidden" name="path" value="${data.path}" />
             <input type="hidden" name="key" value="${data.key}" />
             <div class="form-group"><input class="sl-input" type="text" placeholder="验证码" name="captcha" value="" /></div>
             <button class="sl-button btn-primary" id="signin" type="submit">确定</button></form>
@@ -381,6 +383,15 @@ class Manager {
     return await this.helper.request(data)
   }
 
+  async searchRootId(username,path){
+    const req = this.helper.getRuntime('req')
+    let id = this.stringify({ username, path:req.path + path  })
+    let data = await this.helper.command('ls',req.path + path)
+    if(data && data.id){
+      data = this.parse(data.id)
+      return data.path
+    }
+  }
 
   /**
    * Get cookie
@@ -391,7 +402,7 @@ class Manager {
    * @return {object}
    * @api private
    */
-  async create(username, password, captchaId, captcha) {
+  async create(username, password, captchaId, captcha, path) {
     let cookie
     let needcaptcha = false,
       retry = 0
@@ -462,8 +473,17 @@ class Manager {
           if (this.clientMap[username]) {
             client.path = this.clientMap[username].path
           }
-          await this.updateDrives(this.stringify({ username, password, path: client.path, cookie }))
           this.clientMap[username] = client
+          await this.updateDrives(this.stringify({ username, password, path: client.path, cookie }))
+
+          if( path ){
+            let realPath = await this.searchRootId(username,path)
+            if( realPath ){
+              client.path = realPath
+              await this.updateDrives(this.stringify({ username, password, path: client.path, cookie }))
+            }
+          }
+
           error = false
           break;
         }
@@ -525,7 +545,6 @@ class Manager {
    * @api public
    */
   async prepare(id) {
-
     if (!id.startsWith(protocol)) {
       id = protocol + ':' + id
     }
@@ -544,8 +563,9 @@ class Manager {
       return { cookie, path, username }
     } else {
       if (req.body && req.body.username && req.body.password && req.body.act == 'install') {
-        let { username, password, key, captcha } = req.body
-        let data = await this.create(username, password, key, captcha)
+        let { username, password, path, key, captcha } = req.body
+        console.log('create',username, password, path, key)
+        let data = await this.create(username, password, key, captcha,path)
         return await this.afterPrepare(data, id, req)
       } else if (custom) {
         return { id, type: 'folder', protocol: protocol, body: await this.captchaPage({ username, password, ...custom }) }

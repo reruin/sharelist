@@ -245,7 +245,7 @@ ShareList将自动开启挂载向导，按指示填写用户名密码即可。
 
 ### 虚拟目录
 在需创建虚拟目录处新建```目录名.d.ln```文件。 其内容为```挂载标识:挂载路径```。   
-指向本地```/root```的建虚拟目录  
+指向本地```/root```的虚拟目录  
 ```   
 fs:/root 
 ``` 
@@ -254,7 +254,7 @@ fs:/root
 ```
 gd:0BwfTxffUGy_GNF9KQ25Xd0xxxxxxx 
 ```  
-系统内置了一种单文件虚拟目录系统，使用yaml构建，以```sld```作为后缀保存。参考[example/ShareListDrive.sld](example/sharelist_drive.sld)。 
+系统内置了一种单文件虚拟目录系统，使用yaml构建，以```sld.ln```作为后缀保存。参考[example/sharelist_drive.sld.ln](example/sharelist_drive.sld.ln)。 
 
 ***
 

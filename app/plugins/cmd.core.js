@@ -184,7 +184,7 @@ module.exports = ({ cache , getVendor , getConfig , getRuntime , updateFolder , 
       }
       
       if( hit.type == 'folder'){
-        let t = await vendor.folder(hit.id , { req : getRuntime('req')})
+        let t = await vendor.folder(hit.id , { content:hit.content, req : getRuntime('req')})
         //console.log(t.type,t.children)
         if( t ){
           if( t.type == 'folder' ){

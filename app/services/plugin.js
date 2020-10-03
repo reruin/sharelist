@@ -156,6 +156,9 @@ const getSource = async (id , driverName , data) => {
         return await parseStream( await vendor.createReadStream({id}) )
       }
     }
+    else if(d.content){
+      return d.content
+    }
     else{
       return await getHTTPFile(d.url , d.headers || {})
     }
@@ -460,8 +463,7 @@ const updateFolder = (folder) => {
         let ext  = tmp[tmp.length-2]
 
         //目录快捷方式 name.d.ln
-        let isDir = len > 2 && ext == 'd'
-
+        let isDir = (len > 2 && ext == 'd') || driveMap.has(ext)
         if(isDir){
           d.name = tmp.slice(0,-2).join('.')
           d.type = 'folder'
@@ -509,12 +511,12 @@ const updateFolder = (folder) => {
  * 调用解析器处理
  */
 const updateLnk = async (d) => {
+
   //获取快捷方式的指向内容
   const content = await getSource(d.id , d.protocol)
   //分析内容实体
   const meta = parseLnk(content)
   //从id中猜测协议
-
   //包含协议时
   if(meta){
     d.protocol = meta.protocol
@@ -523,8 +525,7 @@ const updateLnk = async (d) => {
   //不包含协议
   else{
     //从 id 猜测协议
-    let protocol = d.id.split('.').pop()
-
+    let protocol = d.id.replace(/\.ln/,'').split('.').pop()
     if(driveMap.has(protocol)){
       d.protocol = protocol
       d.content = content

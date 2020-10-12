@@ -117,7 +117,7 @@ class ShareList {
             return true
           }
         })
-        if(data.type == 'folder'){
+        if(data.type == 'folder' && !data.body){
           if(currentPath && targetPath != currentPath){
             return { type:'redirect', 'redirect':currentPath+'?rurl='+targetFullPath}
           }else{

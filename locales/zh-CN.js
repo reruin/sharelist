@@ -19,7 +19,7 @@ module.exports = {
   "enable":"启用",
   "disable":"禁用",
   "clear_cache":"清除缓存",
-  "input_path_placeholder":"挂载路径(GoogleDrive/OneDrive 分享的文件夹ID、本地目录、虚拟目录文件地址)",
+  "input_path_placeholder":"挂载路径",
   "signin":"登录",
   "input_token":"输入口令",
   "proxy_enable":"中转（下载、预览）",

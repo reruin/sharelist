@@ -38,6 +38,10 @@
 如果不想使用本机中转，可在此处填写对应的中转服务器。当前支持：
 1. [cloudflare](zh-cn/advance?id=cf-worker中转)
 
+ShareList 也支持配置多个中转服务器，只需用```;```分割即可，同时支持配置每个中转服务器的轮换权重。例如：   
+```https://upstream.com/|1;https://upstream2.com/|2```   
+上述表达式表示配置```upstream```和```upstream2```两台中转服务器，并按1:2分配请求。  
+
 #### 目录缓存时长
 单位 秒。ShareList内部会对文件夹数据进行缓存，设置此项可调整。
 

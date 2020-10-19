@@ -147,8 +147,29 @@ const getDrives = (protocols) => {
   return ret
 }
 
+const getProxyServer = () => {
+  let servers = (getConfig('proxy_server') || '').split(';').map( i => i.split('|') )
+  if( servers.length == 0 ) {
+    return ''
+  }else if(servers.length == 1){
+    return servers[0][0]
+  }
+  else{
+    let weight = servers.map(i => parseInt(i[1]))
+    let sum = weight.reduce((t,c) => t + c, 0)
+    let rnd = Math.floor(Math.random() * sum)
+
+    for(let i = 0; i < weight.length ; i++){
+      rnd -= weight[i]
+      if( rnd < 0 ){
+        return servers[i][0]
+      }
+    }
+  }
+}
+
 const checkAccess = (token) => {
   return token === db.get('token')
 }
 
-module.exports = { getConfig, setIgnorePaths, getIgnorePaths, getAllConfig, save , installed , getPath , setRuntime , getRuntime , saveDrive , getDrive , getSkin , getDrives , getPluginOption , setPluginOption , checkAccess }
+module.exports = { getConfig, setIgnorePaths, getIgnorePaths, getAllConfig, save , installed , getPath , setRuntime , getRuntime , saveDrive , getDrive , getSkin , getDrives , getPluginOption , setPluginOption , checkAccess , getProxyServer }

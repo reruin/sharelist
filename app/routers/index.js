@@ -11,6 +11,9 @@ const install = require('./install')
 const installMid = require('../middleware/koa-install')
 
 router.use('/manage',installMid,manage.routes(), manage.allowedMethods())
+router.use('/admin',(ctx) => {
+  ctx.redirect('/manage')
+})
 
 // router.use('/api',installMid,api.routes(), api.allowedMethods())
 

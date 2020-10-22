@@ -123,7 +123,7 @@ module.exports = ({getSource , getPluginOption , setPluginOption , getConfig}) =
     preview[ext] = hls
   });
 
-  ['mp3','m4a','acc'].forEach( ext => {
+  ['mp3','m4a','acc','wav'].forEach( ext => {
     preview[ext] = audio
   });
 

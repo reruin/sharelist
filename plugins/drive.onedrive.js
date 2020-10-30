@@ -312,10 +312,6 @@ class Manager {
     let data = {"parameters":{"__metadata":{"type":"SP.RenderListDataParameters"},"RenderOptions":136967,"AllowMultipleValueFilterForTaxonomyFields":true,"AddRequiredFields":true}}
     let newurl = `${origin}/personal/${account}/_api/web/GetListUsingPath(DecodedUrl=@a1)/RenderListDataAsStream?@${querystring.stringify(qs)}`
 
-               // $domain . "/personal/" . $account . "/_api/web/GetListUsingPath(DecodedUrl=@a1)/RenderListDataAsStream?@a1='" . urlencode("/personal/" . $account . "/Documents") . "'&RootFolder=" . urlencode("/personal/" . $account . "/Documents/") . "&TryNewExperienceSingle=TRUE",
-    //newurl = "https://makedie-my.sharepoint.com/personal/mengskysama_makedie_onmicrosoft_com/_api/web/GetListUsingPath(DecodedUrl=@a1)/RenderListDataAsStream?@a1='%2Fpersonal%2Fmengskysama_makedie_onmicrosoft_com%2FDocuments'&RootFolder=%2Fpersonal%2Fmengskysama_makedie_onmicrosoft_com%2FDocuments%2F&TryNewExperienceSingle=TRUE"
-
-    //newurl = "https://makedie-my.sharepoint.com/personal/mengskysama_makedie_onmicrosoft_com/_api/web/GetListUsingPath(DecodedUrl=@a1)/RenderListDataAsStream?@a1='%2Fpersonal%2Fmengskysama_makedie_onmicrosoft_com%2FDocuments'&RootFolder=%2Fpersonal%2Fmengskysama_makedie_onmicrosoft_com%2FDocuments%2F&TryNewExperienceSingle=true"
     try{
       ({body , headers , error} = await request({
         url:newurl,
@@ -343,7 +339,7 @@ class Manager {
     let access_token = body['ListSchema']['.driveAccessToken'].split('=')[1]
     let graph = body['ListSchema']['.driveUrl']
     let update_time = Date.now()
-    let expires_in = parseInt(JSON.parse(base64.decode(access_token.split('.')[1]))['exp']+'000') - update_time
+    let expires_in = parseInt(JSON.parse(base64.decode(access_token.split('.')[1]))['exp']) - Math.floor(update_time / 1000)
     let client_id = base64.encode(encodeURIComponent(url))
 
     let client = {
@@ -355,7 +351,6 @@ class Manager {
       share:1
     }
 
-    console.log(client)
     await this.updateDrives(this.stringify(client))
 
     this.clientMap[client_id] = {
@@ -364,7 +359,6 @@ class Manager {
 
     return { credentials:client }
 
-    console.log('ok')
     //console.log(body , headers)
   }
 
@@ -388,7 +382,11 @@ class Manager {
       try {
         resp = await this.helper.request.post(`${metadata}/oauth2/v2.0/token`, params, { json: true })
       } catch (e) {
-        resp = { error : e.toString() }
+        let msg = 'unknow error'
+        if(e.body && e.body.error_description){
+          msg = e.body.error_description
+        }
+        resp = { error : msg }
       }
 
       if (resp.error) return resp
@@ -575,7 +573,6 @@ class Manager {
     let baseUrl = req.origin + req.path
 
     let { credentials, error, unmounted } = await this.get(id)
-
     if (unmounted){
       let data
 
@@ -684,7 +681,7 @@ class Driver {
     id =  manager.stringify({client_id,path})
 
     let r = helper.cache.get(id)
-    console.log(id , path,graph )
+    // console.log(id , path,graph )
     if (r) {
       if (
         (
@@ -771,10 +768,10 @@ class Driver {
         created_at: resp.body.createdDateTime,
         updated_at: resp.body.lastModifiedDateTime,
         ext: helper.extname(resp.body.name),
-        url: resp.body['@microsoft.graph.downloadUrl'],
+        // different zone use different filed
+        url: resp.body['@microsoft.graph.downloadUrl'] || resp.body['@content.downloadUrl'],
         type: resp.body.folder ? 'folder' : 'other',
       }
-
       if (!result.url && resp.body.webUrl) {
         result.type = 'redirect'
         result.redirect = resp.body.webUrl

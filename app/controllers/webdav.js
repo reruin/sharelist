@@ -206,7 +206,7 @@ class Request {
 
     this.depth = ctx.webdav.depth
 
-    this.incompatibleUserAgents = /(WebDAVFS|Microsoft-WebDAV-MiniRedir)/i.test(ctx.get('user-agent'))
+    this.incompatibleUserAgents = true ///(WebDAVFS|Microsoft-WebDAV-MiniRedir)/i.test(ctx.get('user-agent'))
 
     let method = ctx.method.toLowerCase()
 

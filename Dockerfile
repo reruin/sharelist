@@ -1,6 +1,8 @@
 FROM node:8-alpine
 MAINTAINER reruin
 
+ENV TZ=Asia/Shanghai
+
 ADD . /sharelist/
 WORKDIR /sharelist
 VOLUME /sharelist/cache

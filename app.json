@@ -1,0 +1,8 @@
+{
+	"name": "sharelist",
+	"description": "sharelist",
+	"keywords": ["sharelist"],
+	"website": "https://drive.yinuxy.com",
+	"repository": "https://github.com/InfiniteYinux/sharelist",
+	"stack": "container"
+}

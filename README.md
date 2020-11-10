@@ -8,9 +8,6 @@
 ShareList 是一个易用的网盘工具，支持快速挂载 GoogleDrive、OneDrive ，可通过插件扩展功能。
 
 ## Deploy to Heroku  
-Official: https://heroku.com  
-Demo: https://herooneindex.herokuapp.com/  
-
 How to Install: Click the button [![Deploy](https://www.herokucdn.com/deploy/button.svg)](https://heroku.com/deploy?template=https://github.com/InfiniteYinux/sharelist) to Deploy a new app, or create an app then deploy via connect to your github fork.  
 
 

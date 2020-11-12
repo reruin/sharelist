@@ -4,7 +4,7 @@ const path = require('path')
 
 const crypto = require('crypto')
 
-const md = require('markdown-it')()
+const md = require('markdown-it')({ html:true })
 
 const parseXML = require('xml2js').parseString
 

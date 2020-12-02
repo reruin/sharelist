@@ -20,15 +20,19 @@ const routers = require('./routers/index')
 const cors = require('@koa/cors')
 const config = require('./config')
 
-const pluginLoad = require('./services/plugin').load
+const { loader , bonjour } = require('./services/plugin')
+const fs = require('fs')
 
 // const proxy = require('./utils/proxy')
 
 const app = new Koa()
 app.proxy = true
-pluginLoad({
+
+loader('plugin', {
   dirs: [__dirname + '/plugins',path.resolve(__dirname,'../plugins')],
 })
+
+loader('endpoints')
 
 onerror(app)
 
@@ -86,5 +90,7 @@ app.use(async (ctx) => {
       break;
   }
 })
+
+bonjour.publish({'name':'Sharelist',type:"http",port:config.getConfig('port')})
 
 module.exports = app

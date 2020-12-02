@@ -52,7 +52,13 @@ const db = createFiledb(configPath , {raw:true} , {
 
   proxy_server:'',
 
-  ocr_server:'https://api.reruin.net/ocr'
+  ocr_server:'https://api.reruin.net/ocr',
+
+  smb_server_enable: false,
+  
+  smb_server_port:8445,
+
+  smb_anonymous_enable:true
 });
 
 if(process.env.PORT){

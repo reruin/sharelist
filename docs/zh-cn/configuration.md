@@ -65,6 +65,15 @@ ShareList 也支持配置多个中转服务器，只需用```;```分割即可，
 #### WebDAV路径
 ShareList支持WebDAV导出，此处可设置访问路径。
 
+#### SMB
+ShareList支持SMB导出，此处可设置是否启用此功能。[详细使用](zh-cn/advance?id=SMB)
+
+#### SMB 端口
+设置SMB 端口，默认8445。
+
+#### SMB 匿名访问
+设置SMB是否支持匿名访问，默认支持。
+
 #### 验证码识别接口
 设置打码接口。
 

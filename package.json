@@ -13,6 +13,8 @@
   },
   "dependencies": {
     "@koa/cors": "^2.2.1",
+    "@sharelist/node-smb-server": "^0.0.1",
+    "bonjour": "^3.5.0",
     "iconv-lite": "^0.5.0",
     "koa": "^2.2.0",
     "koa-body": "^4.1.1",
@@ -28,7 +30,7 @@
     "koa-views": "^6.2.1",
     "less-middleware": "^2.2.1",
     "lowdb": "^1.0.0",
-    "markdown-it": "^10.0.0",
+    "markdown-it": "^12.0.2",
     "mime": "^2.4.2",
     "node-rsa": "^1.1.1",
     "pug": "^2.0.4",

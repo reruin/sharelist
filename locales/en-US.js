@@ -51,5 +51,8 @@ module.exports = {
   "signout":"Sign Out",
   "anonymous_download":"Anonymous download rules",
   "anonymous_download_placeholder":"Match regular expression, leave blank to allow downloading any files",
-  "index_enable":"Index"
+  "index_enable":"Index",
+  "smb_server_enable":"SMB Server",
+  "smb_server_port":"SMB Server Port",
+  "smb_anonymous_enable":"SMB Allow Anonymous"
 }

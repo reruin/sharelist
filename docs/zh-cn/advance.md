@@ -46,6 +46,27 @@ ShareList支持将请求发送到多个对等的网盘，实现负载均衡。
 
 ***
 
+## Zeroconf
+ShareList支持向其他系统申明服务。包括： 
+1. Sharelist Web站点
+2. Sharelist WebDAV（Emby Zeroconf 浏览器可用）
+
+
+***
+
+## SMB(实验功能)
+ShareList尝试支持将挂载内容以SMB服务形式分享，需在后台管理处启用。暂只支持SMB1.0 且为只读模式。
+默认的SMB连接信息
+```
+端口: 8445
+路径: SL
+用户名: admin
+密码：后台管理密码
+```
+
+***
+
+
 ## Nginx(Caddy)反向代理
 使用反代时，请添加以下配置。  
 

@@ -76,7 +76,7 @@ const handlers = async (a, body , ctx) => {
     cache.clear()
     result.message = 'Success'
   } else if (a == 'cfg') {
-    let { proxy_enable, preview_enable, readme_enable, max_age_dir, max_age_file,max_age_download, webdav_path, anonymous_uplod_enable, ignore_file_extensions , ignore_paths , custom_style , custom_script , proxy_paths , proxy_server , ocr_server , language, anonymous_download, index_enable } = body
+    let { proxy_enable, preview_enable, readme_enable, max_age_dir, max_age_file,max_age_download, webdav_path, anonymous_uplod_enable, ignore_file_extensions , ignore_paths , custom_style , custom_script , proxy_paths , proxy_server , ocr_server , language, anonymous_download, index_enable, smb_server_enable, smb_server_port, smb_anonymous_enable } = body
     let opts = {}
     if (max_age_dir !== undefined) {
       max_age_dir = parseInt(max_age_dir)
@@ -132,7 +132,24 @@ const handlers = async (a, body , ctx) => {
       //console.log(ctx,ctx.__setLocale)
       ctx.__setLocale(language)
     }
+    
+    if (smb_server_enable) {
+      smb_server_enable = smb_server_enable == '1' ? 1 : 0
+      opts.smb_server_enable = smb_server_enable
+    }
 
+    if( smb_server_port ){
+      smb_server_port = parseInt(smb_server_port)
+      if (!isNaN(smb_server_port)) {
+        opts.smb_server_port = smb_server_port
+      }
+    }
+
+    if (smb_anonymous_enable) {
+      smb_anonymous_enable = smb_anonymous_enable == '1' ? 1 : 0
+      opts.smb_anonymous_enable = smb_anonymous_enable
+    }
+    
     opts.custom_script = custom_script
     opts.custom_style = custom_style
     opts.ignore_paths = config.getConfig('ignore_paths')
@@ -142,7 +159,6 @@ const handlers = async (a, body , ctx) => {
     opts.proxy_server = proxy_server
     opts.anonymous_download = anonymous_download
     opts.ocr_server = ocr_server || ''
-
     await config.save(opts)
     result.message = 'Success'
   }

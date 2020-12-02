@@ -23,7 +23,7 @@ const xml2js = ( xml , options = {}) => {
 }
 
 const guessWebDAV = (ua) => {
-  return /(Microsoft\-WebDAV|FileExplorer|WinSCP|WebDAVLib|WebDAVFS|rclone)/i.test(ua)
+  return /(Microsoft\-WebDAV|FileExplorer|WinSCP|WebDAVLib|WebDAVFS|rclone|Kodi)/i.test(ua)
 }
 
 const webdavMethods = ['options','head','trace','get','put','post','delete','mkcol','propfind','proppatch','copy','move','lock','unlock']
@@ -54,6 +54,7 @@ const parseConfig = (str) => {
   return ret
 }
 module.exports = async(ctx, next) => {
+  console.log(ctx.request.headers['user-agent'])
   if (!ctx.session.access) {
     ctx.session.access = new Set()
   }

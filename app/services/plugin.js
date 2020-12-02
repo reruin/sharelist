@@ -10,6 +10,7 @@ const { sendFile , sendHTTPFile ,sendStream, getFile, getHTTPFile } = require('.
 const wrapReadableStream = require('../utils/wrapReadableStream')
 const rectifier = require ('../utils/rectifier')
 const chunkStream = require('../utils/chunkStream')
+const bonjour = require('bonjour')()
 
 const assign = (...rest) => Object.assign(...rest)
 
@@ -400,8 +401,35 @@ const load = (options) => {
   ready = true
 }
 
+var endpoints = []
+const loader = (type, ...rest) => {
+  if( type == 'plugin' ){
+    load(...rest)
+  }else{
+    const files = fs.readdirSync(path.resolve(__dirname,'../../'+type))
+    const services = {}
+    services.command = command
+    services.setRuntime = config.setRuntime
+    services.getConfig = config.getConfig
+    services.bonjour = bonjour
+
+    for (let i = 0; i<files.length;i++) {
+      let filepath = path.join(path.resolve(__dirname,'../../'+type),files[i])
+      let instance = new (require(filepath))(services)
+      let name = instance.name || (type+'_' + files[i].replace(/\./g,'_'))
+      endpoints.push( instance )
+      console.log(`Load ${type}: ${name}`)
+    }
+  }
+}
+
 const reload = () => {
   load(loadOptions)
+  if( endpoints ){
+    for(let endpoint of endpoints){
+      endpoint.restart()
+    }
+  }
 }
 /**
  * 根据协议获取可处理的驱动
@@ -599,4 +627,4 @@ const createWriteStream = async (options) => {
   }
 }
 
-module.exports = { load , reload , getDrive , getStream , getSource , updateFolder , updateFile , updateLnk , getVendors , getAuth , getPreview , isPreviewable , command}
+module.exports = { load , reload , getDrive , getStream , getSource , updateFolder , updateFile , updateLnk , getVendors , getAuth , getPreview , isPreviewable , command , loader , bonjour}

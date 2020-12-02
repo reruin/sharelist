@@ -73,6 +73,7 @@ class Manager {
 
     let paths = await helper.getDrives()
     let data = paths.map(i => this.parse(i.path, i.name))
+    console.log(helper.getRuntime())
     let name = decodeURIComponent(helper.getRuntime().path.replace(/^\//g, ''))
     let hit = data.filter(i => i.name == name)
 

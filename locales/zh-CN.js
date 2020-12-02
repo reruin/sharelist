@@ -51,5 +51,8 @@ module.exports = {
   "signout":"登出",
   "anonymous_download":"下载限制",
   "anonymous_download_placeholder":"匹配正则表达式，留空表示允许下载任意文件。",
-  "index_enable":"目录索引"
+  "index_enable":"目录索引",
+  "smb_server_enable":"SMB 服务",
+  "smb_server_port":"SMB 端口",
+  "smb_anonymous_enable":"SMB 允许匿名访问"
 }

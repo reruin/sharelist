@@ -441,9 +441,19 @@ module.exports = ({ request, cache, getConfig, querystring, base64, saveDrive, g
     })
 
     if(!resp) return false
-
     let url = resp.headers.location
-    resp = {
+
+    let redir = await request({
+      async:true,
+      url:url,
+      method:'GET',
+      followRedirect:false ,
+      headers:{
+        'User-Agent':'Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/69.0.3497.100 Safari/537.36',
+      }
+    })
+    url = redir.headers.location
+    return {
       id,
       url,
       name: data.name,
@@ -452,7 +462,6 @@ module.exports = ({ request, cache, getConfig, querystring, base64, saveDrive, g
       size:data.size,
     }
 
-    return resp
   }
 
   const createReadStream = async ({id , size , options = {}} = {}) => {

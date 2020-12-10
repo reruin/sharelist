@@ -11,4 +11,5 @@
   * [本地文件](zh-cn/plugins/local.md)
   * [WebDAV](zh-cn/plugins/webdav.md)
   * [SFTP](zh-cn/plugins/sftp.md)
+  * [Teambition](zh-cn/plugins/teambition.md)
 * [高级应用](zh-cn/advance.md)

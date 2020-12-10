@@ -158,6 +158,32 @@ const xml2json = ( xml , options = {}) => {
   })
 }
 
+const match = (route , pathname) => {
+  let optionalParam = /\((.*?)\)/g ,
+    namedParam    = /(\(\?)?:\w+/g,
+    splatParam    = /\*\w+/g,
+    escapeRegExp  = /[\-{}\[\]+?.,\\\^$|#\s]/g;
+  let route_new = route.replace(escapeRegExp, '\\$&')
+    .replace(optionalParam, '(?:$1)?')
+    .replace(namedParam, function(match, optional) {
+        return optional ? match : '([^/?]+)';
+    })
+    .replace(splatParam, '([^?]*?)');
+  let expr = new RegExp('^' + route_new + '(?:\\?([\\s\\S]*))?$');
+  let res = expr.exec(route).slice(1)
+  res.pop()
+  let key = res.map( i => i.replace(/^\:/,''))
+  let hit = expr.exec( pathname )
+  let params = {}
+  if( hit ){
+    hit = hit.slice(1)
+    key.forEach((i , idx) => {
+      params[i] = hit[idx]
+    })
+  }
+  return params
+}
+
 module.exports = {
   parsePath,
   getFileType,
@@ -183,6 +209,7 @@ module.exports = {
   md5,
   parseStream,
   xml2json,
+  match,
   params(url) {
     url = url.split('?')[1]
     let reg = /(?:&)?([^=]+)=([^&]*)/ig,

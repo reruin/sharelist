@@ -1,7 +1,7 @@
 const fs = require('fs')
 const path = require('path')
 const querystring = require('querystring')
-const {getFileType , getMIME , isArray , isObject , params , base64 , getRandomIP , retrieveSize , extname , pathNormalize, parseStream , xml2json } = require('../utils/base')
+const {getFileType , getMIME , isArray , isObject , params , base64 , getRandomIP , retrieveSize , extname , pathNormalize, parseStream , xml2json , match } = require('../utils/base')
 const format = require('../utils/format')
 const cache = require('../utils/cache')
 const http = require('../utils/http')
@@ -246,6 +246,7 @@ const getHelpers = (id) => {
     chunkStream,
     recognize,
     xml2json,
+    match:match,
     getOption:()=>{
 
     },
@@ -291,16 +292,22 @@ const getHelpers = (id) => {
 /**
  * 加载插件
  */
-var loadOptions = []
+var loadOptions = {}
 const load = (options) => {
   loadOptions = options
-  const dir = options.dir
-  const dirs = options.dirs
+
+  let { dir, dirs , ...rest } = options
 
   if (dir && dirs.indexOf(dir) === -1) {
     dirs.push(dir)
   }
-  
+
+  const services = { ...rest }
+  services.command = command
+  services.setRuntime = config.setRuntime
+  services.getConfig = config.getConfig
+  services.bonjour = bonjour
+  services.sendStream = getStream
   for (let i = 0; i < dirs.length; i++) {
     const p = dirs[i]
     if (!fs.existsSync(p)) {
@@ -326,7 +333,7 @@ const load = (options) => {
 
         let resource
         if( isClass(ins) ){
-          let driver = new ins(helpers)
+          let driver = new ins(helpers,services)
           let { protocol , mountable , createReadStream , createWriteStream } = driver
           driver.helper = helpers
           resources[id] = {
@@ -407,11 +414,12 @@ const loader = (type, ...rest) => {
     load(...rest)
   }else{
     const files = fs.readdirSync(path.resolve(__dirname,'../../'+type))
-    const services = {}
+    const services = { ...rest[0] }
     services.command = command
     services.setRuntime = config.setRuntime
     services.getConfig = config.getConfig
     services.bonjour = bonjour
+    services.sendStream = getStream
 
     for (let i = 0; i<files.length;i++) {
       let filepath = path.join(path.resolve(__dirname,'../../'+type),files[i])
@@ -626,5 +634,6 @@ const createWriteStream = async (options) => {
     return await writestreamMap.get(protocol)(options)
   }
 }
+
 
 module.exports = { load , reload , getDrive , getStream , getSource , updateFolder , updateFile , updateLnk , getVendors , getAuth , getPreview , isPreviewable , command , loader , bonjour}

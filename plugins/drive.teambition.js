@@ -459,10 +459,10 @@ module.exports = class Driver {
 
     let { path, cookie, username } = data
 
-    let r = helper.cache.get(id)
-
     id =  manager.stringify({username,path})
 
+    let r = helper.cache.get(id)
+    
     if (r) {
       if (
         r.$cached_at &&

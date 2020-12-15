@@ -290,7 +290,7 @@ module.exports = {
         return
       }
       //enableDownload
-      if( ignoreexts.includes(data.ext) || ignorefiles.includes(data.name) ){
+      if( (data.ext && ignoreexts.includes(data.ext)) || ignorefiles.includes(data.name) ){
         ctx.status = 404
       }else{
         await output(ctx , data)
@@ -333,7 +333,7 @@ module.exports = {
         (
           (
             i.type != 'folder' && 
-            !ignoreexts.includes(i.ext) && 
+            (i.ext && !ignoreexts.includes(i.ext)) && 
             !ignorefiles.includes(i.name) 
           ) || 
           (
@@ -355,7 +355,7 @@ module.exports = {
       return ret
     }
     else{
-      if( ignoreexts.includes(data.ext) || ignorefiles.includes(data.name) ){
+      if( (data.ext && ignoreexts.includes(data.ext)) || ignorefiles.includes(data.name) ){
         ctx.status = 404
       }else{
         if(ctx.runtime.method == 'GET'){

@@ -232,7 +232,7 @@ module.exports = {
         if(
           isAdmin || 
           (i.type == 'folder' && !ignorepaths.includes(base_url + '/' + i.name)) || 
-          (i.type != 'folder' && !ignoreexts.includes(i.ext) && !ignorefiles.includes(i.name))){
+          (i.type != 'folder' && !(i.ext && ignoreexts.includes(i.ext)) && !ignorefiles.includes(i.name))){
           let href = ''
           if( i.url && isRelativePath(i.url) ){
             href = pathNormalize(base_url + '/' + i.url)

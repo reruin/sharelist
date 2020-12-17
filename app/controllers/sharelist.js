@@ -166,7 +166,7 @@ module.exports = {
 
     let base_url = ctx.path == '/' ? '' : ctx.path
     let parent = ctx.paths.length ? ('/' + ctx.paths.slice(0,-1).join('/')) : ''
-    let ignoreexts = (config.getConfig('ignore_file_extensions') || '').split(',')
+    let ignoreexts = config.getConfig('ignore_file_extensions') ? (config.getConfig('ignore_file_extensions') || '').split(',') : []
     let ignorefiles = (config.getConfig('ignore_files') || '').split(',')
     let anonymous_uplod_enable = !!config.getConfig('anonymous_uplod_enable')
     let ignorepaths = config.getIgnorePaths()
@@ -232,7 +232,7 @@ module.exports = {
         if(
           isAdmin || 
           (i.type == 'folder' && !ignorepaths.includes(base_url + '/' + i.name)) || 
-          (i.type != 'folder' && !(i.ext && ignoreexts.includes(i.ext)) && !ignorefiles.includes(i.name))){
+          (i.type != 'folder' && !ignoreexts.includes(i.ext) && !ignorefiles.includes(i.name))){
           let href = ''
           if( i.url && isRelativePath(i.url) ){
             href = pathNormalize(base_url + '/' + i.url)
@@ -290,7 +290,7 @@ module.exports = {
         return
       }
       //enableDownload
-      if( (data.ext && ignoreexts.includes(data.ext)) || ignorefiles.includes(data.name) ){
+      if( ignoreexts.includes(data.ext) || ignorefiles.includes(data.name) ){
         ctx.status = 404
       }else{
         await output(ctx , data)
@@ -303,7 +303,7 @@ module.exports = {
    * API handler
    */
   async api(ctx){
-    let ignoreexts = (config.getConfig('ignore_file_extensions') || '').split(',')
+    let ignoreexts = config.getConfig('ignore_file_extensions') ? (config.getConfig('ignore_file_extensions') || '').split(',') : []
     let ignorefiles = (config.getConfig('ignore_files') || '').split(',')
     let anonymous_uplod_enable = !!config.getConfig('anonymous_uplod_enable')
     let ignorepaths = config.getIgnorePaths()
@@ -333,7 +333,7 @@ module.exports = {
         (
           (
             i.type != 'folder' && 
-            (i.ext && !ignoreexts.includes(i.ext)) && 
+            !ignoreexts.includes(i.ext) && 
             !ignorefiles.includes(i.name) 
           ) || 
           (
@@ -355,7 +355,7 @@ module.exports = {
       return ret
     }
     else{
-      if( (data.ext && ignoreexts.includes(data.ext)) || ignorefiles.includes(data.name) ){
+      if( ignoreexts.includes(data.ext) || ignorefiles.includes(data.name) ){
         ctx.status = 404
       }else{
         if(ctx.runtime.method == 'GET'){

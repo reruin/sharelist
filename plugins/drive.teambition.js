@@ -462,7 +462,7 @@ module.exports = class Driver {
     id =  manager.stringify({username,path})
 
     let r = helper.cache.get(id)
-    
+
     if (r) {
       if (
         r.$cached_at &&
@@ -558,7 +558,11 @@ module.exports = class Driver {
         ext: hit.ext,
         protocol: protocol,
         size: hit.size,
-        $expired_at: expired_at,
+        // $expired_at: expired_at,
+        proxy:true,
+        headers:{
+          'referer': 'https://www.teambition.com/'
+        }
       }
 
     }

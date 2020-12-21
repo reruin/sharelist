@@ -59,7 +59,7 @@ class Manager {
     this.pathAppMap = {}
     this.helper = helper
 
-    this.PROXY_URL = 'https://reruin.github.io/redirect/onedrive.html'
+    this.PROXY_URL = 'https://reruin.github.io/sharelist/redirect.html'
   }
 
   /**
@@ -365,7 +365,7 @@ class Manager {
   async refreshAccessToken(credentials) {
     let { client_id, client_secret, redirect_uri, refresh_token, zone, tenant_id , share } = credentials
     if( share ){
-      return this.getShareAccessToken( this.helper.base64.decode(decodeURIComponent(client_id)) )
+      return this.getShareAccessToken( decodeURIComponent(this.helper.base64.decode(client_id) ))
     }
     let metadata = this.getAuthority(zone,tenant_id)
     if (client_id && client_secret && refresh_token) {

@@ -35,6 +35,20 @@ gd:0BwfTxffUGy_GNF9KQ25Xd0xxxxxxx
 
 ***
 
+## sharelist-proxy中转
+
+[Sharelist Proxy](https://github.com/linkdrive/sharelist-proxy)可支持更加自由的中转方式，支持多种安装方式。   
+
+1. [此页面](https://github.com/linkdrive/sharelist-proxy/releases) 可下载对应版本的中转程序。以 -t [TOKEN] -h [HOST] 参数启动即可。
+2. 已安装Node环境时，可直接运行 ```npx @sharelist/proxy -t [TOKEN] -h [HOST]```启动。 
+3. Docker ```docker run sharelist/proxy -e t="[TOKEN]" -e h="[HOST]"```。
+
+?> **Sharelist Proxy默认工作在33009端口，可以使用```-p [PORT]```参数指定其他端口。**   
+
+
+***
+
+
 ## 负载均衡
 ShareList支持将请求发送到多个对等的网盘，实现负载均衡。
 1. 成功挂载对等网盘。

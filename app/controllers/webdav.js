@@ -56,6 +56,7 @@ const dateFormat = (d) => {
 const propsCreate = (data, options) => {
   let out = ''
   let { props, ns: { name, value } } = options
+  if( name ) name = name + ':'
   for (let key in props) {
 
     // TODO getlastmodified format: 
@@ -65,25 +66,25 @@ const propsCreate = (data, options) => {
     if (key == 'getlastmodified' && data.updated_at) {
       let getlastmodified = dateFormat(data.updated_at)
       if (getlastmodified) {
-        out += `<${name}:${key}>${getlastmodified}</${name}:${key}>`
+        out += `<${name}${key}>${getlastmodified}</${name}${key}>`
       }
     }
     if (key == 'displayname') {
-      out += `<${name}:${key}>${data.name.replace(/&/g,'&amp;').replace(/\</g,'&lt;')}</${name}:${key}>`
+      out += `<${name}${key}>${data.name.replace(/&/g,'&amp;').replace(/\</g,'&lt;')}</${name}${key}>`
     }
     if (key == 'getcontentlength') {
-      out += `<${name}:${key}>${parseInt(data.size || 0)}</${name}:${key}>`
+      out += `<${name}${key}>${parseInt(data.size || 0)}</${name}${key}>`
     }
     if (key == 'resourcetype') {
-      out += `<${name}:${key}>${data.type == 'folder' ? `<${name}:collection/>` : ''}</${name}:${key}>`
+      out += `<${name}${key}>${data.type == 'folder' ? `<${name}collection/>` : ''}</${name}${key}>`
     }
     if (key == 'getcontenttype' && data.type != 'folder') {
-      out += `<${name}:${key}>${data.mime}</${name}:${key}>`
+      out += `<${name}${key}>${data.mime}</${name}${key}>`
     }
     if (key == 'creationdate' && data.created_at) {
       let creationdate = dateFormat(data.created_at)
       if (creationdate) {
-        out += `<${name}:${key}>${creationdate}</${name}:${key}>`
+        out += `<${name}${key}>${creationdate}</${name}${key}>`
       }
     }
   }
@@ -104,8 +105,8 @@ const propfindParse = (data, ns) => {
 
   let findprop_ns = nsParse(data)
   let method = Object.keys(data)[0].split(':').pop() || 'propfind'
+  let fp_ns_name = findprop_ns && findprop_ns.name ? `${findprop_ns.name}:` : ''
 
-  let fp_ns_name = findprop_ns ? `${findprop_ns.name}:` : ''
   let props = {}
   if(data[`${fp_ns_name}${method}`]['$$'].hasOwnProperty(`${fp_ns_name}allprop`)){
     return default_options
@@ -138,9 +139,9 @@ const nsParse = (data) => {
   if (data['$']) {
     let attrs = Object.keys(data['$']),
       ns_name, ns_val
-    let hit = attrs.find(i => /xmlns\:/.test(i))
+    let hit = attrs.find(i => /xmlns\:?/.test(i))
     if (hit) {
-      ns_name = hit.split(':')[1]
+      ns_name = hit.split(':')[1] || ''
       ns_val = data['$'][hit]
       return { name: ns_name, value: ns_val }
     }
@@ -164,7 +165,7 @@ const respCreate = (data, options) => {
   let body = `<?xml version="1.0" encoding="utf-8" ?>`
 
   let xmlns = name ? `${name}:` : ''
-  body += `<${xmlns}multistatus${name ? (' xmlns:'+name+'="'+value+'"') : ''}>`
+  body += `<${xmlns}multistatus xmlns${name ? (':'+name) : '' }="${value}">`
   data.forEach(file => {
     if (file.hidden !== true) {
       let href = (/*file.href ||*/ (path+'/'+encodeURIComponent(file.name))).replace(/\/{2,}/g, '/') //path +'/' + encodeURIComponent(file.name)
@@ -206,7 +207,7 @@ class Request {
 
     this.depth = ctx.webdav.depth
 
-    this.incompatibleUserAgents = true ///(WebDAVFS|Microsoft-WebDAV-MiniRedir)/i.test(ctx.get('user-agent'))
+    this.incompatibleUserAgents = true ///(WebDAVFS|Microsoft-WebDAV-MiniRedir|davfs2)/i.test(ctx.get('user-agent'))
 
     let method = ctx.method.toLowerCase()
 

@@ -52,17 +52,26 @@ block content
   script.
     $(function() {
       $('body').on('click', '.copy', function() {
-        var url = ''
+        console.log(1);
+        let url = ''
         $('.list').find('a i:not(.ic-folder)').each(function(){
-          url += `${$(this).parents('a.clearfix').attr('href').replace(/\?.*/g,'')}\n`
+          url += `${parseUrl($(this).parents('a.clearfix').attr('href'))}\n`
           url += '---------------------------------\n'
         })
         copyText(url)
       })
+      function parseUrl(url){
+        if(!url) return ''
+        if(/^(https?:\/\/)?([\da-z\.-]+)\.([a-z\.]{2,6})([\/\w \.-]*)*\/?$/.test(url)){//如果是全路径网址
+          return url.replace(/\?.*/g,'')
+        }else{
+          return window.location.origin + url.replace(/\?.*/g,'')
+        }
+      }
       function copyText(text) {
-        var flag = false
-        var textarea = document.createElement("textarea"); //创建input对象
-        var currentFocus = document.activeElement; //当前获得焦点的元素
+        let flag = false
+        const textarea = document.createElement("textarea"); //创建input对象
+        const currentFocus = document.activeElement; //当前获得焦点的元素
         document.body.appendChild(textarea); //添加元素
         textarea.value = text;
         textarea.focus();

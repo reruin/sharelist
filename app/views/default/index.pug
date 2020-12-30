@@ -1,7 +1,7 @@
 extends partial/layout
 
 block content
-  
+
   header
     .wrap
       -if(parent)
@@ -19,6 +19,8 @@ block content
         -if(downloadable)
           a(href='?download',title="下载文件夹")
             i.ic.ic-folder-download
+        a.copy(href='javascript:void(0)',title="复制链接")
+          i.ic.ic-folder-download
   section.wrap
     .list-header
       .row
@@ -47,10 +49,42 @@ block content
 
   -if(writeable)
     script(src='/script/upload.js')
+  script.
+    $(function() {
+      $('body').on('click', '.copy', function() {
+        let url = ''
+        $('.list').find('a i:not(.ic-folder)').each(function(){
+          url += `${$(this).parents('a.clearfix').attr('href').replace(/\?.*/g,'')}\n`
+          url += '---------------------------------\n'
+        })
+        copyText(url)
+      })
+      function copyText(text) {
+        var textarea = document.createElement("textarea"); //创建input对象
+        var currentFocus = document.activeElement; //当前获得焦点的元素
+        document.body.appendChild(textarea); //添加元素
+        textarea.value = text;
+        textarea.style = 'visible:hidden'
+        textarea.focus();
+        if (textarea.setSelectionRange) {
+          textarea.setSelectionRange(0, textarea.value.length); //获取光标起始位置到结束位置
+        } else {
+          textarea.select();
+        }
+        try {
+          var flag = document.execCommand("copy"); //执行复制
+        } catch (err) {
+          var flag = false;
+        }
+        document.body.removeChild(textarea); //删除元素
+        currentFocus.focus();
+        return flag;
+      }
+    })
   include partial/footer
 
 
 
-  
 
-  
+
+

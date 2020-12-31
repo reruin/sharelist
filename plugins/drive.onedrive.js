@@ -13,18 +13,21 @@ const crypto = require('crypto')
 const querystring = require('querystring')
 
 const support_zone = {
-  'GLOBAL': [
+  'COM': [
     'https://login.microsoftonline.com',
     'https://graph.microsoft.com',
     'https://portal.azure.com',
     '全球',
-    ['00cdbfd5-15a5-422f-a7d7-75e8eddd8fa8','pTvE-.ooe8ou5p1552O8s.3WK996UZ.Z8M']
+    'https://www.office.com/',
+    ['00cdbfd5-15a5-422f-a7d7-75e8eddd8fa8','pTvE-.ooe8ou5p1552O8s.3WK996UZ.Z8M'],
   ],
   'CN': [
     'https://login.chinacloudapi.cn',
     'https://microsoftgraph.chinacloudapi.cn',
     'https://portal.azure.cn',
     '世纪互联',
+    'https://portal.partner.microsoftonline.cn/Home',
+    ['aaf7d98a-53cb-4a50-8c30-65adfd20b004','7d~ZR~mG90_3Wka_~xoWetG2g_Lc.eBwi1'],
   ],
   'DE': [
     'https://login.microsoftonline.de',
@@ -33,7 +36,7 @@ const support_zone = {
     'Azure 德国'
   ],
   // L4
-  'USGOV': [
+  'US': [
     'https://login.microsoftonline.us',
     'https://graph.microsoft.us',
     'https://portal.azure.us',
@@ -94,7 +97,7 @@ class Manager {
     for (let i of d) {
       let data = this.parse(i.path)
       if(data.client_id && !data.share){
-        data.graph = this.getGraphEndpoint(data.zone,data.tenant_id)
+        data.graph = this.getGraphEndpoint(data.zone,data.site_id)
       }
       this.clientMap[data.client_id] = data
     }
@@ -111,9 +114,9 @@ class Manager {
     let data = this.parse(id)
     if (data.client_id && this.clientMap[data.client_id]) {
       let credentials = this.clientMap[data.client_id]
-      let { update_time, expires_in } = credentials
+      let { expires_at } = credentials
 
-      if ((Date.now() - update_time) > expires_in * 1000 * 0.9) {
+      if ((expires_at - Date.now()) < 10 * 60 * 1000) {
         let result = await this.refreshAccessToken(credentials)
         if (result.error) {
           return result
@@ -183,7 +186,7 @@ class Manager {
   }
 
   getScopes(zone) {
-    let zoneScope = support_zone[zone || 'GLOBAL'][1]
+    let zoneScope = support_zone[zone || 'COM'][1]
     return [
       'offline_access', 
       //`${zoneScope}/Files.ReadWrite.All`,
@@ -196,30 +199,32 @@ class Manager {
   }
 
   getDefaultConfig(zone){
-    return support_zone[zone || 'COMMON'][4]
+    return support_zone[zone || 'COMMON'][5] || []
   }
 
-  getGraphEndpoint(zone , site_id){
-    site_id = false
-    //sites/' . getConfig('siteid') . '
+  getGraphEndpoint(zone , site_id = false){
     return support_zone[zone || 'COMMON'][1] + '/v1.0' + (site_id ? `/sites/${site_id}` : '/me') + '/drive'
   }
 
+  getGraphEndpointSite(zone , site_name){
+    //sites/' . getConfig('siteid') . '
+    return support_zone[zone || 'COMMON'][1] + '/v1.0/sites/root:/' + site_name
+  }
+
   async generateAuthUrl(config) {
-    let { client_id, client_secret, zone, tenant_id, redirect_uri } = config
-    let metadata = this.getAuthority(zone, tenant_id)
+    let { client_id, client_secret, zone, tenant_id, redirect_uri, site_name } = config
 
     const opts = {
-      client_id,
+      client_id:client_id.split('.')[0],
       scope: this.getScopes(zone),
       response_type: 'code',
       redirect_uri: this.PROXY_URL,
       state: redirect_uri
     };
 
-    this.pathAppMap[redirect_uri] = { client_id, client_secret, zone, tenant_id, metadata, redirect_uri: opts.redirect_uri, create_time: Date.now() }
+    this.pathAppMap[redirect_uri] = { client_id, client_secret, zone, tenant_id, redirect_uri: opts.redirect_uri, create_time: Date.now(), site_name }
 
-    return `${metadata}/oauth2/v2.0/authorize?${querystring.stringify(opts)}`;
+    return `${this.getAuthority(zone, tenant_id)}/oauth2/v2.0/authorize?${querystring.stringify(opts)}`;
   }
 
   /**
@@ -232,13 +237,15 @@ class Manager {
   async getAccessToken(code, key) {
     let appConfig = this.pathAppMap[key]
     if (!appConfig) return {
-      error: '没有匹配到app_id(key:' + key + ')'
+      error: '没有匹配到app_id , No matching app_id (key:' + key + ')'
     }
 
-    let { client_id, client_secret, metadata, zone, tenant_id, redirect_uri } = appConfig
+    let { client_id, client_secret, zone, tenant_id, redirect_uri, site_name } = appConfig
+    
+    let metadata = this.getAuthority(zone,tenant_id)
 
     let params = {
-      client_id,
+      client_id:client_id.split('.')[0],
       client_secret,
       code,
       redirect_uri,
@@ -251,7 +258,6 @@ class Manager {
     } catch (e) {
       resp = { error : e.toString() }
     }
-      
     if (resp.error) return resp
 
     if (resp.body.error) {
@@ -259,23 +265,35 @@ class Manager {
     }
 
     let { refresh_token, expires_in, access_token } = resp.body
+    let site_id
+    // get sharepoint site id
+    if( site_name ){
+      let api = this.getGraphEndpointSite(zone , site_name)
+      try{
+        let resp = await this.helper.request.get(api, { json: true , headers:{
+          'Authorization':'Bearer '+access_token
+        } })
+        site_id = resp.body.id
+      }catch(e){
+       return { error: 'parse site id error' }
+      }
+    }
 
     let client = {
       client_id,
       client_secret,
       zone,
       tenant_id,
+      site_id,
       redirect_uri,
       refresh_token,
-      expires_in,
       access_token,
-      update_time: Date.now(),
+      expires_at: Date.now() + expires_in * 1000,
     }
 
     this.clientMap[client_id] = {
       ...client,
-      metadata: this.getAuthority(zone,tenant_id),
-      graph: this.getGraphEndpoint(zone,tenant_id)
+      graph: this.getGraphEndpoint(zone,site_id)
     }
 
     if (key) delete this.pathAppMap[key]
@@ -296,22 +314,24 @@ class Manager {
    */
   async getShareAccessToken(url){
     let { request , base64 } = this.helper
-    let [ _, tenant_name, account ] = url.match(/https:\/\/([^\.]+).sharepoint\.com\/:[a-z]:\/g\/personal\/([^\/]+)\//)
-    let origin = `https://${tenant_name}.sharepoint.com`
 
     let { body , headers , error } = await request.get(url , { followRedirect:false, headers:{'User-Agent':'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_14_4) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/79.0.3945.88 Safari/537.36'}})
     
     let cookie = headers['set-cookie'] ? headers['set-cookie'].join('; ') : ''
 
+  
+    let obj = new URL(headers['location'])
+    let origin = obj.origin
+    let rootFolder = obj.searchParams.get('id')
+    let account = rootFolder.split(' ')[0].replace('/Shared','').replace(/Documents.*?$/,'')
+
     let qs = {
-      'a1':`'/personal/${account}/Documents'`,
-      RootFolder:`/personal/${account}/Documents/`,
+      a1:`'${rootFolder.replace(/(?<=Documents).*$/,'')}'`,
+      RootFolder:rootFolder,
       TryNewExperienceSingle:'TRUE',
     }
-
-    let data = {"parameters":{"__metadata":{"type":"SP.RenderListDataParameters"},"RenderOptions":136967,"AllowMultipleValueFilterForTaxonomyFields":true,"AddRequiredFields":true}}
-    let newurl = `${origin}/personal/${account}/_api/web/GetListUsingPath(DecodedUrl=@a1)/RenderListDataAsStream?@${querystring.stringify(qs)}`
-
+    let data = {"parameters":{"__metadata":{"type":"SP.RenderListDataParameters"},"RenderOptions":1446151,"AllowMultipleValueFilterForTaxonomyFields":true,"AddRequiredFields":true}}
+    let newurl = `${origin}${account}/_api/web/GetListUsingPath(DecodedUrl=@a1)/RenderListDataAsStream?@${querystring.stringify(qs)}`
     try{
       ({body , headers , error} = await request({
         url:newurl,
@@ -328,7 +348,6 @@ class Manager {
     }catch(e){
       console.log(e)
     }
-
     if( error ){
       return { error: error.toString() }
     }
@@ -336,17 +355,18 @@ class Manager {
       return { error: body.error.code }
     }
 
+    if(!body.ListSchema['.driveAccessToken']){
+      return { error: '请将分享文件夹设置[拥有链接的任何人都可编辑] / The shared folder must be given editing permissions' }
+    }
     let access_token = body['ListSchema']['.driveAccessToken'].split('=')[1]
     let graph = body['ListSchema']['.driveUrl']
-    let update_time = Date.now()
-    let expires_in = parseInt(JSON.parse(base64.decode(access_token.split('.')[1]))['exp']) - Math.floor(update_time / 1000)
+    let expires_at = parseInt(JSON.parse(base64.decode(access_token.split('.')[1]))['exp']) * 1000
     let client_id = base64.encode(encodeURIComponent(url))
 
     let client = {
       access_token,
       client_id,
-      expires_in,
-      update_time,
+      expires_at,
       graph,
       share:1
     }
@@ -363,15 +383,16 @@ class Manager {
   }
 
   async refreshAccessToken(credentials) {
-    let { client_id, client_secret, redirect_uri, refresh_token, zone, tenant_id , share } = credentials
+    let { client_id, client_secret, redirect_uri, refresh_token, zone, tenant_id, site_id, share } = credentials
     if( share ){
       return this.getShareAccessToken( decodeURIComponent(this.helper.base64.decode(client_id) ))
     }
-    let metadata = this.getAuthority(zone,tenant_id)
-    if (client_id && client_secret && refresh_token) {
 
+    let metadata = this.getAuthority(zone,tenant_id)
+
+    if (client_id && client_secret && refresh_token) {
       let params = {
-        client_id,
+        client_id:client_id.split('.')[0],
         client_secret,
         redirect_uri,
         refresh_token,
@@ -394,10 +415,10 @@ class Manager {
       if (resp.body.error) {
         return { error: resp.body.error_description || resp.body.error }
       }
-
+      // console.log('refreshAccessToken',resp.body)
       let { expires_in, access_token } = resp.body
       refresh_token = resp.body.refresh_token
-
+      let expires_at = expires_in * 1000 + Date.now()
       let client = {
         client_id,
         client_secret,
@@ -405,20 +426,17 @@ class Manager {
         tenant_id,
         redirect_uri,
         refresh_token,
-        expires_in,
         access_token,
-        update_time: Date.now(),
+        expires_at,
       }
 
       this.clientMap[client_id] = {
         ...client,
-        metadata: this.getAuthority(zone,tenant_id),
-        graph: this.getGraphEndpoint(zone,tenant_id)
+        graph: this.getGraphEndpoint(zone,site_id)
       }
 
       await this.updateDrives(this.stringify(client))
 
-      console.log('refresh_token')
       return { credentials:client }
     }
 
@@ -428,10 +446,12 @@ class Manager {
 
 
   install(error) {
-    let zone = []
+    let zone = [] , types = ['onedrive','sharepoint']
+
     for (let [key, value] of Object.entries(support_zone)) {
-      zone.push(`<option value="${key}" data-portal="${value[2]}" ${key == 'GLOBAL' ? 'selected' : ''}>${value[3]}</option>`)
+      zone.push(`<option value="${key}" data-sharepoint="${value[4] || ''}" data-portal="${value[2] || ''}" ${key == 'COM' ? 'selected' : ''}>${value[3]}</option>`)
     }
+
     return { id:'onedrive-install', type: 'folder', protocol, body: `
       <script src="https://cdn.bootcss.com/jquery/3.3.1/jquery.min.js"></script>
       <style>
@@ -457,10 +477,13 @@ class Manager {
         
         .form-item{
           margin-bottom:8px;
-          display:none;
         }
         .form-item.show{
           display:block;
+        }
+
+        .tab{
+          display:none;
         }
       </style>
       <div class="auth">
@@ -468,32 +491,37 @@ class Manager {
         
         <form class="form-horizontal" method="post">
           <div class="l-center" style="font-size:13px;">
-            <label><input type="radio" name="type" value="api" checked /> API 挂载</label>
-            <label><input type="radio" name="type" value="sharelink" /> 分享链接挂载</label>
-            <label><input type="radio" name="type" value="auto" /> 自动挂载</label>
+            <label><input type="radio" name="type" value="onedrive" checked /> OneDrive 挂载</label>
+            <label><input type="radio" name="type" value="sharepoint" /> SharePoint 挂载</label>
+            <label><input type="radio" name="type" value="sharelink" /> SharePoint 分享链接挂载</label>
           </div>
           <input type="hidden" name="act" value="install" />
 
           <div class="form-body">
-            <div class="form-item tab-api tab-auto">
+            <div class="form-item tab tab-onedrive tab-auto tab-sharepoint">
               <select id="j_zone" name="zone">
                 ${zone.join('')}
               </select>
-              <div></div>
             </div>
-            <div class="form-item tab-api">
-              <p>前往 <a style="margin-right:5px;" id="j_portal">Azure管理后台</a> 注册应用获取 应用ID 和 应用机密。</p>
-              <p>重定向 URI 请设置为 <a target="_blank" href="https://github.com/reruin/reruin.github.io/blob/master/sharelist/redirect.html" style="font-size:12px;margin-right:5px;color:#337ab7;">https://reruin.github.io/sharelist/redirect.html</a></p>
+            <div class="tab tab-sharepoint">
+              <p>前往 <a style="margin-right:5px;cursor:pointer;" id="j_portal_office">office365</a>，点击应用 sharepoint，创建一个网站，将URL地址填入下方输入框中。</p>
+              <input class="sl-input zone_change_placeholder" type="text" name="sharepoint_site" value="" placeholder="URL https://xxxxxx.sharepoint.com/sites(teams)/xxxxxx" />
             </div>
-            <div class="form-item tab-api"><input class="sl-input" type="text" name="client_secret" value="" placeholder="应用机密 / app_secret" /></div>
-            <div class="form-item tab-api"><input class="sl-input" type="text" name="client_id" value="" placeholder="应用ID / app_id" /></div>
-            <div class="form-item tab-api"><input class="sl-input" type="text" name="tenant_id" value="" placeholder="租户ID / tenant_id (企业版/教育版 子账户必填)" /></div>
+            <div class="tab tab-sharepoint tab-onedrive">
+              <div class="form-item" style="font-size:12px;"><label><input name="custom" id="j_custom" type="checkbox"> 使用自己的应用ID 和 应用机密</label></div>
+              <div class="tab-custom">
+                <p>前往 <a style="margin-right:5px;cursor:pointer;" id="j_portal">Azure管理后台</a> 注册应用获取 应用ID 和 应用机密。重定向 URI 请设置为: </p>
+                <p><a target="_blank" href="https://github.com/reruin/reruin.github.io/blob/master/sharelist/redirect.html" style="font-size:12px;margin-right:5px;color:#337ab7;">https://reruin.github.io/sharelist/redirect.html</a></p>
+                <div class="form-item"><input class="sl-input" type="text" name="client_id" value="" placeholder="应用ID / app_id" /></div>
+                <div class="form-item"><input class="sl-input" type="text" name="client_secret" value="" placeholder="应用机密 / app_secret" /></div>
+                <div class="form-item"><input class="sl-input" type="text" name="tenant_id" value="" placeholder="租户ID / tenant_id (多租户可选)" /></div>
 
-            <div class="form-item tab-sharelink"><input class="sl-input" type="text" name="share_url" value="" placeholder="URL https://xxxx.sharepoint.com/:f:/g/personal/xxxxxxxx/mmmmmmmmm?e=XXXX" /></div>
-
-            <div class="form-item tab-auto">
-              <p style="margin:16px 0;">ShareList将使用内置的 app_id 和 app_secret 进行挂载。</p>
+              </div>
             </div>
+            
+
+            <div class="form-item tab tab-sharelink"><input class="sl-input" type="text" name="share_url" value="" placeholder="URL https://xxxx.sharepoint.com/:f:/g/personal/xxxxxxxx/mmmmmmmmm?e=XXXX" /></div>
+
           </div>
           <button class="sl-button btn-primary" id="signin" type="submit">验证</button>
         </form>
@@ -501,9 +529,20 @@ class Manager {
       </div>
       <script>
         function toggleType(type){
-          // $('.form-item.tab-'+type).fadeIn().siblings('.form-item').fadeOut() 
-          $('.form-item').hide()
-          $('.form-item.tab-'+type).fadeIn(150)
+          // $('.tab.tab-'+type).fadeIn().siblings('.tab').fadeOut() 
+          $('.tab').hide()
+          $('.tab.tab-'+type).fadeIn(150)
+          toggleCustom()
+
+        }
+
+        function toggleCustom(){
+          var checked = $('#j_custom').prop("checked")
+          if( checked ){
+            $('.tab-custom').show()
+          }else{
+            $('.tab-custom').hide()
+          }
         }
 
         $(function(){
@@ -518,6 +557,33 @@ class Manager {
             window.open(portal)
           })
 
+          $('#j_portal_office').on('click' , function(){
+            var option = $("#j_zone option:selected")
+            var portal = option.attr('data-sharepoint');
+            if( portal ){
+              window.open(portal)
+            }else{
+              alert('暂不支持当前地域')
+            }
+          })
+
+          $('#j_type').on('change' , function(){
+            $('.form-item').hide()
+            $('.form-item.tab-'+type).fadeIn(150)
+          })
+
+          $('#j_custom').on('change' , function(){
+            toggleCustom()
+          })
+
+          $('#j_zone').on('change' , function(){
+            let zone = $(this).val().toLowerCase()
+            $('input.zone_change_placeholder').each(function(){
+              var tip = $(this).attr('placeholder')
+              $(this).attr('placeholder' , tip.replace(/sharepoint\.[a-z]+/,'sharepoint.'+zone))
+            })
+          })
+          
           toggleType($('input:radio[name=type]:checked').val())
         })
 
@@ -545,15 +611,6 @@ class Manager {
     }
   }
 
-  async update(id) {
-    let data = this.parse(id)
-    if (data.username) {
-      let hit = this.clientMap[data.username]
-      if (hit) {
-        return await this.create(hit.username, hit.password)
-      }
-    }
-  }
 
   /**
    * Get auth from id
@@ -570,6 +627,8 @@ class Manager {
 
     const req = this.helper.getRuntime('req')
 
+    let { base64 } = this.helper
+
     let baseUrl = req.origin + req.path
 
     let { credentials, error, unmounted } = await this.get(id)
@@ -577,8 +636,9 @@ class Manager {
       let data
 
       if (req.body && req.body.act && req.body.act == 'install') {
-        let { client_id, client_secret, zone, tenant_id = 'common', share_url , type } = req.body
-        let body
+        let { client_id, client_secret, zone, tenant_id = 'common', custom, share_url, sharepoint_site, type } = req.body
+        let body , site_name
+ 
         if (type == 'sharelink'){
           let credentials = await this.getShareAccessToken(share_url)
           if (credentials.error) {
@@ -587,18 +647,30 @@ class Manager {
             data = this.redirect(baseUrl)
           }
         }else{
-          if( !zone ){
-            data = this.error('请选择地域')
-          }
-          if(type == 'auto'){
+          if(custom){
+            if( !client_id || !client_secret ){
+              data = this.error('require client_id and client_secret')
+            }
+          }else{
             [client_id,client_secret] = this.getDefaultConfig(zone)
             if( !client_id ){
               data = this.error('暂不支持当前地域')
-            } 
+            } else{
+              client_id = client_id + '.proxy.' + Date.now()
+            }
           }
 
-          if (client_id && client_secret && zone) {
-            data = this.redirect(await this.generateAuthUrl({ client_id, client_secret, redirect_uri: baseUrl, zone, tenant_id }))
+          if(type == 'sharepoint'){
+            if( sharepoint_site ){
+              let obj = new URL(sharepoint_site)
+              site_name = obj.pathname
+            }else{
+              data = this.error('请填写sharepoint站点URL<br/>require sharepoint site')
+            }
+          }
+
+          if (!data && client_id && client_secret && zone) {
+            data = this.redirect(await this.generateAuthUrl({ client_id, client_secret, redirect_uri: baseUrl, zone, tenant_id, site_name }))
           } 
         }
       }
@@ -702,7 +774,6 @@ class Driver {
     //docs: https://docs.microsoft.com/zh-cn/graph/api/driveitem-list-children?view=graph-rest-1.0&tabs=http
     if (folder) {
       let url = graph + '/root' + (path == '/' ? '' : `:${path.replace(/\/+$/,'')}:`) + '/children'
-
       let resp = await helper.request.get(url, {
         headers: {
           'Authorization': `Bearer ${access_token}`,
@@ -716,7 +787,6 @@ class Driver {
       })
 
       if (!resp.body) return false
-
       if (resp.body.error) return manager.error(resp.body.error.message,false)
 
       const ts = Date.now()
@@ -754,7 +824,6 @@ class Driver {
         },
         json: true
       })
-
       if (!resp.body) return false
 
       if (resp.body.error) return manager.error(resp.body.error.message,false)
@@ -768,7 +837,6 @@ class Driver {
         created_at: resp.body.createdDateTime,
         updated_at: resp.body.lastModifiedDateTime,
         ext: helper.extname(resp.body.name),
-        // different zone use different filed
         url: resp.body['@microsoft.graph.downloadUrl'] || resp.body['@content.downloadUrl'],
         type: resp.body.folder ? 'folder' : 'other',
       }

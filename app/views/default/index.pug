@@ -28,7 +28,7 @@ block content
     ul.list
       each i in data
         li
-          a.clearfix(href=i.href , target=i.type == 'folder' ? '' : '_blank')
+          a.clearfix(href=i.href , 'data-no-instant', target=i.type == 'folder' ? '' : '_blank')
             .row
               span.file-name.col-md-7.col-sm-6.col-xs-8
                 i.ic(class='ic-'+i.type)
@@ -42,11 +42,14 @@ block content
     section.wrap(style="margin-top:64px;border-top:1px solid #eee;")
       article.markdown-body(style="padding:32px;")
         | !{readme}
-  script(src='https://cdn.bootcss.com/jquery/3.3.1/jquery.min.js')
-  script(src='/script/sort.js')
-
+  script('data-no-instant',src='https://cdn.bootcdn.net/ajax/libs/jquery/3.5.1/jquery.min.js')
+  script('data-no-instant',src='https://cdn.bootcdn.net/ajax/libs/instantclick/3.1.0/instantclick.min.js')
+  script('data-no-instant',src='/script/sort.js')
+  script('data-no-instant').
+    InstantClick.init('mousedown')
+  
   -if(writeable)
-    script(src='/script/upload.js')
+    script('data-no-instant',src='/script/upload.js')
   include partial/footer
 
 

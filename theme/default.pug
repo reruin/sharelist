@@ -1,3 +1,42 @@
+//- name:partial/layout
+
+doctype html
+html
+  head
+    title= _config_('title')
+    meta(charset='utf8')
+    meta(name='viewport', content='width=device-width, initial-scale=1.0,minimum-scale=1.0, maximum-scale=1.0, user-scalable=no')
+    
+    // META
+    link(rel='stylesheet', href='//cdn.bootcss.com/bootstrap/3.3.7/css/bootstrap.min.css')
+    link(rel='stylesheet', type='text/css',href='https://fonts.loli.net/css?family=Source+Code+Pro')
+    link(rel='stylesheet', type='text/css', href='/style/main.css')
+    -if(g_config && g_config.custom_style)
+      .
+        !{g_config.custom_style}
+  body
+    block content
+    footer
+      p
+        a(href='https://github.com/reruin/sharelist',target='_blank') GitHub
+        a(href='/manage',target='_blank')= __('manage')
+    -if(g_config.custom_script)
+      .
+        !{g_config.custom_script}
+
+//- name:partial/footer
+
+footer
+  p
+    a(href='https://github.com/reruin/sharelist',target='_blank') GitHub
+    a(href='/manage',target='_blank')= __('manage')
+-if(g_config.custom_script)
+  .
+    !{g_config.custom_script}
+
+
+
+//- name:index
 extends partial/layout
 
 block content
@@ -50,10 +89,3 @@ block content
   
   -if(writeable)
     script('data-no-instant',src='/script/upload.js')
-  include partial/footer
-
-
-
-  
-
-  

@@ -98,6 +98,12 @@ const getSkin = (key) => {
   return db.get('skin') || 'default'
 }
 
+const setSkin = (name) => {
+  if( name != getSkin('skin') ){
+    save({skin:key})
+  }
+}
+
 const getPluginOption = (key) => {
   let p = db.get('plugin_option') || []
   let hit = p.find(i => i.key == key )

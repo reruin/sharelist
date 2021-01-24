@@ -143,6 +143,9 @@ const output = async (ctx , data)=>{
           await service.stream(ctx , url , 'url' , protocol , data)
         }
       }else{
+        if( data.headers ){
+          ctx.set(data.headers)
+        }
         ctx.redirect( url )
       }
     }

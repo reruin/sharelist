@@ -59,7 +59,7 @@ module.exports = (app , { dir , defaultTheme = 'default' } = {}) => {
       path:(src, req) => {
         let relpath = path.relative(dir,src)
         let p =  path.resolve(dir,options.theme,relpath)
-        options.staticMap[ '\\' + relpath.replace('.less','.css') ] = path.resolve(dest,relpath.replace('.less','.css'))
+        options.staticMap[ path.sep + relpath.replace('.less','.css') ] = path.resolve(dest,relpath.replace('.less','.css'))
         return p
       }
     }

@@ -259,11 +259,16 @@ module.exports = {
    * @return {void}
    */
   async shell_exec(ctx){
-    let body = ctx.request.body
-    let { command , path = '/' } = body
-    if(command){
-      let ret = await service.exec(command , path)
-      ctx.body = ret
+    let access = !!ctx.session.admin
+    if(access){
+      let body = ctx.request.body
+      let { command , path = '/' } = body
+      if(command){
+        let ret = await service.exec(command , path)
+        ctx.body = ret
+      }
+    }else{
+      ctx.redirect('/manage')
     }
   }
 }

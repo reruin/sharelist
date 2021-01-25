@@ -74,7 +74,14 @@ app.use(async (ctx , next) => {
   await next()
 })
 
-
+app.use(async (ctx, next) => {
+  switch (ctx.status) {
+    case 404:
+      await ctx.renderSkin('404');
+      break;
+  }
+  await next();
+})
 
 // 配置服务端模板渲染引擎中间件
 /*app.use(views(__dirname + '/views', {
@@ -83,13 +90,5 @@ app.use(async (ctx , next) => {
 
 // 初始化路由中间件
 app.use(routers.routes()).use(routers.allowedMethods())
-
-app.use(async (ctx) => {
-  switch (ctx.status) {
-    case 404:
-      await ctx.renderSkin('404');
-      break;
-  }
-})
 
 module.exports = app

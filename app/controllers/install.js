@@ -23,6 +23,9 @@ module.exports = {
    * Save config handler
    */
   async save(ctx){
+    if(config.installed() ){
+      ctx.redirect('/')
+    }
     let { token , name , path , vendor , title = 'ShareList'} =  ctx.request.body
     let cfg = {token , title}
     if(Array.isArray(name)){

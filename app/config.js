@@ -68,7 +68,7 @@ if(process.env.PORT){
 const save = async (d) => db.set(d)
 
 const installed = () => {
-  return db.get('path') && db.get('token')
+  return !!db.get('token')
 }
 
 const getConfig = (key) => db.get(key)

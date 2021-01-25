@@ -9,12 +9,13 @@ class RSS {
   start() {
     let { app, path } = this
     let port = app.getConfig('port')
+    let sitename = app.getConfig('title')
     let router = app.router().all(this.path + ':path(.*)', async (ctx, next) => {
       await this.onRequest(ctx, next)
     })
     app.web().use(router.routes())
 
-    this.zeroconf = app.bonjour.publish({ name: 'ShareList RSS', type: 'http', port, txt: { path } })
+    this.zeroconf = app.bonjour.publish({ name: `ShareList RSS(${sitename})`, type: 'http', port, txt: { path } })
   }
 
   async onRequest(ctx, next) {

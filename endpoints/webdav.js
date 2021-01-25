@@ -248,11 +248,15 @@ const propfind = async (config,app) => {
   }
 }
 
+const copy = async (config,app) => {
+  console.log(config)
+}
+
 const WebDAVResponse = async (config , app) => {
-  const allows = ['GET', 'HEAD', 'OPTIONS', 'PROPFIND']
+  const allows = ['GET', 'HEAD', 'OPTIONS', 'PROPFIND' , 'COPY']
   const httpAuthRealm = "ShareList WebDAV"
 
-  let { path, method , depth } = config
+  let { path, method , depth , req } = config
   console.log('WebDAV',method)
   if( method == 'propfind' ){
     return await propfind(config , app)
@@ -279,9 +283,22 @@ const WebDAVResponse = async (config , app) => {
       status:'200 OK'
     }
   }
-  else if( method == 'get'){
+  else if( method == 'get' ){
     return await get(config,app)
-  }else{
+  }
+  else if( method == 'put' ){
+    // upload
+    // let data = await app.command('ls', config.path)
+    req.pause()
+    let { driver , id } = await app.getDriver(config.path)
+    if( driver.createWriteStream ){
+      console.log(config.path)
+      let stream = await driver.createWriteStream({id}) 
+      console.log(stream)
+      req.pipe(stream)
+    }
+  }
+  else{
     return {
       status:'405 Method not allowed',
       headers:{
@@ -304,6 +321,7 @@ class WebDAV {
   start(){
     let { app , path } = this
     let port = app.getConfig('port')
+    let sitename = app.getConfig('title')
 
     app.web().use(async (ctx,next) => {
       let url = ctx.req.url
@@ -316,22 +334,30 @@ class WebDAV {
       }
     })
 
-    this.zeroconf = app.bonjour.publish({ name: 'ShareList WebDAV', type: 'webdav', port, txt: { path } })
+    this.zeroconf = app.bonjour.publish({ name: `ShareList WebDAV(${sitename})`, type: 'webdav', port, txt: { path } })
   }
 
   async onRequest(ctx,next , url){
-    let json = await xml2js(await parser(ctx.req),{
-      explicitChildren:true,
-      explicitArray:false
-    })
+    console.log(ctx.headers , ctx.method)
+    let { headers } = ctx
 
+    let method = ctx.method.toLowerCase()
     let webdavData = {
-      data:json , 
+      data:{} , 
       depth:ctx.get('depth'),
-      method:ctx.method.toLowerCase(),
+      method,
       path: url,
       basePath: this.path,
+      req:ctx.req
     }
+
+    if( method == 'get' || method == 'propfind' ){
+      webdavData.data = await xml2js(await parser(ctx.req),{
+        explicitChildren:true,
+        explicitArray:false
+      })
+    }
+
     let resp
     try{
      resp = await WebDAVResponse(webdavData, this.app)

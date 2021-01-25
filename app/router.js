@@ -22,7 +22,7 @@ router.get('/manage', installMid, manage.home)
   .post('/install', install.save)
 
 
-  .all('/:path(.*)',async (ctx, next) => {
+  .all('/:path(.*)',installMid, async (ctx, next) => {
     if (ctx.webdav) {
       await webdav(ctx, next)
     } else {

@@ -156,6 +156,7 @@ class Manager {
     this.clientMap = {}
     this.helper = helper
     this.captchaProcess = {}
+    this.SMSTask = {}
   }
 
   /**
@@ -185,29 +186,6 @@ class Manager {
     })
   }
 
-  /**
-   * Recognize verify code
-   *
-   * @param {string} [image] image base64 data
-   * @return {string} verify code
-   * @api private
-   */
-  async ocr(image) {
-    let resp = await this.helper.recognize(image, 'caiyun')
-    let ret = { error: resp.error, msg: resp.msg }
-    if (!resp.error) {
-      let code = resp.result.replace(/[^a-z0-9]/i, '')
-      // retry
-      if (code.length == 4) {
-        ret.code = code
-      } else {
-        ret.code = ''
-      }
-    }
-
-    return ret
-  }
-
   init(d) {
     for (let i of d) {
       let data = this.parse(i.path)
@@ -227,20 +205,16 @@ class Manager {
     if (data.username) {
       let hit = this.clientMap[data.username]
       if (hit) {
-        if (!hit.cookie || (Date.now() - hit.updated_at) > this.max_age_cookie) {
-          let { result, error } = await this.create(hit.username, hit.password)
-          if (error) {
-            return { error }
-          } else {
-            hit = this.clientMap[data.username]
-          }
+        if( hit.cookie && (hit.expires_at && (hit.expires_at - Date.now() > 3 * 3600 * 1000) ) ) {
+          hit = this.clientMap[data.username]
+        }else{
+          return { error:'Cookie 即将到期 请重新登录' }
         }
       }
 
       if (hit) {
         let p = (data.path == '/' || data.path == '') ? '00019700101000000001' : data.path
         return { ...hit, path: p }
-
       } else {
         return { error: '挂载失败，请确保账号或者密码正确' }
       }
@@ -265,6 +239,7 @@ class Manager {
       username: data.hostname,
       password: data.searchParams.get('password'),
       cookie: data.searchParams.get('cookie'),
+      expires_at: data.searchParams.get('expires_at'),
       protocol: data.protocol.split(':')[0],
       path: data.pathname.replace(/^\//, ''),
     }
@@ -281,10 +256,11 @@ class Manager {
    * @return {string}
    * @api public
    */
-  stringify({ path, username, password, cookie }) {
+  stringify({ path, username, password, cookie , expires_at }) {
     let query = {}
     if (password) query.password = password
     if (cookie) query.cookie = cookie
+    if(expires_at) query.expires_at = expires_at
     return urlFormat({
       protocol: protocol,
       hostname: username,
@@ -298,46 +274,62 @@ class Manager {
     return id in this.captchaProcess
   }
 
+  hasSMSTask(id) {
+    return id in this.SMSTask
+  }
+
   async resumeCaptchaTask(id, captcha) {
     let { username, password } = this.captchaProcess[id]
     return await this.create(username, password, id, captcha)
   }
 
+  async resumeSMSTask(id, code) {
+    let { username, password } = this.SMSTask[id]
+    return await this.create(username, password, null
+      , null, code)
+  }
+
   async install(msg) {
     return `
+      <script data-no-instant src="https://cdn.bootcdn.net/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
       <div class="auth">
         <h3>和彩云 挂载向导</h3>
         ${ msg ? '<p style="font-size:12px;">'+msg+'</p>' : '' }
         <div>
           <form class="form-horizontal" method="post">
             <input type="hidden" name="act" value="install" />
-            <div class="form-group"><input class="sl-input" type="text" name="username" value="" placeholder="用户名" /></div>
-            <div class="form-group"><input class="sl-input" type="password" name="password" value="" placeholder="密码" /></div>
+            <div class="form-group" style="position:relative;"><input class="sl-input" type="text" name="username" value="" placeholder="手机号" /><a id="j_code" style="position: absolute;top: 0;right: 0;height: 100%;height: 44px;display: block;margin: 15px;line-height: 44px;cursor:pointer;color:#1e88e5;">获取验证码</a></div>
+            <div class="form-group"><input class="sl-input" type="text" name="password" value="" placeholder="验证码" /></div>
             <div class="form-group"><input class="sl-input" type="text" name="path" value="" placeholder="挂载目录，根目录请留空" /></div>
             <button class="sl-button btn-primary" id="signin" type="submit">验证</button></form>
         </div>
       </div>
-    `
-  }
-
-  async captchaPage(data) {
-    return `
-      <div class="auth">
-        <h3>和彩云 挂载向导</h3>
-        <p style="font-size:12px;">请输入验证码
-          <img src="${data.img}" />
-        </p>
-        <div>
-          <form class="form-horizontal" method="post">
-            <input type="hidden" name="act" value="install" />
-            <input type="hidden" name="username" value="${data.username}" />
-            <input type="hidden" name="password" value="${data.password}" />
-            <input type="hidden" name="path" value="${data.path}" />
-            <input type="hidden" name="key" value="${data.key}" />
-            <div class="form-group"><input class="sl-input" type="text" placeholder="验证码" name="captcha" value="" /></div>
-            <button class="sl-button btn-primary" id="signin" type="submit">确定</button></form>
-        </div>
-      </div>
+      <script>
+        function getSMSPassWord(){
+          var mobile = $('input[name="username"]').val()
+          if( mobile ){
+            $.ajax({
+              url:'',
+              type : "POST",
+              data: {act:'getsmspass' , mobile:mobile},
+              dataType:"json",
+              success:function(resp){
+              if(resp.err){
+                alert(resp.msg)
+              }else{
+                alert('已发送')
+              }
+            }})
+          }else{
+            alert('请输入手机号')
+          }
+        }
+        $(function(){
+          $('#j_code').on('click' , function(){
+            getSMSPassWord()
+          })
+        })
+        </script>
     `
   }
 
@@ -393,6 +385,16 @@ class Manager {
     }
   }
 
+  async getSmsPass(mobile){
+    let resp = await this.fetch('/caiyun/openapi/authentication/getdyncpassword', {"account":mobile,"reqType":"3"})
+    console.log(resp.body)
+    if( resp.body.mcsCode == '0' ){
+      return { err:0 , random:resp.body.data.random }
+    }else{
+      return { err:1 , msg:resp.body.message }
+    }
+  }
+
   /**
    * Get cookie
    *
@@ -402,28 +404,17 @@ class Manager {
    * @return {object}
    * @api private
    */
-  async create(username, password, captchaId, captcha, path) {
+  async create(username, password, path) {
     let cookie
-    let needcaptcha = false,
-      retry = 0
+
     let formdata = {
       account: username,
       dycPwd: password,
-      loginStyle: 'passPwd',
+      loginStyle: 'passSMS',
       verifyCode: ""
     }
-    // console.log( captchaId, captcha,this.captchaProcess)
-    if (captchaId && this.captchaProcess[captchaId]) {
-      retry = 0
-      needcaptcha = true
-    }
-
-    if (captcha) {
-      formdata.verifyCode = captcha
-    }
-
+    
     let error = false
-
 
     let publicKey = await this.getPublicKey()
     console.log('publicKey',publicKey)
@@ -432,80 +423,45 @@ class Manager {
       return { error: '无法获取公钥' }
     }
 
-    while (true) {
-      // 0 验证码
-      if (needcaptcha && !formdata.verifyCode) {
-
-        let resp = await this.fetch('/caiyun/aas/platform/tellin/verfycode.do', `<root><account>${username}</account><type>0</type></root>`, {
-          encoding: null,
-          json:false
-        })
-        let imgBase64
-        if (resp.body) {
-          imgBase64 = "data:" + resp.headers["content-type"] + ";base64," + Buffer.from(resp.body).toString('base64');
+    // 1 登陆
+    let key = getRandomSring(16)
+    let body = {
+      autoLogin: true,
+      clientId: "0010101",
+      encryptMsg: aesEncrypt(JSON.stringify(formdata), key)
+    }
+    let resp = await this.fetch('/caiyun/openapi/authentication/login', body, {
+      skey:rsaEncrypt(key,publicKey)
+    })
+    if (resp && resp.body && resp.body.statusCode == 200) {
+      let code = resp.body.mcsCode
+  
+      if( code == '0' ){
+        let cookie = resp.headers['set-cookie'].join('; ')
+        // cookie 有效期30天
+        let client = { username, password, cookie, expires_at:Date.now() + 30 * 86400 * 1000 }
+        if (this.clientMap[username]) {
+          client.path = this.clientMap[username].path
         }
-        if (retry <= 0) {
-          let key = captchaId || Math.random()
-          this.captchaProcess[key] = { username, password }
-          return { error: true, body: { key, img: imgBase64 } }
-        }
-        retry--
-      }
+        this.clientMap[username] = client
+        await this.updateDrives(this.stringify({ username, password, path: client.path, cookie,expires_at:client.expires_at }))
 
-      delete this.captchaProcess[captchaId]
-
-      // 1 登陆
-      let key = getRandomSring(16)
-      let body = {
-        autoLogin: true,
-        clientId: "0010101",
-        encryptMsg: aesEncrypt(JSON.stringify(formdata), key)
-      }
-      let resp = await this.fetch('/caiyun/openapi/authentication/login', body, {
-        skey:rsaEncrypt(key,publicKey)
-      })
-      if (resp && resp.body && resp.body.statusCode == 200) {
-        let code = resp.body.mcsCode
-    
-        if( code == '0' ){
-          let cookie = resp.headers['set-cookie'].join('; ')
-          let client = { username, password, cookie, updated_at: Date.now() }
-          if (this.clientMap[username]) {
-            client.path = this.clientMap[username].path
+        if( path ){
+          let realPath = await this.searchRootId(username,path)
+          if( realPath ){
+            client.path = realPath
+            await this.updateDrives(this.stringify({ username, password, path: client.path, cookie , expires_at:client.expires_at }))
           }
-          this.clientMap[username] = client
-          await this.updateDrives(this.stringify({ username, password, path: client.path, cookie }))
+        }
 
-          if( path ){
-            let realPath = await this.searchRootId(username,path)
-            if( realPath ){
-              client.path = realPath
-              await this.updateDrives(this.stringify({ username, password, path: client.path, cookie }))
-            }
-          }
-
-          error = false
-          break;
-        }
-        // 200050401 The user information is incorrect. 密码不正确
-        // 200059521 密码不正确（需验证码）
-        // ["9103", "账号或密码不正确，请重新输入"], ["9441", "账号或密码不正确，请重新输入"], ["9999
-        else if( code == '200050401' || code == '200059521' || ['9103','9441','9999'].includes(code)){
-          return { error: resp.body.message + '<br/>账号密码不正确' }
-        }
-        //Too many login failures. Graphic verification code is required.
-        else if (code == '200059504') {
-          needcaptcha = true
-          continue
-        }
-        //验证码错误 The verification code is incorrect.
-        else if (code == '200059512') {
-          needcaptcha = true
-          formdata.verifyCode = null
-          continue
-        } else {
-          return { error : resp.body.message }
-        }
+        error = false
+      }
+      // The verification code has expired
+      else if( code = '9442' ){
+        return { error : '验证码已过期 请重新获取 / The verification code has expired' }
+      }
+      else {
+        return { error : resp.body.message }
       }
     }
 
@@ -525,18 +481,6 @@ class Manager {
     }
   }
 
-  async afterPrepare(data = {}, id, req) {
-    let { error, body } = data
-    if (!error) {
-      return { id, type: 'folder', protocol: protocol, redirect: req.origin + req.path }
-    } else {
-      if (body) {
-        return { id, type: 'folder', protocol: protocol, body: await this.captchaPage({ username: data.username, password: data.password, ...body }) }
-      } else {
-        return { id, type: 'folder', protocol: protocol, body: await this.install(error || '请确认账号密码') }
-      }
-    }
-  }
   /**
    * Get auth from id
    *
@@ -553,22 +497,24 @@ class Manager {
 
     let baseUrl = req.origin + req.path
 
-    //验证码
-    if (req.body && req.body.key && req.body.captcha && this.hasCaptchaTask(req.body.key)) {
-      return await this.afterPrepare(await this.resumeCaptchaTask(req.body.key, req.body.captcha), id, req)
+    if( req.body && req.body.act == 'getsmspass' ){
+      return { id, type: 'folder', protocol: protocol, body: await this.getSmsPass(req.body.mobile) }
     }
 
-    let { path, cookie, username, password, error, custom } = await this.get(id)
+    let { path, cookie, username, password, error } = await this.get(id)
+
     if (cookie) {
       return { cookie, path, username }
     } else {
       if (req.body && req.body.username && req.body.password && req.body.act == 'install') {
-        let { username, password, path, key, captcha } = req.body
-        console.log('create',username, password, path, key)
-        let data = await this.create(username, password, key, captcha,path)
-        return await this.afterPrepare(data, id, req)
-      } else if (custom) {
-        return { id, type: 'folder', protocol: protocol, body: await this.captchaPage({ username, password, ...custom }) }
+        let { username, password, path } = req.body
+        console.log(username, password, path,'<<<<')
+        let data = await this.create(username, password, path)
+        if (!data.error) {
+          return { id, type: 'folder', protocol: protocol, redirect: req.origin + req.path }
+        } else {
+          return { id, type: 'folder', protocol: protocol, body: await this.install(data.error || '未知错误') }
+        }
       }
 
       return { id, type: 'folder', protocol: protocol, body: await this.install(error) }
@@ -685,7 +631,7 @@ class CY {
     if (r) {
       if (
         (
-          r.$expired_at && Date.now() < r.$expired_at
+          r.$expires_at && Date.now() < r.$expires_at
         ) ||
         (
           r.$cached_at &&
@@ -801,7 +747,7 @@ class CY {
         }
       }
 
-      let expired_at = Date.now() + 50 * 1000
+      let expires_at = Date.now() + 50 * 1000
       let downloadUrl = resp.body.data
 
       resp = {
@@ -811,7 +757,7 @@ class CY {
         ext: hit.ext,
         protocol: protocol,
         size: hit.size,
-        $expired_at: expired_at,
+        $expires_at: expires_at,
         $cached_at: Date.now(),
       }
 

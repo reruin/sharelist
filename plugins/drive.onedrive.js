@@ -421,6 +421,7 @@ class Manager {
         client_secret,
         zone,
         tenant_id,
+        site_id,
         redirect_uri,
         refresh_token,
         access_token,
@@ -766,7 +767,7 @@ class Driver {
         return r
       }
     }
-
+console.log('access_token',access_token)
     let folder = path.endsWith('/')
     //docs: https://docs.microsoft.com/zh-cn/graph/api/driveitem-list-children?view=graph-rest-1.0&tabs=http
     if (folder) {

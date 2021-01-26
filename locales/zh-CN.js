@@ -54,5 +54,6 @@ module.exports = {
   "index_enable":"目录索引",
   "smb_server_enable":"SMB 服务",
   "smb_server_port":"SMB 端口",
-  "smb_anonymous_enable":"SMB 允许匿名访问"
+  "smb_anonymous_enable":"SMB 允许匿名访问",
+  "theme":"主题"
 }

@@ -42,6 +42,13 @@ block content
                     option(value='en-US', selected=config.language=='en-US' ? 'selected' : null)= __('English')
               .form-group
                 .col-sm-4
+                  label= __('theme')
+                .col-sm-8
+                  select.form-control(name='theme',value=config.theme)
+                    each i in config.themes
+                      option(value=i, selected=i==config.theme ? 'selected' : null)= i
+              .form-group
+                .col-sm-4
                   label= __('index_enable')
                 .col-sm-8
                   select.form-control(name='index_enable',value=config.index_enable,required)

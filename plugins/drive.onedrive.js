@@ -27,7 +27,7 @@ const support_zone = {
     'https://portal.azure.cn',
     '世纪互联',
     'https://portal.partner.microsoftonline.cn/Home',
-    ['aaf7d98a-53cb-4a50-8c30-65adfd20b004','7d~ZR~mG90_3Wka_~xoWetG2g_Lc.eBwi1'],
+    ['9430c343-440f-44f3-ba1d-18b77c0072af','8f3.2dD-_.6mLv-VmMo6vCxuYcm5~Liqn4'],
   ],
   'DE': [
     'https://login.microsoftonline.de',
@@ -86,7 +86,6 @@ class Manager {
         hit = data
       }
     }
-
     hit.forEach(i => {
       helper.saveDrive(client, i.name)
     })
@@ -278,7 +277,6 @@ class Manager {
        return { error: 'parse site id error' }
       }
     }
-
     let client = {
       client_id,
       client_secret,
@@ -415,7 +413,6 @@ class Manager {
       if (resp.body.error) {
         return { error: resp.body.error_description || resp.body.error }
       }
-      // console.log('refreshAccessToken',resp.body)
       let { expires_in, access_token } = resp.body
       refresh_token = resp.body.refresh_token
       let expires_at = expires_in * 1000 + Date.now()

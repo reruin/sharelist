@@ -54,5 +54,6 @@ module.exports = {
   "index_enable":"Index",
   "smb_server_enable":"SMB Server",
   "smb_server_port":"SMB Server Port",
-  "smb_anonymous_enable":"SMB Allow Anonymous"
+  "smb_anonymous_enable":"SMB Allow Anonymous",
+  "theme":"Theme"
 }

@@ -157,6 +157,19 @@ module.exports = {
    * Index handler
    */
   async index(ctx){
+    let ignorepaths = config.getIgnorePaths()
+    let base_url = ctx.path == '/' ? '' : ctx.path
+    let isAdmin = ctx.session.admin
+
+    //匹配隐藏路径 decodeURIComponent(base_url)
+    if( !isAdmin ){
+      let hit = ignorepaths.some( i => decodeURIComponent(base_url).startsWith(i) )
+      if( hit ){
+        ctx.status = 404
+        return
+      }
+    }
+    
     let downloadLinkAge = config.getConfig('max_age_download')
     let cursign = md5(config.getConfig('max_age_download_sign') + Math.floor(Date.now() / downloadLinkAge))
     //exclude folder
@@ -167,13 +180,10 @@ module.exports = {
     
     const data = await service.path(ctx.runtime)
 
-    let base_url = ctx.path == '/' ? '' : ctx.path
     let parent = ctx.paths.length ? ('/' + ctx.paths.slice(0,-1).join('/')) : ''
     let ignoreexts = config.getConfig('ignore_file_extensions') ? (config.getConfig('ignore_file_extensions') || '').split(',') : []
     let ignorefiles = (config.getConfig('ignore_files') || '').split(',')
     let anonymous_uplod_enable = !!config.getConfig('anonymous_uplod_enable')
-    let ignorepaths = config.getIgnorePaths()
-    let isAdmin = ctx.session.admin
 
     if( data === false || data === 401){
       ctx.status = 404
@@ -234,7 +244,7 @@ module.exports = {
       for(let i of data.children){
         if(
           isAdmin || 
-          (i.type == 'folder' && !ignorepaths.includes(base_url + '/' + i.name)) || 
+          (i.type == 'folder' && !ignorepaths.includes(decodeURIComponent(base_url + '/' + i.name))) || 
           (i.type != 'folder' && !ignoreexts.includes(i.ext) && !ignorefiles.includes(i.name))){
           let href = ''
           if( i.url && isRelativePath(i.url) ){
@@ -340,7 +350,7 @@ module.exports = {
             !ignorefiles.includes(i.name) 
           ) || 
           (
-            i.type == 'folder' &&  !ignorepaths.includes(base_url + '/' + i.name)
+            i.type == 'folder' &&  !ignorepaths.includes(decodeURIComponent(base_url + '/' + i.name))
           )
         ) &&
         i.hidden !== true

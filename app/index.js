@@ -9,7 +9,6 @@ const i18n = require('koa-i18n')
 const path = require('path')
 const session = require('koa-session-minimal')
 const os = require('os')
-const addr = require('./middleware/koa-addr')
 const paths = require('./middleware/koa-paths')
 const Router = require('koa-router')
 
@@ -19,8 +18,6 @@ const config = require('./config')
 const themeManger = require('./services/theme')
 const { loader , bonjour } = require('./services/plugin')
 const fs = require('fs')
-
-// const proxy = require('./utils/proxy')
 
 const app = new Koa()
 app.proxy = true
@@ -53,20 +50,12 @@ app.use(koaBody())
 
 app.use(json())
 
-app.use(addr)
-
 app.use(paths)
 
-// 配置控制台日志中间件
 app.use(logger())
 
 themeManger(app , { dir : path.resolve(__dirname,'../theme') })
 
-
-/*// 配置静态资源加载中间件
-app.use(staticCache(__dirname + '/public' , {maxage:30 * 24 * 60 * 60 }))
-
-staticCache(os.tmpdir()+'/sharelist' , {maxage:30 * 24 * 60 * 60 , dynamic:true})*/
 
 app.use(async (ctx , next) => {
   ctx.state.__ = ctx.__.bind(ctx)
@@ -74,22 +63,15 @@ app.use(async (ctx , next) => {
   await next()
 })
 
-
-
-// 配置服务端模板渲染引擎中间件
-/*app.use(views(__dirname + '/views', {
-  extension: 'pug'
-}))*/
-
-// 初始化路由中间件
-app.use(routers.routes()).use(routers.allowedMethods())
-
-app.use(async (ctx) => {
+app.use(async (ctx , next) => {
+  await next()
   switch (ctx.status) {
     case 404:
       await ctx.renderSkin('404');
       break;
   }
 })
+
+app.use(routers.routes()).use(routers.allowedMethods())
 
 module.exports = app

@@ -54,7 +54,6 @@ const parseConfig = (str) => {
   return ret
 }
 module.exports = async(ctx, next) => {
-  console.log(ctx.request.headers['user-agent'])
   if (!ctx.session.access) {
     ctx.session.access = new Set()
   }

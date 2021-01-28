@@ -13,4 +13,5 @@
   * [SFTP](zh-cn/plugins/sftp.md)
   * [Teambition](zh-cn/plugins/teambition.md)
   * [Baidu](zh-cn/plugins/baidu.md)
+  * [Aliyun Drive](zh-cn/plugins/aliyundrive.md)
 * [高级应用](zh-cn/advance.md)

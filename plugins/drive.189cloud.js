@@ -474,5 +474,37 @@ module.exports = ({ request, cache, getConfig, querystring, base64, saveDrive, g
     }
   }
 
+    /**
+   * create folder
+   *
+   * @param {string} [id] folder id
+   * @param {string} [target] file path
+   * @return {string} 
+   *
+   * @api private
+   */
+  const mkdir = async (id , folder , cookies) => {
+    if( typeof folder == 'string' ) folder = [folder]
+    //递归创建
+    for(let i = 0; i < folder.length; i++){
+      let resp = await axios({
+        url:`https://cloud.189.cn/v2/createFolder.action?parentId=${id}&fileName=${children[i]}&noCache=${Math.random()}`,
+        method:'GET',
+        headers:{
+          'User-Agent':'Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/69.0.3497.100 Safari/537.36',
+          'Cookie': cookies,
+        },
+      })
+
+      if (!resp || !resp.data) {
+        return false
+      }
+
+      id = resp.data.fileId
+    }
+
+    return id
+  }
+
   return { name, label:'天翼云 账号登录版', version, drive: { protocols, folder, file , createReadStream  } }
 }

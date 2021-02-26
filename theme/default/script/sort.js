@@ -11,6 +11,7 @@ function renderViewMode() {
       $(this).css({'background':'none'})
     })
   }
+  $('.menu-viewtype').toggleClass('menu-viewtype--grid')
 }
 $(function() {
   var param = (location.search.match(/sort=([\w\W]+?)(&|$)/) || ['', ''])[1]
@@ -59,7 +60,7 @@ $(function() {
     reload()
   })
 
-  $(document).on('click', '#j_vp', function() {
+  $(document).on('click', '.menu-viewtype', function() {
     let isGrid = localStorage['viewport_mode'] == 'grid'
     localStorage['viewport_mode'] = isGrid ? 'list' : 'grid'
     renderViewMode()

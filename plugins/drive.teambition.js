@@ -1,8 +1,8 @@
 /**
  * Teambition Drive
  *
- * teambition://username/orgId/spaceId/driveId/folderId/?password
- * teambition://username/orgId/spaceId/driveId/folderId/fileId?password
+ * teambition://username/orgId/driveId/folderId/?password
+ * teambition://username/orgId/driveId/folderId/fileId?password
  */
 const { URL } = require('url')
 
@@ -99,7 +99,7 @@ class Manager {
    */
   parse(path, name) {
     let data = new URL(path)
-    let [tenantId, spaceId, driveId, rootId] = data.pathname.replace(/^\//, '').split('/')
+    let [tenantId, driveId, rootId] = data.pathname.replace(/^\//, '').split('/')
 
     return {
       name,
@@ -108,7 +108,7 @@ class Manager {
       cookie: data.searchParams.get('cookie'),
       protocol: data.protocol.split(':')[0],
       path: data.pathname.replace(/^\//, ''),
-      tenantId, spaceId, driveId, rootId
+      tenantId, driveId, rootId
     }
   }
 
@@ -137,7 +137,7 @@ class Manager {
 
   install(msg) {
     return { id:`${protocol}-install`, type: 'folder', protocol, body:`
-      <div class="auth">
+      <div class="auth" style="width:500px;">
         <h3>Teambition 挂载向导</h3>
         ${ msg ? '<p style="font-size:12px;">'+msg+'</p>' : '' }
         <div>
@@ -145,8 +145,8 @@ class Manager {
             <input type="hidden" name="act" value="install" />
             <div class="form-group"><input class="sl-input" type="text" name="username" value="" placeholder="用户名" /></div>
             <div class="form-group"><input class="sl-input" type="password" name="password" value="" placeholder="密码" /></div>
-            <div class="form-group"><input class="sl-input" type="password" name="rootPath" value="" placeholder="初始地址 " /></div>
-            <p style="font-size:11px;color:#666;">初始地址 https://www.teambition.com/pan/org/xxxxxx/space/xxxxxx/folder/xxxxxx<br />用于辅助选定orgID、spaceID和初始文件夹，留空时sharelist会匹配默认值。</p>
+            <div class="form-group"><input class="sl-input" type="text" name="rootPath" value="" placeholder="初始地址 " /></div>
+            <p style="font-size:11px;color:#555;">初始地址 可用于选定初始文件夹 或 初始项目。留空时sharelist会匹配默认值。 <br><br>绑定网盘<br />https://www.teambition.com/pan/org/xxxxxx/space/xxxxxx/folder/xxxxxx<br /><br>绑定项目<br />https://www.teambition.com/project/xxxxxx/works/xxxxxx</p>
             <button class="sl-button btn-primary" id="signin" type="submit">确定</button></form>
         </div>
       </div>
@@ -172,7 +172,7 @@ class Manager {
    * @return {object}
    * @api private
    */
-  async create(username, password, {tenantId , spaceId , rootId}) {
+  async create(username, password, {tenantId , driveId, rootId}) {
     //0 准备工作： 获取必要数据
     let { body, headers: headers2 } = await this.helper.request.get('https://account.teambition.com/login/password', {
       headers: {
@@ -241,9 +241,8 @@ class Manager {
         }
       }
 
-      let driveId
-
-      if(!driveId){
+      //获取driveId
+      if(tenantId != 'project' && !driveId){
         //获取 driveId
         resp = await this.helper.request.get(`https://pan.teambition.com/pan/api/orgs/${tenantId}?orgId=${tenantId}`, {
           headers: {
@@ -259,8 +258,7 @@ class Manager {
         }
       }
 
-      if (!spaceId) {
-        // spaceId
+      if (!rootId) {
         resp = await this.helper.request.get(`https://pan.teambition.com/pan/api/spaces?orgId=${tenantId}&memberId=${userId}`, {
           headers: {
             'Referer': 'https://www.teambition.com/projects',
@@ -273,12 +271,11 @@ class Manager {
         })
 
         if (resp.body && resp.body.length) {
-          spaceId = resp.body[0].spaceId
           rootId = resp.body[0].rootId
         }
       }
 
-      let client = { username, password, userId, tenantId, driveId, spaceId, rootId, cookie, updated_at: Date.now(), path:`/${tenantId}/${spaceId}/${driveId}/${rootId}/` }
+      let client = { username, password, userId, tenantId, driveId, rootId, cookie, updated_at: Date.now(), path:`/${tenantId}/${driveId}/${rootId}/` }
 
       this.clientMap[username] = client
 
@@ -297,8 +294,8 @@ class Manager {
       if (hit) {
         let options = {}
         if( hit.path ){
-          let { tenantId,spaceId,driveId,rootId } = hit
-          options = { tenantId,spaceId,driveId,rootId }
+          let { tenantId,driveId,rootId } = hit
+          options = { tenantId,driveId,rootId }
         }
         return await this.create(hit.username, hit.password , options)
       }
@@ -327,10 +324,16 @@ class Manager {
       if (req.body && req.body.username && req.body.password && req.body.act == 'install') {
         let { username, password, rootPath } = req.body
         let options = {}
+        let type = rootPath.includes('teambition.com/project') ? 'project' : 'disk'
         if(rootPath){
-          options.tenantId = (rootPath.match(/(?<=\/pan\/org\/)([^\/]+)/) || [''])[0]
-          options.spaceId = (rootPath.match(/(?<=\/space\/)([^\/]+)/) || [''])[0]
-          options.rootId = (rootPath.match(/(?<=\/folder\/)([^\/]+)/) || [''])[0]
+          if( type == 'disk' ){
+            options.tenantId = (rootPath.match(/(?<=\/pan\/org\/)([^\/]+)/) || [''])[0]
+            options.rootId = (rootPath.match(/(?<=\/folder\/)([^\/]+)/) || [''])[0]
+          }else if( type == 'project' ){
+            options.tenantId = 'project'
+            options.driveId = (rootPath.match(/(?<=\/project\/)([^\/]+)/) || [''])[0]
+            options.rootId = (rootPath.match(/(?<=\/works\/)([^\/]+)/) || [''])[0]
+          }
         }
         let { error, msg } = await this.create(username, password, options)
         if (error) {
@@ -346,7 +349,6 @@ class Manager {
       }else{
         data = this.install()
       }
-      console.log(data)
       return { ready:false, data}
     }else{
       if( error ){
@@ -441,12 +443,179 @@ module.exports = class Driver {
     return resp
   }
 
+  async pathForProject(id, {path, username, tenantId , driveId , folderId , cookie}){
+    let { manager, protocol, helper } = this
+
+    //folders
+    let resp = await this.fetchData(id, {
+      url:'https://www.teambition.com/api/collections',
+      qs:{
+        _parentId: folderId,
+        _projectId: driveId,
+        order: 'updatedDesc',
+        count: 1000,
+        page: 1,
+        _: Date.now()
+      },
+      method: 'GET',
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/69.0.3497.100 Safari/537.36',
+        'Origin': 'https://www.teambition.com',
+        'Referer': 'https://www.teambition.com/',
+        'Cookie': cookie,
+      },
+      json: true
+    })
+
+    if (!resp.body) return false
+
+    if( resp.body.message ) return manager.error(resp.body.message, false)
+
+    const ts = Date.now()
+
+    let baseId = `/${tenantId}/${driveId}/`
+
+    let children = resp.body.filter(i => !!i.title).map((i) => {
+      return {
+        id: manager.stringify({
+          username,
+          path: baseId + i._id
+        }),
+        name: i.title,
+        protocol,
+        size: i.size,
+        created_at: i.created,
+        updated_at: i.updated,
+        type: 'folder',
+        $cached_at: ts
+      }
+    })
+
+    // files
+    resp = await this.fetchData(id, {
+      url:'https://www.teambition.com/api/works',
+      qs:{
+        _parentId: folderId,
+        _projectId: driveId,
+        order: 'updatedDesc',
+        count: 1000,
+        page: 1,
+        _: Date.now(),
+      },
+      method: 'GET',
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/69.0.3497.100 Safari/537.36',
+        'Origin': 'https://www.teambition.com',
+        'Referer': 'https://www.teambition.com/',
+        'Cookie': cookie,
+      },
+      json: true
+    })
+
+    if (!resp.body) return false
+    if( resp.body.message ) return manager.error(resp.body.message, false)
+
+    resp.body.forEach((i) => {
+      children.push({
+        id: manager.stringify({
+          username,
+          path: baseId + `${folderId}/${i._id}`
+        }),
+        name: i.fileName,
+        ext: i.fileType,
+        protocol,
+        size: i.fileSize,
+        created_at: i.created,
+        updated_at: i.updated,
+        type: 'fileCategory',
+        thumb:i.thumbnail,
+        $download_url:i.downloadUrl,
+        $cached_at: ts
+      })
+    })
+
+    let result = {
+      id,
+      path,
+      type: 'folder',
+      protocol: protocol,
+      $cached_at: ts,
+      children
+    }
+    helper.cache.set(id, result)
+
+    return result
+  }
+
+  async pathForNode(id, { path, username, tenantId , driveId , folderId , cookie}){
+    let { manager, protocol, helper } = this
+
+    let resp = await this.fetchData(id, {
+      url:'https://pan.teambition.com/pan/api/nodes',
+      qs:{
+        orgId: tenantId,
+        offset: 0,
+        limit: 10000,
+        orderBy: 'updateTime',
+        orderDirection: 'desc',
+        driveId,
+        parentId: folderId,
+      },
+      method: 'GET',
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/69.0.3497.100 Safari/537.36',
+        'Origin': 'https://www.teambition.com',
+        'Referer': 'https://www.teambition.com/',
+        'Cookie': cookie,
+      },
+      json: true
+    })
+
+    if (!resp.body) return false
+
+    if (!resp.body.data) return manager.error('error', false)
+
+    const ts = Date.now()
+    let baseId = `/${tenantId}/${driveId}/`
+
+    let children = resp.body.data.map((i) => {
+      return {
+        id: manager.stringify({
+          username,
+          path: (baseId + (i.kind == 'folder' ? i.nodeId : `${folderId}/${i.nodeId}`))
+        }),
+        name: i.name,
+        ext: helper.extname(i.name),
+        protocol,
+        size: i.size,
+        created_at: i.created,
+        updated_at: i.updated,
+        type: i.kind == 'folder' ? 'folder' : 'other',
+        mime: i.contentType,
+        thumb:i.thumbnail,
+        $download_url:i.downloadUrl,
+        $cached_at: ts
+      }
+    })
+
+    let result = {
+      id,
+      path,
+      type: 'folder',
+      protocol: protocol,
+      $cached_at: ts,
+      children
+    }
+    helper.cache.set(id, result)
+
+    return result
+  }
   /**
    * Get data by path
    *
    * @param {string} [id] path id 
-   *    BT://username/orgId/spaceId/driveId/folderId/
-   *    BT://username/orgId/spaceId/driveId/folderId/fileId
+   *    BT://username/orgId/driveId/folderId/
+   *    BT://username/orgId/driveId/folderId/fileId
    * @return {object}
    * @api private
    */
@@ -476,73 +645,19 @@ module.exports = class Driver {
     }
 
 
-    let [tenantId, spaceId, driveId, folderId , fileId ] = path.replace(/(^\/|\/$)/, '').split('/')
+    let [tenantId, driveId, folderId , fileId ] = path.replace(/(^\/|\/$)/, '').split('/')
 
     let isFolder = !fileId
 
     if (isFolder) {
-
-      let resp = await this.fetchData(id, {
-        url: `https://pan.teambition.com/pan/api/nodes`,
-        qs: {
-          orgId: tenantId,
-          offset: 0,
-          limit: 10000,
-          orderBy: 'updateTime',
-          orderDirection: 'desc',
-          driveId,
-          spaceId,
-          parentId: folderId,
-        },
-        method: 'GET',
-        headers: {
-          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/69.0.3497.100 Safari/537.36',
-          'Origin': 'https://www.teambition.com',
-          'Referer': 'https://www.teambition.com/',
-          'Cookie': cookie,
-        },
-        json: true
-      })
- 
-      if (!resp.body) return false
-
-      if (!resp.body.data) return manager.error('error', false)
-
-      const ts = Date.now()
-      let baseId = `/${tenantId}/${spaceId}/${driveId}/`
-      console.log(resp.body.data)
-      let children = resp.body.data.map((i) => {
-        return {
-          id: manager.stringify({
-            username,
-            path: (baseId + (i.kind == 'folder' ? i.nodeId : `${folderId}/${i.nodeId}`))
-          }),
-          name: i.name,
-          ext: helper.extname(i.name),
-          protocol,
-          size: i.size,
-          created_at: i.created,
-          updated_at: i.updated,
-          type: i.kind == 'folder' ? 'folder' : 'other',
-          mime: i.contentType,
-          thumb:i.thumbnail,
-          $download_url:i.downloadUrl,
-          $cached_at: ts
-        }
-      })
-
-      let result = {
-        id,
-        path,
-        type: 'folder',
-        protocol: protocol,
-        $cached_at: ts,
-        children
+      if( tenantId == 'project' ){
+        return await this.pathForProject(id , {path, username, tenantId, driveId, folderId , cookie })
+      }else{
+        return await this.pathForNode(id , {path, username, tenantId, driveId, folderId , cookie })
       }
-      helper.cache.set(id, result)
-      return result
+
     } else {
-      let parentId = manager.stringify({ username, path: `/${tenantId}/${spaceId}/${driveId}/${folderId}` })
+      let parentId = manager.stringify({ username, path: `/${tenantId}/${driveId}/${folderId}` })
 
       let parentData = await this.path(parentId)
 

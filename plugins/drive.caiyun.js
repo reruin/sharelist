@@ -680,6 +680,7 @@ class CY {
               protocol: protocol,
               created_at: datetimeFormat(file.uploadTime),
               updated_at: datetimeFormat(file.updateTime),
+              thumb:file.thumbnailURL,
               type: 'folder',
             })
           }
@@ -696,6 +697,7 @@ class CY {
               ext:file.contentSuffix,
               size:file.contentSize,
               md5:file.digest,
+              thumb:file.thumbnailURL,
             }
             if (file.bigthumbnailURL) item.icon = file.bigthumbnailURL
             children.push(item)  
@@ -759,6 +761,7 @@ class CY {
         size: hit.size,
         $expires_at: expires_at,
         $cached_at: Date.now(),
+        thumb:hit.thumb
       }
 
       helper.cache.set(id, resp)

@@ -322,14 +322,14 @@ module.exports = ({ request, cache, getConfig, querystring, base64, saveDrive, g
   }
 
   const fetchData = async (id,rest) => {
-    let resp , retry_times = 5
+    let resp = { error:false }, retry_times = 5
     while(true && --retry_times){
-      resp = await request({async:true,...rest})
+      resp.data = await request({async:true,...rest})
       //cookie失效
-      if(resp.headers['Content-Type'] && resp.headers['Content-Type'].includes('text/html')){
+      if(resp.data.headers['Content-Type'] && resp.data.headers['Content-Type'].includes('text/html')){
         let { result , msg } = await manager.update(id)
         if( result ){
-          resp = { msg }
+          resp = { msg , error:true }
           break;
         }else{
           continue
@@ -367,7 +367,7 @@ module.exports = ({ request, cache, getConfig, querystring, base64, saveDrive, g
 
     let children = [] , pageNum = 1
     while(true){
-      let resp = await fetchData(id,{
+      let { data , msg, error } = await fetchData(id,{
         url:`https://cloud.189.cn/v2/listFiles.action?fileId=${path}&mediaType=&keyword=&inGroupSpace=false&orderBy=1&order=ASC&pageNum=${pageNum}&pageSize=9999&noCache=${Math.random()}`,
         method:'GET',
         headers:{
@@ -377,11 +377,12 @@ module.exports = ({ request, cache, getConfig, querystring, base64, saveDrive, g
         json:true
       })
     
-      if (!resp || !resp.body) {
-        return { id, type: 'folder', protocol: defaultProtocol,body:resp.msg || '解析错误' }
+      if (error || !data || !data.body) {
+        return { id, type: 'folder', protocol: defaultProtocol,body:msg || '解析错误' }
       }
 
-      for(let file of resp.body.data){
+      for(let file of data.body.data){
+        console.log(file)
         let item = {
           id: manager.stringify({username , path:file.fileId}),
           name: file.fileName,
@@ -389,6 +390,7 @@ module.exports = ({ request, cache, getConfig, querystring, base64, saveDrive, g
           created_at: file.createTime,
           updated_at: file.lastOpTime,
           type: file.isFolder ? 'folder' : 'file',
+          thumb:file.icon ? file.icon.smallUrl : ''
         }
         if( item.type != 'folder' ){
           item.ext = file.fileType
@@ -400,8 +402,8 @@ module.exports = ({ request, cache, getConfig, querystring, base64, saveDrive, g
         children.push(item)
       }
       
-      let count = resp.body.recordCount
-      let currentCount = resp.body.pageNum * resp.body.pageSize
+      let count = data.body.recordCount
+      let currentCount = data.body.pageNum * data.body.pageSize
 
       if( currentCount < count ){
         //翻页
@@ -429,9 +431,9 @@ module.exports = ({ request, cache, getConfig, querystring, base64, saveDrive, g
 
     let { path, cookies , username } = await prepare(id)
 
-    let data = options.data || {}
-    let resp = await fetchData(id,{
-      url:data.url,
+    let filedata = options.data || {}
+    let { data , error , msg } = await fetchData(id,{
+      url:filedata.url,
       method:'GET',
       followRedirect:false ,
       headers:{
@@ -440,8 +442,8 @@ module.exports = ({ request, cache, getConfig, querystring, base64, saveDrive, g
       }
     })
 
-    if(!resp) return false
-    let url = resp.headers.location
+    if(error || !data) return false
+    let url = data.headers.location
 
     let redir = await request({
       async:true,
@@ -453,13 +455,15 @@ module.exports = ({ request, cache, getConfig, querystring, base64, saveDrive, g
       }
     })
     url = redir.headers.location
+    console.log(url)
     return {
       id,
       url,
-      name: data.name,
-      ext: data.ext,
+      name: filedata.name,
+      ext: filedata.ext,
       protocol: defaultProtocol,
-      size:data.size,
+      size:filedata.size,
+      thumb:filedata.thumb
     }
 
   }

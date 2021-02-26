@@ -510,6 +510,7 @@ module.exports = class Driver {
 
       const ts = Date.now()
       let baseId = `/${tenantId}/${spaceId}/${driveId}/`
+      console.log(resp.body.data)
       let children = resp.body.data.map((i) => {
         return {
           id: manager.stringify({
@@ -524,6 +525,7 @@ module.exports = class Driver {
           updated_at: i.updated,
           type: i.kind == 'folder' ? 'folder' : 'other',
           mime: i.contentType,
+          thumb:i.thumbnail,
           $download_url:i.downloadUrl,
           $cached_at: ts
         }
@@ -558,6 +560,7 @@ module.exports = class Driver {
         ext: hit.ext,
         protocol: protocol,
         size: hit.size,
+        thumb:hit.thumb,
         // $expired_at: expired_at,
         // proxy:true,
         headers:{

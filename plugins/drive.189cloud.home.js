@@ -556,7 +556,7 @@ class CTCH {
             item.ext = file.name[0].split('.').pop()
             item.size = parseInt(file.size[0])
             item.md5 = file.md5[0]
-            if (file.icon) item.icon = file.icon[0].smallUrl
+            if (file.icon) item.thumb = file.icon[0].smallUrl
           }
 
           children.push(item)
@@ -617,6 +617,7 @@ class CTCH {
         ext: hit.ext,
         protocol: protocol,
         size:hit.size,
+        thumb:hit.thumb,
         $expired_at:expired_at - 5000,
         $cached_at:Date.now(),
       }

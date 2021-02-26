@@ -51,6 +51,9 @@ const parseConfig = (str) => {
     }
     ret.sort = r
   }
+  if(params.has('thumb')){
+    ret.isThumb = true
+  }
   return ret
 }
 module.exports = async(ctx, next) => {

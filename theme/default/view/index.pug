@@ -19,22 +19,28 @@ block content
         -if(downloadable)
           a(href='?download',title="下载文件夹")
             i.ic.ic-folder-download
-  section.wrap
-    .list-header
+        a#j_vp(title="视图模式")
+            i.ic.ic-grid
+  section.wrap.node-list
+    .node-list__header
       .row
         .col-md-7.col-sm-6.col-xs-8(data-sort="name")= __('filename')
         .col-md-2.col-sm-2.col-xs-4.text-right(data-sort="size")= __('size')
         .col-md-3.col-sm-4.hidden-xs.text-right(data-sort="time")= __('last_modified')
-    ul.list
+    ul.node-list__body
       each i in data
         li
-          a.clearfix(href=i.href , target=i.type == 'folder' ? '' : '_blank')
+          a.clearfix(href=i.href, target=i.type == 'folder' ? '' : '_blank',title=i.name)
             .row
               span.file-name.col-md-7.col-sm-6.col-xs-8
-                i.ic(class='ic-'+i.type)
-                | #{i.name}
+                span(data-type=i.type,data-thumb=i.thumb)
+                  span.file-thumb 
+                    -if(i.thumb)
+                      .file-thumb-img(data-src=i.thumb)
+                    i.ic(class='ic-'+i.type)
+                  span.file-name-title #{i.name}
               span.file-size.col-md-2.col-sm-2.col-xs-4.text-right
-                | #{i.size}
+                | #{i._size ? i.size : ''}
               span.file-modified.col-md-3.col-sm-4.hidden-xs.text-right
                 | #{i.updated_at}
   -if(readme)
@@ -47,7 +53,9 @@ block content
   script('data-no-instant',src='/script/sort.js')
   script('data-no-instant').
     InstantClick.init('mousedown')
-  
+    InstantClick.on('change', function(url, body, title) {
+      renderViewMode()
+    });
   -if(writeable)
     script('data-no-instant',src='/script/upload.js')
   include partial/footer

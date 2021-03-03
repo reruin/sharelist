@@ -33,7 +33,7 @@
     "markdown-it": "^12.0.2",
     "mime": "^2.4.2",
     "node-rsa": "^1.1.1",
-    "pug": "^2.0.4",
+    "pug": "^3.0.2",
     "ssh2-sftp-client": "^5.1.2",
     "webdav": "^2.6.0",
     "write-file-atomic": "^2.4.2",

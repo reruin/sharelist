@@ -5,13 +5,15 @@ function renderViewMode() {
     $('.file-thumb-img').each(function(){
       $(this).css({'background':'url('+$(this).attr('data-src')+') center center / contain no-repeat'})
     })
+    $('.menu-viewtype').addClass('menu-viewtype--grid')
+
   } else {
     $('.node-list').removeClass('node-list--grid')
     $('.file-thumb-img').each(function(){
       $(this).css({'background':'none'})
     })
+    $('.menu-viewtype').removeClass('menu-viewtype--grid')
   }
-  $('.menu-viewtype').toggleClass('menu-viewtype--grid')
 }
 $(function() {
   var param = (location.search.match(/sort=([\w\W]+?)(&|$)/) || ['', ''])[1]

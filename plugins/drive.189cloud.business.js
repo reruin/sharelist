@@ -574,7 +574,7 @@ class CTCB {
             item.ext = file.fileType
             item.size = parseInt(file.fileSize)
             item.url = 'https:' + file.downloadUrl
-            if (file.icon) item.icon = file.icon.smallUrl
+            if (file.icon) item.thumb = file.icon.smallUrl
           }
 
           children.push(item)
@@ -625,6 +625,7 @@ class CTCB {
         ext: data.ext,
         protocol: protocol,
         size:data.size,
+        thumb:data.thumb
       }
 
       return resp

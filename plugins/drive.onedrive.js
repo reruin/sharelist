@@ -767,7 +767,7 @@ class Driver {
         return r
       }
     }
-console.log('access_token',access_token)
+
     let folder = path.endsWith('/')
     //docs: https://docs.microsoft.com/zh-cn/graph/api/driveitem-list-children?view=graph-rest-1.0&tabs=http
     if (folder) {
@@ -779,7 +779,8 @@ console.log('access_token',access_token)
         },
         qs: {
           select: 'id,name,size,file,folder,@microsoft.graph.downloadUrl,thumbnails,createdDateTime,lastModifiedDateTime',
-          top: 999999
+          top: 999999,
+          '$expand':'thumbnails'
         },
         json: true
       })
@@ -790,6 +791,8 @@ console.log('access_token',access_token)
       const ts = Date.now()
 
       let children = resp.body.value.map((i) => {
+        let thumb = i.thumbnails.length > 0 ? i.thumbnails[0].medium.url : ''
+
         return {
           id: manager.stringify({
             client_id,
@@ -804,6 +807,7 @@ console.log('access_token',access_token)
           updated_at: i.lastModifiedDateTime,
           url: i['@microsoft.graph.downloadUrl'] || i['@content.downloadUrl'],
           type: i.folder ? 'folder' : 'other',
+          thumb,
           $cached_at: ts
         }
       })
@@ -815,7 +819,7 @@ console.log('access_token',access_token)
       return result
     } else {
       let url = `${graph}/root:${path}`
-      let resp = await helper.request.get(url, {
+      let resp = await helper.request.get(url+'?$expand=thumbnails', {
         headers: {
           'Authorization': `Bearer ${access_token}`,
           'Content-Type': 'application/json'
@@ -825,6 +829,7 @@ console.log('access_token',access_token)
       if (!resp.body) return false
 
       if (resp.body.error) return manager.error(resp.body.error.message,false)
+      let thumb = resp.body.thumbnails.length > 0 ? resp.body.thumbnails[0].medium.url : ''
 
       let result = {
         id: id,
@@ -836,6 +841,7 @@ console.log('access_token',access_token)
         updated_at: resp.body.lastModifiedDateTime,
         ext: helper.extname(resp.body.name),
         url: resp.body['@microsoft.graph.downloadUrl'] || resp.body['@content.downloadUrl'],
+        thumb,
         type: resp.body.folder ? 'folder' : 'other',
       }
       if (!result.url && resp.body.webUrl) {

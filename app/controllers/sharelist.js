@@ -51,7 +51,7 @@ const enableDownload = (ctx, data) => {
 const output = async (ctx , data)=>{
   const download = enableDownload(ctx, data)
 
-  const { isPreview , isForward , isAdmin } = ctx.runtime
+  const { isPreview , isForward , isAdmin , isThumb } = ctx.runtime
 
   //const downloadLinkAge = config.getConfig('max_age_download')
 
@@ -86,6 +86,12 @@ const output = async (ctx , data)=>{
     return
   }
   
+  if( isThumb ){
+    if( data.thumb ) ctx.redirect( data.thumb )
+    else ctx.status = 404
+    return 
+  }
+
   if(isPreview && preview_enable){
     let re = await service.preview(data)
     let displayDownloadLabel = true
@@ -104,7 +110,6 @@ const output = async (ctx , data)=>{
       delete query.preview
       let querystr = qs.stringify(query)
       let purl = ctx.path + ( querystr ? ('?' + querystr) : '')
-      
       await ctx.renderSkin('detail',{
         data : re , displayDownloadLabel,
         url : isProxy ? purl : url
@@ -179,12 +184,10 @@ module.exports = {
     }
     
     const data = await service.path(ctx.runtime)
-
     let parent = ctx.paths.length ? ('/' + ctx.paths.slice(0,-1).join('/')) : ''
     let ignoreexts = config.getConfig('ignore_file_extensions') ? (config.getConfig('ignore_file_extensions') || '').split(',') : []
     let ignorefiles = (config.getConfig('ignore_files') || '').split(',')
     let anonymous_uplod_enable = !!config.getConfig('anonymous_uplod_enable')
-
     if( data === false || data === 401){
       ctx.status = 404
     }
@@ -253,15 +256,20 @@ module.exports = {
             href = pathNormalize(base_url + '/' + encodeURIComponent(i.name))
           }
 
+          let thumbUrl = ''
+          if(i.thumb){
+            thumbUrl = href + '?thumb'
+          }
+
           if(await service.isPreviewable(i) && preview_enable){
             href += (href.indexOf('?')>=0 ? '&' : '?') + 'preview'
           }
           if( i.type != 'folder' && downloadLinkAge > 0 ){
             href += (href.indexOf('?')>=0 ? '&' : '?') + 't=' + sign
           }
-          
+
           if(i.hidden !== true)
-            ret.data.push( { href , type : i.type , _size:i.size,size: i.displaySize , updated_at:i.updated_at , name:i.name})
+            ret.data.push( { href , thumb:thumbUrl, type : i.type , _size:i.size,size: i.displaySize , updated_at:i.updated_at , name:i.name})
         }
       }
 

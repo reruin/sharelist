@@ -490,7 +490,7 @@ module.exports = ({ request, cache, getConfig, querystring, base64, saveDrive, g
 
     let data = options.data || {}
 
-    let api = `https://www.googleapis.com/drive/v3/files/${path}?alt=media`
+    let api = `https://www.googleapis.com/drive/v3/files/${path}?alt=media&acknowledgeAbuse=true`
 
     return {
       id,
@@ -745,7 +745,7 @@ module.exports = ({ request, cache, getConfig, querystring, base64, saveDrive, g
 
     let { path, credentials } = predata
 
-    let url = `https://www.googleapis.com/drive/v3/files/${path}?alt=media`
+    let url = `https://www.googleapis.com/drive/v3/files/${path}?alt=media&acknowledgeAbuse=true`
 
     let readstream = request({
       url,

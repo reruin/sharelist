@@ -600,6 +600,7 @@ class Driver {
           created_at: helper.datetime(i.server_ctime),
           updated_at: helper.datetime(i.server_mtime),
           type: i.isdir ? 'folder' : 'other',
+          thumb:i.thumbs ? i.thumbs.url2 : '',
           $cached_at: ts
         }
       })
@@ -649,6 +650,7 @@ class Driver {
         updated_at: hit.updated_at,
         ext: hit.ext,
         type: 'other',
+        thumb:hit.thumb,
         protocol,
       }
 

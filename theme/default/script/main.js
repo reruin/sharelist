@@ -15,51 +15,79 @@ function renderViewMode() {
     $('.menu-viewtype').removeClass('menu-viewtype--grid')
   }
 }
-$(function() {
-  var param = (location.search.match(/sort=([\w\W]+?)(&|$)/) || ['', ''])[1]
-  var sort = {}
-  param.split('+').forEach(function(i) {
-    var pairs = i.split(':')
-    if (pairs.length == 2) {
-      sort[pairs[0]] = pairs[1]
+
+var sortManager = (function(){
+  var searchParams = {} ,sort = {}
+
+  location.search.substring(1).split('&').forEach(function(i){
+    let pairs =  i.split('=')
+    if(pairs[0]){
+      searchParams[pairs[0]] = pairs[1]
     }
   })
 
-  function reload() {
+  if( searchParams.sort ){
+    searchParams.sort.split('+').forEach(function(i) {
+      var pairs = i.split(':')
+      if (pairs.length == 2) {
+        sort[pairs[0]] = pairs[1]
+      }
+    })
+  }
+
+  function reload(){
     var v = []
     for (var i in sort) {
       if (sort[i]) v.push(i + ':' + sort[i])
     }
-    var sortstr = 'sort=' + v.join('+')
-    var searchParams = location.search
-
-    if (v.length == 0) {
-      location.href = searchParams.replace(/sort=([\w\W]*?)(&|$)/, '')
-    } else {
-      if (searchParams) {
-        if (searchParams.indexOf('sort') >= 0) {
-          location.href = searchParams.replace(/sort=([\w\W]+?)(&|$)/, sortstr)
-        } else {
-          location.href = searchParams + '&' + sortstr
-        }
-      } else {
-        location.href = searchParams + '?' + sortstr
-      }
+    if(v.length > 0){
+      searchParams['sort'] = v.join('+')
+    }else{
+      delete searchParams['sort']
     }
 
+    var newSearch = [] , href = location.pathname
+    for(var i in searchParams){
+      newSearch.push(i+'='+searchParams[i])
+    }
+    if( newSearch.length ){
+      href += '?'+newSearch.join('&')
+    }
+
+    location.href = href
   }
 
+  function set(key,value,override){
+    if( override === true ){
+      sort = {}
+    }
+
+    sort[key] = value
+  }
+
+  function get(key){
+    return sort[key]
+  }
+
+  return {
+    reload:reload,
+    set:set,
+    get:get
+  }
+}())
+
+$(function() {
+
   //
-  $('[data-sort]').on('click', function() {
+  $(document).on('click', '[data-sort]', function() {
     var el = $(this)
     var type = el.attr('data-sort')
     // [null,desc asc]
     var value = el.attr('data-sort-value')
-    var currentValue = sort[type]
+    var currentValue = sortManager.get(type)
     //reset
-    sort = {}
-    sort[type] = currentValue == 'asc' ? '' : currentValue == 'desc' ? 'asc' : 'desc'
-    reload()
+    sortManager.set(type,currentValue == 'asc' ? '' : currentValue == 'desc' ? 'asc' : 'desc' , true)
+    sortManager.reload()
   })
 
   $(document).on('click', '.menu-viewtype', function() {

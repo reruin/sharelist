@@ -16,6 +16,7 @@ const options = {
   staticMap:{}
 }
 
+const bootTime = Date.now()
 
 const render = (ctx, filename , locals = {}) => {
   const state = Object.assign(locals, ctx.state || {})
@@ -31,6 +32,7 @@ const renderMiddleware = ({ dir }) => (ctx, next) => {
     let data = { 
       ...extra , 
       __path__:dir,
+      __timestamp__:bootTime,
       g_config:{
         custom_style:getConfig('custom_style'),
         custom_script:getConfig('custom_script'),

@@ -230,17 +230,10 @@ module.exports = {
       let sort = ctx.runtime.sort
 
       if(sort){
-        if(sort.size){
-          let r = sort.size == 'desc' ? 1 : -1
-          data.children = data.children.sort((a,b) => a.size > b.size ? r : -r )
-        }
-        if(sort.time){
-          let r = sort.time == 'desc' ? 1 : -1
-          data.children = data.children.sort((a,b) => a.updated_at > b.updated_at ? r : -r)
-        }
-        if(sort.name){
-          let r = sort.time == 'desc' ? 1 : -1
-          data.children = data.children.sort((a,b) => a.name > b.name ? r : -r)
+        for(let key in sort){
+          let r = sort[key] == 'desc' ? 1 : -1
+          let raw_key = key == 'time' ? 'updated_at' : key
+          data.children = data.children.sort((a,b) => a[raw_key] > b[raw_key] ? r : -r )
         }
       }
 

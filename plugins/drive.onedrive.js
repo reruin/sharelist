@@ -211,7 +211,7 @@ class Manager {
   }
 
   async generateAuthUrl(config) {
-    let { client_id, client_secret, zone, tenant_id, redirect_uri, site_name } = config
+    let { client_id, client_secret, zone, tenant_id, redirect_uri, site_name, path } = config
 
     const opts = {
       client_id:client_id.split('.')[0],
@@ -221,7 +221,7 @@ class Manager {
       state: redirect_uri
     };
 
-    this.pathAppMap[redirect_uri] = { client_id, client_secret, zone, tenant_id, redirect_uri: opts.redirect_uri, create_time: Date.now(), site_name }
+    this.pathAppMap[redirect_uri] = { client_id, client_secret, zone, tenant_id, path, redirect_uri: opts.redirect_uri, create_time: Date.now(), site_name }
 
     return `${this.getAuthority(zone, tenant_id)}/oauth2/v2.0/authorize?${querystring.stringify(opts)}`;
   }
@@ -239,7 +239,7 @@ class Manager {
       error: '没有匹配到app_id , No matching app_id (key:' + key + ')'
     }
 
-    let { client_id, client_secret, zone, tenant_id, redirect_uri, site_name } = appConfig
+    let { client_id, client_secret, zone, tenant_id, redirect_uri, site_name, path } = appConfig
     
     let metadata = this.getAuthority(zone,tenant_id)
 
@@ -286,6 +286,7 @@ class Manager {
       redirect_uri,
       refresh_token,
       access_token,
+      path,
       expires_at: Date.now() + expires_in * 1000,
     }
 
@@ -310,7 +311,7 @@ class Manager {
    * @param {object} 
    * @api private
    */
-  async getShareAccessToken(url){
+  async getShareAccessToken(url , path){
     let { request , base64 } = this.helper
 
     let { body , headers , error } = await request.get(url , { followRedirect:false, headers:{'User-Agent':'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_14_4) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/79.0.3945.88 Safari/537.36'}})
@@ -366,6 +367,7 @@ class Manager {
       client_id,
       expires_at,
       graph,
+      path,
       share:1
     }
 
@@ -381,7 +383,7 @@ class Manager {
   }
 
   async refreshAccessToken(credentials) {
-    let { client_id, client_secret, redirect_uri, refresh_token, zone, tenant_id, site_id, share } = credentials
+    let { client_id, client_secret, redirect_uri, refresh_token, zone, tenant_id, site_id, share, path } = credentials
     if( share ){
       return this.getShareAccessToken( decodeURIComponent(this.helper.base64.decode(client_id) ))
     }
@@ -422,10 +424,11 @@ class Manager {
         zone,
         tenant_id,
         site_id,
+        path,
         redirect_uri,
         refresh_token,
         access_token,
-        expires_at,
+        expires_at
       }
 
       this.clientMap[client_id] = {
@@ -519,6 +522,8 @@ class Manager {
             
 
             <div class="form-item tab tab-sharelink"><input class="sl-input" type="text" name="share_url" value="" placeholder="URL https://xxxx.sharepoint.com/:f:/g/personal/xxxxxxxx/mmmmmmmmm?e=XXXX" /></div>
+            
+            <div class="form-item"><input class="sl-input" type="text" name="path" value="" placeholder="挂载目录 如 /abc/def，默认留空 挂载根目录" /></div>
 
           </div>
           <button class="sl-button btn-primary" id="signin" type="submit">验证</button>
@@ -634,11 +639,11 @@ class Manager {
       let data
 
       if (req.body && req.body.act && req.body.act == 'install') {
-        let { client_id, client_secret, zone, tenant_id = 'common', custom, share_url, sharepoint_site, type } = req.body
+        let { client_id, client_secret, zone, tenant_id = 'common', custom, share_url, sharepoint_site, type, path } = req.body
         let body , site_name
- 
+        if( path && !path.endsWith('/')) path += '/'
         if (type == 'sharelink'){
-          let credentials = await this.getShareAccessToken(share_url)
+          let credentials = await this.getShareAccessToken(share_url,path)
           if (credentials.error) {
             data = this.error(credentials.error)
           } else {
@@ -668,7 +673,7 @@ class Manager {
           }
 
           if (!data && client_id && client_secret && zone) {
-            data = this.redirect(await this.generateAuthUrl({ client_id, client_secret, redirect_uri: baseUrl, zone, tenant_id, site_name }))
+            data = this.redirect(await this.generateAuthUrl({ client_id, client_secret, redirect_uri: baseUrl, zone, tenant_id, site_name , path }))
           } 
         }
       }

@@ -445,7 +445,7 @@ module.exports = ({ request, cache, getConfig, querystring, base64, saveDrive, g
         includeItemsFromAllDrives: true,
         supportsAllDrives: true,
         pageSize: 1000,
-        fields: `nextPageToken, files(id,name,mimeType,size,fileExtension,modifiedTime)`,
+        fields: `nextPageToken, files(id,name,mimeType,size,fileExtension,modifiedTime,ownedByMe)`,
         q: `trashed = false and '${path}' in parents`,
       },
       json: true
@@ -470,7 +470,6 @@ module.exports = ({ request, cache, getConfig, querystring, base64, saveDrive, g
 
     //缓存 pathid(fid->appid)  <=> path
     //cache.set(baseUrl , id)
-    // console.log(children)
     let result = { id, type: 'folder', protocol: defaultProtocol }
     result.$cached_at = Date.now()
     result.children = children
@@ -490,7 +489,7 @@ module.exports = ({ request, cache, getConfig, querystring, base64, saveDrive, g
 
     let data = options.data || {}
 
-    let api = `https://www.googleapis.com/drive/v3/files/${path}?alt=media&acknowledgeAbuse=true`
+    let api = `https://www.googleapis.com/drive/v3/files/${path}?alt=media${data.ownedByMe ? '&acknowledgeAbuse=true' : ''}`
 
     return {
       id,

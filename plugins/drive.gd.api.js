@@ -479,6 +479,27 @@ module.exports = ({ request, cache, getConfig, querystring, base64, saveDrive, g
     return result
   }
 
+  const abusiveFilesMap = {}
+
+  const isAbusiveFile =  async (url, access_token) => {
+    if( url in abusiveFilesMap ){
+      return abusiveFilesMap[url]
+    }else{
+      const resp = await request({
+        method: 'HEAD',
+        url,
+        headers: {
+          'Authorization': `Bearer ${access_token}`,
+        },
+        async:true
+      })
+
+      abusiveFilesMap[url] = resp.statusCode == 403
+
+      return abusiveFilesMap[url]
+    }
+  }
+
   // 无临时链接 强制中转
   const file = async (id, options) => {
     let predata = await prepare(id)
@@ -489,8 +510,11 @@ module.exports = ({ request, cache, getConfig, querystring, base64, saveDrive, g
 
     let data = options.data || {}
 
-    let api = `https://www.googleapis.com/drive/v3/files/${path}?alt=media${data.ownedByMe ? '&acknowledgeAbuse=true' : ''}`
+    let api = `https://www.googleapis.com/drive/v3/files/${path}?alt=media`//${data._ownedByMe? '&acknowledgeAbuse=true' : ''}`
 
+    if( await isAbusiveFile(api,credentials.access_token) ){
+      api += '&acknowledgeAbuse=true'
+    }
     return {
       id,
       url: api,

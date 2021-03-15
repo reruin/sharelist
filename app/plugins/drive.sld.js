@@ -68,7 +68,6 @@ module.exports = ({isObject , isArray}) => {
       let resp = { id, type: 'folder', protocol: defaultProtocol }
 
       let json = yaml.parse(data)
-
       json = createId(json, id)
       resp.children = json
       resp.updated_at = Date.now()
@@ -95,7 +94,6 @@ module.exports = ({isObject , isArray}) => {
           }
         }) //[ parseInt(path[i]) ]
       }
-
       return disk
     }else{
       return []
@@ -103,10 +101,19 @@ module.exports = ({isObject , isArray}) => {
   }
 
   const folder = async (id,{ content } = {}) => {
-    if(content){
-      return mount(id,content)
-    }else{
-      return findById(id)
+    try{
+      let json = yaml.parse(id)
+      if(json && typeof json == 'object'){
+        return mount(null,id)
+      }else{
+        throw new Error("")
+      }
+    }catch(e){
+      if(content){
+        return mount(id,content)
+      }else{
+        return findById(id)
+      }
     }
   }
 

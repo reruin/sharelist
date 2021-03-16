@@ -382,7 +382,6 @@ module.exports = ({ request, cache, getConfig, querystring, base64, saveDrive, g
       }
 
       for(let file of data.body.data){
-        console.log(file)
         let item = {
           id: manager.stringify({username , path:file.fileId}),
           name: file.fileName,
@@ -432,8 +431,11 @@ module.exports = ({ request, cache, getConfig, querystring, base64, saveDrive, g
     let { path, cookies , username } = await prepare(id)
 
     let filedata = options.data || {}
+
+    let url = filedata.url
+
     let { data , error , msg } = await fetchData(id,{
-      url:filedata.url,
+      url,
       method:'GET',
       followRedirect:false ,
       headers:{
@@ -443,18 +445,18 @@ module.exports = ({ request, cache, getConfig, querystring, base64, saveDrive, g
     })
 
     if(error || !data) return false
-    let url = data.headers.location
-
-    let redir = await request({
-      async:true,
-      url:url,
-      method:'GET',
-      followRedirect:false ,
-      headers:{
-        'User-Agent':'Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/69.0.3497.100 Safari/537.36',
-      }
-    })
-    url = redir.headers.location
+    if(data.headers.location){
+      let redir = await request({
+        async:true,
+        url:data.headers.location,
+        method:'GET',
+        followRedirect:false ,
+        headers:{
+          'User-Agent':'Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/69.0.3497.100 Safari/537.36',
+        }
+      })
+      url = redir.headers.location
+    }
     console.log(url)
     return {
       id,

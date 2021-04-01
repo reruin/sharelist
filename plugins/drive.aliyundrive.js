@@ -10,6 +10,8 @@ const urlFormat = require('url').format
 
 const protocol = 'aliyun'
 
+const superagent = require('superagent');
+
 /**
  * auth manager class
  */
@@ -172,20 +174,19 @@ class Manager {
    * @return {object}
    * @api private
    */
-  async create({refresh_token}) {
+  async create({refresh_token}) {  //,grant_type: "refresh_token"
     //0 准备工作： 获取必要数据
     let resp
     try{
-      resp = await this.helper.request.post('https://websv.aliyundrive.com/token/refresh', { refresh_token }, {
-        headers: {
-          'User-Agent': 'None',
-        },
-        json:true
-      })
+      resp = await superagent.post('https://auth.aliyundrive.com/v2/account/token')
+      .send({
+          refresh_token: refresh_token,
+          grant_type: "refresh_token"
+      });
     }catch(e){
       
     }
-    console.log(resp.body)
+    console.log('resp',resp.body)
     if( !resp || !resp.body || !resp.body.access_token) return { error: true, msg: '无法获取登录token' }
 
     let { user_id , access_token , default_drive_id:drive_id , expires_in } = resp.body

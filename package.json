@@ -38,7 +38,8 @@
     "webdav": "^2.6.0",
     "write-file-atomic": "^2.4.2",
     "xml2js": "^0.4.19",
-    "yaml": "^1.5.0"
+    "yaml": "^1.5.0",
+    "superagent": "^6.1.0"
   },
   "devDependencies": {
     "nodemon": "^1.18.4",

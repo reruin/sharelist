@@ -7,7 +7,7 @@ const name = 'OneDrive'
 
 const version = '1.0'
 
-const protocols = ['od', 'onedrive']
+const protocols = ['od']
 
 const defaultProtocol = 'od'
 

@@ -1,6 +1,6 @@
 const parseXML = require('xml2js').parseString
 const parsePath = require('../utils/base').parsePath
-const { setLocation , getConfig , setRuntime } = require('../config')
+const { setLocation , getConfig , setRuntime , checkAccess } = require('../config')
 const qs = require('querystring')
 const { URLSearchParams } = require('url')
 
@@ -23,7 +23,7 @@ const xml2js = ( xml , options = {}) => {
 }
 
 const guessWebDAV = (ua) => {
-  return /(Microsoft\-WebDAV|FileExplorer|WinSCP|WebDAVLib)/i.test(ua)
+  return /(Microsoft\-WebDAV|FileExplorer|WinSCP|WebDAVLib|WebDAVFS|rclone|Kodi|davfs2)/i.test(ua)
 }
 
 const webdavMethods = ['options','head','trace','get','put','post','delete','mkcol','propfind','proppatch','copy','move','lock','unlock']
@@ -37,6 +37,9 @@ const parseConfig = (str) => {
   if(params.has('forward')){
     ret.isForward = true
   }
+  if(params.has('download')){
+    ret.download = true
+  }
   if(params.has('sort')){
     let s = params.get('sort')
     let r = {}
@@ -47,6 +50,9 @@ const parseConfig = (str) => {
       }
     }
     ret.sort = r
+  }
+  if(params.has('thumb')){
+    ret.isThumb = true
   }
   return ret
 }
@@ -64,9 +70,14 @@ module.exports = async(ctx, next) => {
   ctx.paths = paths
   ctx.paths_raw = paths_raw
 
+  let query = parseConfig(ctx.querystring)
+  let isAdmin = !!ctx.session.admin
+  //兼容 get 验证
+  if( checkAccess(ctx.query.token) ){
+    isAdmin = true
+  }
   let runtime = {
     href:ctx.href,
-    path:ctx.path,
     querystring:ctx.querystring,
     query:ctx.query,
     body:ctx.request.body,
@@ -76,12 +87,11 @@ module.exports = async(ctx, next) => {
     protocol:ctx.protocol,
     path:ctx.path,
     paths:paths,
-    isAdmin:!!ctx.session.admin,
+    isAdmin,
     access:ctx.session.access,
-
-    ...parseConfig(ctx.querystring)
+    session:ctx.session,
+    ...query
   }
-
   if( ctx.get('x-request') ){
     let data = {}
     try{
@@ -102,7 +112,7 @@ module.exports = async(ctx, next) => {
   }
 
   ctx.runtime = runtime
-  setRuntime('req' , runtime)
+  setRuntime(runtime)
   /*
   setLocation({
     href:ctx.href,
@@ -135,7 +145,6 @@ module.exports = async(ctx, next) => {
     }
 
     ctx.runtime.isWebDAV = true
-    console.log(ctx.request.headers['user-agent'])
     //upload
     if(method == 'PUT'){
       //{ type: 'upload', name: file.name, size: file.size , path : opts.path }
@@ -150,7 +159,7 @@ module.exports = async(ctx, next) => {
     if(!runtime.isAdmin && ctx.get('authorization')){
       let [, value] = ctx.get('authorization').split(' ');
       let pairs = Buffer.from(value, "base64").toString("utf8").split(':')
-      if( getConfig('token') == pairs[1] ){
+      if( checkAccess(pairs[1]) ){
         ctx.session.admin = true
         runtime.isAdmin = true
       }

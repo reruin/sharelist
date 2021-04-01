@@ -168,18 +168,16 @@ const install = async (client_id, client_secret, redirect_uri) => {
   return `
     <div class="auth">
       <h3>挂载GoogleDrive</h3>
-      <p style="font-size:12px;">1. <a target="_blank" style="font-size:12px;margin-right:5px;color:#337ab7;" href="https://developers.google.com/drive/api/v3/quickstart/nodejs">访问此链接</a>点击 [Enable the Drive API] 按钮，获取 credentials.json。如果你已有凭证请从第二步开开始。</p>
-
-      <p style="font-size:12px;">2. 上传json凭证。 <input type="file" onchange="readFile(this)" /></p>
-      <p style="font-size:12px;">3. <a target="_blank" style="font-size:12px;margin-right:5px;color:#337ab7;" id="j_code_link"  onclick="directToCodeUrl(this)"> 获取验证code</a>。 </p>
+      <p style="font-size:12px;">1. <a target="_blank" style="font-size:12px;margin-right:5px;color:#337ab7;" href="https://developers.google.com/drive/api/v3/quickstart/nodejs">访问此链接</a>点击 [Enable the Drive API] 按钮，创建[Desktop app]类型的凭证，获取 Client ID / Client Secret。如果已有凭证请从第二步开开始。</p>
+      <p style="font-size:12px;">2. 填写Client ID / Client Secret后，<a target="_blank" style="font-size:12px;margin-right:5px;color:#337ab7;" id="j_code_link"  onclick="directToCodeUrl(this)">点击获取验证code</a>，若出现[This app isn't verified]，请展开Advanced，点击[Go to Quickstart (unsafe)]。 </p>
 
       <form class="form-horizontal" method="post">
         <input type="hidden" name="act" value="quick_install" />
         <input type="hidden" name="redirect_uri" id="j_direct_uri" value="${redirect_uri}" />
-        <div class="form-group"><input id="j_client_secret" class="sl-input" type="text" name="client_secret" placeholder="应用机密 / client_secret" /></div>
-        <div class="form-group"><input id="j_client_id" class="sl-input" type="text" name="client_id" placeholder="应用ID / client_id" /></div>
-        <div class="form-group"><input id="j_code" class="sl-input" type="text" name="code" placeholder="验证code" /></div>
-        <button class="sl-button btn-primary" id="signin" type="submit">验证</button>
+        <div class="form-group"><input id="j_client_id" class="sl-input" type="text" name="client_id" placeholder="应用ID / Client ID" /></div>
+        <div class="form-group"><input id="j_client_secret" class="sl-input" type="text" name="client_secret" placeholder="应用机密 / Client Secret" /></div>
+        <div class="form-group"><input id="j_code" class="sl-input" type="text" name="code" placeholder="code" /></div>
+        <button class="sl-button btn-primary" id="signin" type="submit">验证 / Verify</button>
       </form>
       <script>
         var codeUrl;
@@ -219,10 +217,14 @@ const install = async (client_id, client_secret, redirect_uri) => {
         }
 
         function directToCodeUrl(el){
-          if(codeUrl){
+          var client_id = document.querySelector('#j_client_id').value ;
+          var client_secret = document.querySelector('#j_client_secret').value;
+          if(client_id && client_secret){
+            var codeUrl = "https://accounts.google.com/o/oauth2/auth?client_id="+client_id+"&redirect_uri=urn:ietf:wg:oauth:2.0:oob&response_type=code&access_type=offline&scope=https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fdrive&approval_prompt=auto";
+
             window.open(codeUrl)
           }else{
-            alert('请上传凭证')
+            alert('请输入Client ID / Client Secret')
           }
         }
       </script>
@@ -320,7 +322,8 @@ module.exports = ({ request, cache, getConfig, querystring, base64, saveDrive, g
     if(!credentials){
       //使用 client_id, client_secret, code , redirect_uri 快速挂载
       if( req.body && req.body.act && req.body.act == 'quick_install'){
-        let { client_id, client_secret, code , redirect_uri } = req.body
+        let { client_id, client_secret, code } = req.body
+        let redirect_uri = 'urn:ietf:wg:oauth:2.0:oob'
         if (client_id && client_secret && code && redirect_uri) {
           let credentials = await oauth2.authToken({client_id, client_secret, code , redirect_uri})
           if (credentials.error) {
@@ -442,7 +445,7 @@ module.exports = ({ request, cache, getConfig, querystring, base64, saveDrive, g
         includeItemsFromAllDrives: true,
         supportsAllDrives: true,
         pageSize: 1000,
-        fields: `nextPageToken, files(id,name,mimeType,size,fileExtension,modifiedTime)`,
+        fields: `nextPageToken, files(id,name,mimeType,size,fileExtension,modifiedTime,ownedByMe)`,
         q: `trashed = false and '${path}' in parents`,
       },
       json: true
@@ -467,7 +470,6 @@ module.exports = ({ request, cache, getConfig, querystring, base64, saveDrive, g
 
     //缓存 pathid(fid->appid)  <=> path
     //cache.set(baseUrl , id)
-    // console.log(children)
     let result = { id, type: 'folder', protocol: defaultProtocol }
     result.$cached_at = Date.now()
     result.children = children
@@ -475,6 +477,27 @@ module.exports = ({ request, cache, getConfig, querystring, base64, saveDrive, g
     cache.set(id, result)
 
     return result
+  }
+
+  const abusiveFilesMap = {}
+
+  const isAbusiveFile =  async (url, access_token) => {
+    if( url in abusiveFilesMap ){
+      return abusiveFilesMap[url]
+    }else{
+      const resp = await request({
+        method: 'HEAD',
+        url,
+        headers: {
+          'Authorization': `Bearer ${access_token}`,
+        },
+        async:true
+      })
+
+      abusiveFilesMap[url] = resp.statusCode == 403
+
+      return abusiveFilesMap[url]
+    }
   }
 
   // 无临时链接 强制中转
@@ -487,8 +510,11 @@ module.exports = ({ request, cache, getConfig, querystring, base64, saveDrive, g
 
     let data = options.data || {}
 
-    let api = `https://www.googleapis.com/drive/v3/files/${path}?alt=media`
+    let api = `https://www.googleapis.com/drive/v3/files/${path}?alt=media`//${data._ownedByMe? '&acknowledgeAbuse=true' : ''}`
 
+    if( await isAbusiveFile(api,credentials.access_token) ){
+      api += '&acknowledgeAbuse=true'
+    }
     return {
       id,
       url: api,
@@ -742,7 +768,7 @@ module.exports = ({ request, cache, getConfig, querystring, base64, saveDrive, g
 
     let { path, credentials } = predata
 
-    let url = `https://www.googleapis.com/drive/v3/files/${path}?alt=media`
+    let url = `https://www.googleapis.com/drive/v3/files/${path}?alt=media&acknowledgeAbuse=true`
 
     let readstream = request({
       url,
@@ -780,5 +806,5 @@ module.exports = ({ request, cache, getConfig, querystring, base64, saveDrive, g
     }
 
   }
-  return { name, label:'GD API版', version, drive: { protocols, folder, file , createReadStream , createWriteStream } }
+  return { name, label:'GoogleDrive API', version, drive: { protocols, folder, file , createReadStream , createWriteStream } }
 }

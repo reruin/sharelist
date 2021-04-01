@@ -1,0 +1,68 @@
+extends partial/layout
+
+block content
+  
+  header
+    .wrap
+      -if(parent)
+        a.back(href=parent)
+          i.ic.ic-back(style="color:#333;font-size:18px;")
+      a.home(href='/')= _config_('title')
+      .upload-menu
+        -if(writeable)
+          a
+            i.ic.ic-upload-folder
+            input(type="file",multiple="",webkitdirectory="",directory="",name="file")
+          a
+            i.ic.ic-upload
+            input(type="file",multiple="",name="file")
+        -if(downloadable)
+          a(href='?download',title="下载文件夹")
+            i.ic.ic-folder-download
+        a.menu-viewtype(title="视图模式")
+          i.ic.ic-grid
+          i.ic.ic-list
+  section.wrap.node-list
+    .node-list__header
+      .row
+        .col-md-7.col-sm-6.col-xs-8(data-sort="name")= __('filename')
+        .col-md-2.col-sm-2.col-xs-4.text-right(data-sort="size")= __('size')
+        .col-md-3.col-sm-4.hidden-xs.text-right(data-sort="time")= __('last_modified')
+    ul.node-list__body
+      each i in data
+        li
+          a.clearfix(href=i.href, target=i.type == 'folder' ? '' : '_blank',title=i.name)
+            .row
+              span.file-name.col-md-7.col-sm-6.col-xs-8
+                span(data-type=i.type,data-thumb=i.thumb)
+                  span.file-thumb 
+                    -if(i.thumb)
+                      .file-thumb-img(data-src=i.thumb)
+                    i.ic(class='ic-'+i.type)
+                  span.file-name-title #{i.name}
+              span.file-size.col-md-2.col-sm-2.col-xs-4.text-right
+                | #{i._size ? i.size : ''}
+              span.file-modified.col-md-3.col-sm-4.hidden-xs.text-right
+                | #{i.updated_at}
+  -if(readme)
+    link(rel='stylesheet', type='text/css', href='https://cdn.bootcss.com/github-markdown-css/3.0.1/github-markdown.min.css')
+    section.wrap(style="margin-top:64px;border-top:1px solid #eee;")
+      article.markdown-body(style="padding:32px;")
+        | !{readme}
+  script('data-no-instant',src='https://cdn.bootcdn.net/ajax/libs/jquery/3.5.1/jquery.min.js')
+  script('data-no-instant',src='https://cdn.bootcdn.net/ajax/libs/instantclick/3.1.0/instantclick.min.js')
+  script('data-no-instant',src='/script/main.js?'+__timestamp__)
+  script('data-no-instant').
+    InstantClick.init('mousedown')
+    InstantClick.on('change', function(url, body, title) {
+      renderViewMode()
+    });
+  -if(writeable)
+    script('data-no-instant',src='/script/upload.js')
+  include partial/footer
+
+
+
+  
+
+  

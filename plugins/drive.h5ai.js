@@ -3,7 +3,7 @@
  * h5ai 列目录
  */
 
-const name = 'h5ai-beta'
+const name = 'h5ai'
 
 const version = '1.0'
 

@@ -13,7 +13,6 @@ if(!fs.existsSync('./cache')){
   fs.mkdirSync('./cache');
 }
 
-
 var port = normalizePort(config.getConfig('port') || 33001);
 
 var server = http.createServer(app.callback());

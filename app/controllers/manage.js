@@ -4,7 +4,16 @@ const config = require('../config')
 const cache = require('../utils/cache')
 const { getVendors , reload } = require('../services/plugin')
 const service = require('../services/sharelist')
+const themeManager = require('../services/theme')
 
+/**
+ * Hanlders hub
+ * 
+ * @param {string} [a] action
+ * @param {object} [body] formdata
+ * @param {object} [ctx] ctx
+ * @return {object}
+ */
 const handlers = async (a, body , ctx) => {
   let result = { status: 0, message: 'Success', data: '', a }
 
@@ -28,7 +37,6 @@ const handlers = async (a, body , ctx) => {
       result.message = 'Invalid Arguments'
     }
   } else if(a == 'plugin_option'){
-    console.log(body)
     for(let i in body){
       if(i!=='a'){
         let value = config.getPluginOption(i)
@@ -51,6 +59,10 @@ const handlers = async (a, body , ctx) => {
   } else if(a == 'reboot'){
     reload()
     result.message = 'Success'
+  }
+  else if(a == 'signout'){
+    ctx.session.admin = false
+    result.message = 'Success'
   } else if (a == 'title') {
     let title = body.title
     if (title) {
@@ -64,7 +76,7 @@ const handlers = async (a, body , ctx) => {
     cache.clear()
     result.message = 'Success'
   } else if (a == 'cfg') {
-    let { proxy_enable, preview_enable, readme_enable, max_age_dir, max_age_file,max_age_download, webdav_path, anonymous_uplod_enable, ignore_file_extensions , ignore_paths , custom_style , custom_script , proxy_paths , proxy_server , ocr_server , language } = body
+    let { proxy_enable, preview_enable, readme_enable, max_age_dir, max_age_file,max_age_download, webdav_path, anonymous_uplod_enable, ignore_file_extensions , ignore_paths , custom_style , custom_script , proxy_paths , proxy_server , ocr_server , language, anonymous_download, index_enable, smb_server_enable, smb_server_port, smb_anonymous_enable , theme } = body
     let opts = {}
     if (max_age_dir !== undefined) {
       max_age_dir = parseInt(max_age_dir)
@@ -96,6 +108,10 @@ const handlers = async (a, body , ctx) => {
       preview_enable = preview_enable == '1' ? 1 : 0
       opts.preview_enable = preview_enable
     }
+    if (index_enable) {
+      index_enable = index_enable == '1' ? 1 : 0
+      opts.index_enable = index_enable
+    }
 
     if (readme_enable) {
       readme_enable = readme_enable == '1' ? 1 : 0
@@ -111,16 +127,29 @@ const handlers = async (a, body , ctx) => {
       opts.webdav_path = webdav_path
     }
 
-    if(ocr_server){
-      opts.ocr_server = ocr_server
-    }
-
     if(language !== undefined){
       opts.language = language
       //console.log(ctx,ctx.__setLocale)
       ctx.__setLocale(language)
     }
+    
+    if (smb_server_enable) {
+      smb_server_enable = smb_server_enable == '1' ? 1 : 0
+      opts.smb_server_enable = smb_server_enable
+    }
 
+    if( smb_server_port ){
+      smb_server_port = parseInt(smb_server_port)
+      if (!isNaN(smb_server_port)) {
+        opts.smb_server_port = smb_server_port
+      }
+    }
+
+    if (smb_anonymous_enable) {
+      smb_anonymous_enable = smb_anonymous_enable == '1' ? 1 : 0
+      opts.smb_anonymous_enable = smb_anonymous_enable
+    }
+    
     opts.custom_script = custom_script
     opts.custom_style = custom_style
     opts.ignore_paths = config.getConfig('ignore_paths')
@@ -128,6 +157,13 @@ const handlers = async (a, body , ctx) => {
     opts.ignore_paths.__root__ = ignore_paths.split(',')
     opts.proxy_paths = proxy_paths.split(',')
     opts.proxy_server = proxy_server
+    opts.anonymous_download = anonymous_download
+    opts.ocr_server = ocr_server || ''
+    opts.theme = theme
+
+    if( theme ){
+      themeManager.setTheme( theme )
+    }
     await config.save(opts)
     result.message = 'Success'
   }
@@ -137,6 +173,9 @@ const handlers = async (a, body , ctx) => {
 
 module.exports = {
 
+  /**
+   * Manage page index handler
+   */
   async home(ctx, next) {
 
     let token = ctx.request.body.token
@@ -147,7 +186,8 @@ module.exports = {
       if (act == 'export') {
         ctx.body = JSON.stringify(config.getAllConfig())
       } else {
-        await ctx.renderSkin('manage', { access, message, config: config.getAllConfig(), vendors: getVendors() })
+        let newConfig = Object.assign(config.getAllConfig() , { themes: themeManager.getThemes() })
+        await ctx.renderSkin('manage', { access, message, config: newConfig, vendors: getVendors() })
       }
     } else {
       await ctx.renderSkin('manage', { access })
@@ -155,6 +195,9 @@ module.exports = {
 
   },
 
+  /**
+   * API router handler
+   */
   async api(ctx) {
 
     let body = ctx.request.body
@@ -203,6 +246,9 @@ module.exports = {
 
   },
 
+  /**
+   * Shell page handler
+   */
   async shell(ctx){
     let access = !!ctx.session.admin
     if(access){
@@ -212,6 +258,12 @@ module.exports = {
     }
   },
 
+  /**
+   * Shell exection
+   * 
+   * @param {object} [ctx]
+   * @return {void}
+   */
   async shell_exec(ctx){
     let body = ctx.request.body
     let { command , path = '/' } = body

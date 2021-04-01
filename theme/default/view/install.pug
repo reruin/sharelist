@@ -1,0 +1,66 @@
+extends partial/layout
+
+block content
+  include partial/message
+  
+  header
+    .header-wrap
+      a.home(href='/') ShareList
+  section.wrap
+    .page-header
+      h4.text-center= __('install')
+      form.form-horizontal(action='',method='post')
+        .panel.panel-default
+            .panel-heading= __('token')
+            .panel-body
+              .form-group
+                .col-sm-12
+                  input.form-control(type='text', name='token' , placeholder=__('new_token'),required)
+        .panel.panel-default
+            .panel-heading= __('site_title')
+            .panel-body
+              .form-group
+                .col-sm-12
+                  input.form-control(type='text', name='title', value="ShareList" , placeholder=__('site_title'),required)
+        .panel.panel-default
+          .panel-heading
+            span= __('virtual_path')
+            a.create-path(style='float:right;')= __('add')
+          .panel-body
+            .group-path
+              .form-group.item
+                .col-sm-2
+                  select.form-control(name='vendor',placeholder=__('type'),required)
+                    each vendor in vendors
+                      option(value=vendor.protocol) #{vendor.name}
+                .col-sm-2
+                  input.form-control(type='text', name='name',placeholder=__('name'),required)
+                .col-sm-7
+                  input.form-control(type='text', name='path',placeholder=__('input_path_placeholder'))
+                .col-sm-1
+                  button.btn.btn-default.remove-path(type='button') -
+        .form-group
+          .col-sm-offset-2.col-sm-10
+            button.btn.btn-default(type='submit')= __('save')
+  script(src='https://cdn.bootcss.com/jquery/3.3.1/jquery.min.js')
+  script.
+    $(function(){
+      var item
+      if($('.item').length){
+        item = $('.item:first').clone()
+        item.find('input').val('')
+      }
+      $('body').on('click','.create-path' , function(){
+        $('.group-path').append( item.clone() )
+      }).on('click' ,'.remove-path' , function(){
+        $(this).parents('.item').remove()
+      })
+
+      let example = $('.item:first')
+      example.find('[name="vendor"]').val('fs')
+      example.find('[name="name"]').val('演示目录')
+      example.find('[name="path"]').val('./example')
+    })
+  include partial/footer
+
+  

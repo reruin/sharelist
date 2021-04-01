@@ -1,6 +1,5 @@
 /*
  * xdrive 是 sharelist 内置的使用yaml描述的网盘系统 , 没有缓存
- * xd: rootId(yaml文件所在路径) + yaml文件名 + ':' + 排序
  */
 
 const name = 'ShareListDrive'
@@ -13,15 +12,26 @@ const defaultProtocol = 'xd'
 
 const yaml = require('yaml')
 
+const { URL } = require('url')
+
+const crypto = require('crypto')
+
+const md5 = (v) => {
+  return crypto.createHash('md5').update(v).digest('hex')
+}
+
 module.exports = ({isObject , isArray}) => {
 
   const diskMap = {}
 
-  const getDisk = (id) => {
-    let [rootId , diskPath] = id.split('->')
+  const parse = (id) => {
+    let data = new URL(id)
+
+    let rootId = data.hostname
+    let path = data.pathname.replace(/^\/+/,'').split('/')
     return {
       disk:diskMap[rootId] , 
-      path:(diskPath || '').replace(/^\/+/,'').split('/')
+      path
     }
   }
 
@@ -29,7 +39,8 @@ module.exports = ({isObject , isArray}) => {
   const createId = (d, rootId) => {
     d.forEach((i, index) => {
       if (isObject(i)) {
-        i.id = rootId + '/' + i.name.replace(/\.d\.ln$/, '').replace(/\.ln$/, '')
+        let name = i.name.replace(/\.d\.ln$/, '').replace(/\.ln$/, '')
+        i.id = rootId + '/' + name
         i.protocol = defaultProtocol
         if (i.children) {
           i.type = 'folder'
@@ -46,18 +57,22 @@ module.exports = ({isObject , isArray}) => {
     return d
   }
 
-  const mount = async (rootId, data) => {
-    let resp = { id: rootId, type: 'folder', protocol: defaultProtocol }
+  const mount = async (key,data) => {
 
     if (data) {
-      let json = yaml.parse(data)
 
-      json = createId(json, rootId + '->')
+      let key = md5(data)
+
+      let id = defaultProtocol+'://'+key
+
+      let resp = { id, type: 'folder', protocol: defaultProtocol }
+
+      let json = yaml.parse(data)
+      json = createId(json, id)
       resp.children = json
       resp.updated_at = Date.now()
 
-      diskMap[rootId] = resp
-
+      diskMap[key] = resp
       return resp
     } else {
       return undefined
@@ -65,12 +80,12 @@ module.exports = ({isObject , isArray}) => {
   }
 
   const findById = (id) => {
-    let { disk , path } = getDisk(id)
+    let { disk , path } = parse(id)
     if(disk){
       for (let i = 0; i < path.length && disk; i++) {
         disk = disk.children
         disk = disk.find(j => {
-          return `${j.name}` == path[i]
+          return j.name == decodeURIComponent(path[i])
 
           if (j.type == 'folder') {
             return `${j.name}.${j.ext}` == path[i]
@@ -79,18 +94,26 @@ module.exports = ({isObject , isArray}) => {
           }
         }) //[ parseInt(path[i]) ]
       }
-
       return disk
     }else{
       return []
     }
   }
 
-  const folder = async (id, data) => {
-    if (data.content) {
-      return mount(id, data.content)
-    } else {
-      return findById(id)
+  const folder = async (id,{ content } = {}) => {
+    try{
+      let json = yaml.parse(id)
+      if(json && typeof json == 'object'){
+        return mount(null,id)
+      }else{
+        throw new Error("")
+      }
+    }catch(e){
+      if(content){
+        return mount(id,content)
+      }else{
+        return findById(id)
+      }
     }
   }
 

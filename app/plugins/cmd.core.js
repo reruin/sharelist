@@ -62,6 +62,12 @@ module.exports = ({ cache , getVendor , getConfig , getRuntime , updateFolder , 
       }
     }
 
+    if(resp.downloadable && getRuntime().download){
+      let vendor = getVendor(resp.protocol)
+      if( vendor && vendor.downloadFolder ){
+        resp.url = await vendor.downloadFolder(resp.id , p.split('/').pop())
+      }
+    }
     let ret = clone(resp)
     if(ret.children){
       ret.children.forEach(i => {
@@ -93,8 +99,8 @@ module.exports = ({ cache , getVendor , getConfig , getRuntime , updateFolder , 
       id: i.path.split(':').slice(1).join(':'),
       protocol: i.path.split(':')[0],
       name: i.name,
-      size: '-',
-      updated_at: '-',
+      size: 0,
+      updated_at: '',
       type: 'folder'
     }))
 
@@ -154,6 +160,9 @@ module.exports = ({ cache , getVendor , getConfig , getRuntime , updateFolder , 
       }
 
       if(hit.protocol == 'root' ){
+        if(filter && filter(hit , [])){
+          return hit;
+        }
         continue
       }
       
@@ -175,7 +184,7 @@ module.exports = ({ cache , getVendor , getConfig , getRuntime , updateFolder , 
       }
       
       if( hit.type == 'folder'){
-        let t = await vendor.folder(hit.id , { req : getRuntime('req')})
+        let t = await vendor.folder(hit.id , { content:hit.content, req : getRuntime('req')})
         //console.log(t.type,t.children)
         if( t ){
           if( t.type == 'folder' ){
@@ -185,9 +194,15 @@ module.exports = ({ cache , getVendor , getConfig , getRuntime , updateFolder , 
             }
           }
           else if(t.type == 'redir') {
-            hit = await process_fast(t.path)
-            //不再参与后续
-            break;
+            hit = await process_fast(t.path , (d , p) => {
+              let t = [...p]
+              t[idx] = paths[idx]
+              if(filter && filter(d , t)){
+                return hit;
+              }
+            })
+            
+            return hit
           }
           else{
             hit = await updateFile(t)

@@ -4,7 +4,9 @@ const path = require('path')
 
 const crypto = require('crypto')
 
-const md = require('markdown-it')()
+const md = require('markdown-it')({ html:true })
+
+const parseXML = require('xml2js').parseString
 
 const rnd = (min, max) => Math.floor(min + Math.random() * (max - min))
 
@@ -133,6 +135,55 @@ const md5 = (v) => {
   return crypto.createHash('md5').update(v).digest('hex')
 }
 
+const { StringDecoder } = require('string_decoder');
+
+const parseStream = (stream , encoding = 'utf-8') => new Promise((resolve , reject) => {
+  let str = ''
+  const decoder = new StringDecoder(encoding);
+  stream.on('data' , (chunk) => {
+    str += decoder.write(chunk);
+  })
+
+  stream.on('end' , () => {
+    resolve(str)
+  })
+})
+
+const xml2json = ( xml , options = {}) => {
+  return new Promise((resolve , reject) => {
+    parseXML(xml, options, (err, res) => {
+      if (err) resolve(null)
+      else resolve(res)
+    })
+  })
+}
+
+const match = (route , pathname) => {
+  let optionalParam = /\((.*?)\)/g ,
+    namedParam    = /(\(\?)?:\w+/g,
+    splatParam    = /\*\w+/g,
+    escapeRegExp  = /[\-{}\[\]+?.,\\\^$|#\s]/g;
+  let route_new = route.replace(escapeRegExp, '\\$&')
+    .replace(optionalParam, '(?:$1)?')
+    .replace(namedParam, function(match, optional) {
+        return optional ? match : '([^/?]+)';
+    })
+    .replace(splatParam, '([^?]*?)');
+  let expr = new RegExp('^' + route_new + '(?:\\?([\\s\\S]*))?$');
+  let res = expr.exec(route).slice(1)
+  res.pop()
+  let key = res.map( i => i.replace(/^\:/,''))
+  let hit = expr.exec( pathname )
+  let params = {}
+  if( hit ){
+    hit = hit.slice(1)
+    key.forEach((i , idx) => {
+      params[i] = hit[idx]
+    })
+  }
+  return params
+}
+
 module.exports = {
   parsePath,
   getFileType,
@@ -156,6 +207,9 @@ module.exports = {
   extname,
   markdownParse,
   md5,
+  parseStream,
+  xml2json,
+  match,
   params(url) {
     url = url.split('?')[1]
     let reg = /(?:&)?([^=]+)=([^&]*)/ig,

@@ -3,7 +3,7 @@ const os = require('os')
 const { createFiledb } = require('./utils/db/filedb');
 const configPath = process.cwd() +'/cache/config.json'
 const port = process.env.PORT || 33001
-const runtime = {}
+var runtime = {}
 
 const db = createFiledb(configPath , {raw:true} , {
   port , 
@@ -11,6 +11,8 @@ const db = createFiledb(configPath , {raw:true} , {
   proxy_enable : 0 ,
 
   preview_enable : 1,
+
+  index_enable:1,
 
   webdav_path : '/webdav/',
   //目录刷新时间 15分钟getDrive
@@ -37,6 +39,8 @@ const db = createFiledb(configPath , {raw:true} , {
 
   anonymous_uplod_enable:0,
 
+  anonymous_download:'',
+
   plugin_option:[],
 
   custom_style:'',
@@ -48,7 +52,15 @@ const db = createFiledb(configPath , {raw:true} , {
 
   proxy_server:'',
 
-  ocr_server:'https://api.reruin.net/ocr'
+  ocr_server:'https://api.reruin.net/ocr',
+
+  smb_server_enable: false,
+  
+  smb_server_port:8445,
+
+  smb_anonymous_enable:true,
+
+  theme:'default',
 });
 
 if(process.env.PORT){
@@ -58,7 +70,7 @@ if(process.env.PORT){
 const save = async (d) => db.set(d)
 
 const installed = () => {
-  return db.get('path') && db.get('token')
+  return !!db.get('token')
 }
 
 const getConfig = (key) => db.get(key)
@@ -70,7 +82,7 @@ const setIgnorePaths = (key , paths) => {
 }
 
 const getIgnorePaths = (key , paths) => {
-  return [].concat(...Object.values(db.get('ignore_paths') || {}))
+  return [].concat(...Object.values(db.get('ignore_paths') || {})).filter(i => !!i)
 }
 
 
@@ -78,12 +90,20 @@ const getAllConfig = (key) => db.all
 
 const getPath = () => [].concat( db.get('path') || [] )
 
-const getRuntime = (key) => {
-  return runtime[key]
+const getRuntime = () => runtime
+
+const setRuntime = (value) => {
+  runtime = value
 }
 
 const getSkin = (key) => {
   return db.get('skin') || 'default'
+}
+
+const setSkin = (name) => {
+  if( name != getSkin('skin') ){
+    save({skin:key})
+  }
 }
 
 const getPluginOption = (key) => {
@@ -103,9 +123,6 @@ const setPluginOption = (key , value) => {
   db.save()
 }
 
-const setRuntime = (key , value) => {
-  runtime[key] = value
-}
 
 const saveDrive = (value , name) => {
   if(!name) name = decodeURIComponent(runtime.req.path.replace(/^\//g,''))
@@ -144,8 +161,29 @@ const getDrives = (protocols) => {
   return ret
 }
 
+const getProxyServer = () => {
+  let servers = (getConfig('proxy_server') || '').split(';').map( i => i.split('|') )
+  if( servers.length == 0 ) {
+    return ''
+  }else if(servers.length == 1){
+    return servers[0][0]
+  }
+  else{
+    let weight = servers.map(i => parseInt(i[1]))
+    let sum = weight.reduce((t,c) => t + c, 0)
+    let rnd = Math.floor(Math.random() * sum)
+
+    for(let i = 0; i < weight.length ; i++){
+      rnd -= weight[i]
+      if( rnd < 0 ){
+        return servers[i][0]
+      }
+    }
+  }
+}
+
 const checkAccess = (token) => {
   return token === db.get('token')
 }
 
-module.exports = { getConfig, setIgnorePaths, getIgnorePaths, getAllConfig, save , installed , getPath , setRuntime , getRuntime , saveDrive , getDrive , getSkin , getDrives , getPluginOption , setPluginOption , checkAccess }
+module.exports = { getConfig, setIgnorePaths, getIgnorePaths, getAllConfig, setConfig:save, save , installed , getPath , setRuntime , getRuntime , saveDrive , getDrive , getSkin , getDrives , getPluginOption , setPluginOption , checkAccess , getProxyServer }

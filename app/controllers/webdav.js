@@ -9,6 +9,9 @@ var virtualFile = {
 
 }
 
+/**
+ * Webdav props default options
+ */
 const default_options = {
   ns:{
     name:'D',
@@ -24,6 +27,12 @@ const default_options = {
   }
 }
 
+/**
+ * Conv date to GMT
+ * 
+ * @param {string} [d]
+ * @return {mixed}
+ */
 const dateFormat = (d) => {
   let nd = new Date(d)
   if (nd instanceof Date && !isNaN(nd)) {
@@ -33,9 +42,21 @@ const dateFormat = (d) => {
   }
 }
 
+/**
+ * Create webdav xml response
+ *
+ * @param {object} [data]
+ * @param {object} [options] 
+ * @param {object} [optiosn.props]
+ * @param {object} [optiosn.ns]
+ * @param {string} [optiosn.ns.name]
+ * @param {string} [optiosn.ns.value]
+ * @return {string} XML string
+ */
 const propsCreate = (data, options) => {
   let out = ''
   let { props, ns: { name, value } } = options
+  if( name ) name = name + ':'
   for (let key in props) {
 
     // TODO getlastmodified format: 
@@ -45,25 +66,25 @@ const propsCreate = (data, options) => {
     if (key == 'getlastmodified' && data.updated_at) {
       let getlastmodified = dateFormat(data.updated_at)
       if (getlastmodified) {
-        out += `<${name}:${key}>${getlastmodified}</${name}:${key}>`
+        out += `<${name}${key}>${getlastmodified}</${name}${key}>`
       }
     }
     if (key == 'displayname') {
-      out += `<${name}:${key}>${data.name.replace(/&/g,'&amp;').replace(/\</g,'&lt;')}</${name}:${key}>`
+      out += `<${name}${key}>${data.name.replace(/&/g,'&amp;').replace(/\</g,'&lt;')}</${name}${key}>`
     }
     if (key == 'getcontentlength') {
-      out += `<${name}:${key}>${parseInt(data.size)}</${name}:${key}>`
+      out += `<${name}${key}>${parseInt(data.size || 0)}</${name}${key}>`
     }
     if (key == 'resourcetype') {
-      out += `<${name}:${key}>${data.type == 'folder' ? `<${name}:collection/>` : ''}</${name}:${key}>`
+      out += `<${name}${key}>${data.type == 'folder' ? `<${name}collection/>` : ''}</${name}${key}>`
     }
     if (key == 'getcontenttype' && data.type != 'folder') {
-      out += `<${name}:${key}>${data.mime}</${name}:${key}>`
+      out += `<${name}${key}>${data.mime}</${name}${key}>`
     }
     if (key == 'creationdate' && data.created_at) {
       let creationdate = dateFormat(data.created_at)
       if (creationdate) {
-        out += `<${name}:${key}>${creationdate}</${name}:${key}>`
+        out += `<${name}${key}>${creationdate}</${name}${key}>`
       }
     }
   }
@@ -71,6 +92,12 @@ const propsCreate = (data, options) => {
   return out
 }
 
+/**
+ * Parse prop from webdab request
+ *
+ * @param  {object} [data]
+ * @return {object}
+ */
 const propfindParse = (data, ns) => {
   if(!data){
     return default_options
@@ -78,8 +105,8 @@ const propfindParse = (data, ns) => {
 
   let findprop_ns = nsParse(data)
   let method = Object.keys(data)[0].split(':').pop() || 'propfind'
+  let fp_ns_name = findprop_ns && findprop_ns.name ? `${findprop_ns.name}:` : ''
 
-  let fp_ns_name = findprop_ns ? `${findprop_ns.name}:` : ''
   let props = {}
   if(data[`${fp_ns_name}${method}`]['$$'].hasOwnProperty(`${fp_ns_name}allprop`)){
     return default_options
@@ -98,6 +125,12 @@ const propfindParse = (data, ns) => {
   }
 }
 
+/**
+ * Parse props from webdav request
+ * 
+ * @param {object} [data]
+ * @return {object|boolean}
+ */
 const nsParse = (data) => {
   if(!data) return false
 
@@ -106,9 +139,9 @@ const nsParse = (data) => {
   if (data['$']) {
     let attrs = Object.keys(data['$']),
       ns_name, ns_val
-    let hit = attrs.find(i => /xmlns\:/.test(i))
+    let hit = attrs.find(i => /xmlns\:?/.test(i))
     if (hit) {
-      ns_name = hit.split(':')[1]
+      ns_name = hit.split(':')[1] || ''
       ns_val = data['$'][hit]
       return { name: ns_name, value: ns_val }
     }
@@ -116,15 +149,23 @@ const nsParse = (data) => {
   return false
 }
 
-
-//<?xml version="1.0" encoding="utf-8" ?> <D:multistatus xmlns:D='DAV:'> <D:response> <D:href>http://www.domain.example.com/public/</D:href> <D:propstat> <D:prop> <D:lockdiscovery> <D:activelock> <D:locktype><D:write/></D:locktype> <D:lockscope><D:exclusive/></D:lockscope> <D:depth>0</D:depth> <D:owner>James Smith</D:owner> <D:timeout>Infinite</D:timeout> <D:locktoken> <D:href>opaquelocktoken:f81de2ad-7f3d-a1b3-4f3c-00a0c91a9d76</D:href> </D:locktoken> </D:activelock> </D:lockdiscovery> </D:prop> <D:status>HTTP/1.1 200 OK</D:status> </D:propstat> </D:response> </D:multistatus>
+/**
+ * Create webdav responese xml by data and props options
+ *
+ * @param {object} [data] file data
+ * @param {object} [options]
+ * @param {object} [options.props] Available props
+ * @param {object} [options.path]  Current folder path
+ * @param {object} [options.ns]
+ * @return {string} XML string
+ */
 const respCreate = (data, options) => {
   let { props, path, ns: { name, value } } = options
 
   let body = `<?xml version="1.0" encoding="utf-8" ?>`
 
   let xmlns = name ? `${name}:` : ''
-  body += `<${xmlns}multistatus${name ? (' xmlns:'+name+'="'+value+'"') : ''}>`
+  body += `<${xmlns}multistatus xmlns${name ? (':'+name) : '' }="${value}">`
   data.forEach(file => {
     if (file.hidden !== true) {
       let href = (/*file.href ||*/ (path+'/'+encodeURIComponent(file.name))).replace(/\/{2,}/g, '/') //path +'/' + encodeURIComponent(file.name)
@@ -136,65 +177,39 @@ const respCreate = (data, options) => {
 
   body += `</${xmlns}multistatus>`
   body = body.replace(/^\s+/g,'').replace(/[\r\n]/g,'')
-  // console.log(body)
-  /*return `<?xml version="1.0" encoding="utf-8" ?>
-<D:multistatus xmlns:D="DAV:">
-    <D:response>
-        <D:href>/%E6%BC%94%E7%A4%BA%E7%9B%AE%E5%BD%95/example/filesystem_windows_disk_c/Users/abcdef</D:href>
-        <D:propstat>
-            <D:status>HTTP/1.1 200 OK</D:status>
-            <D:prop>
-                <D:getlastmodified>Mon, 25 Feb 2019 12:20:01 GMT</D:getlastmodified>
-                <D:getcontentlength>100</D:getcontentlength>
-                <D:creationdate>Mon, 25 Feb 2019 12:20:01 GMT</D:creationdate>
-                <D:resourcetype>
-                    <D:collection />
-                </D:resourcetype>
-                <D:displayname>你好</D:displayname>
-            </D:prop>
-        </D:propstat>
-    </D:response>
-    <D:response>
-        <D:href>/%E6%BC%94%E7%A4%BA%E7%9B%AE%E5%BD%95/example/filesystem_windows_disk_c/Users/abcdef2</D:href>
-        <D:propstat>
-            <D:status>HTTP/1.1 200 OK</D:status>
-            <D:prop>
-                <D:getlastmodified>Mon, 25 Feb 2019 12:20:01 GMT</D:getlastmodified>
-                <D:getcontentlength>100</D:getcontentlength>
-                <D:creationdate>Mon, 25 Feb 2019 12:20:01 GMT</D:creationdate>
-                <D:resourcetype>
-                    <D:collection />
-                </D:resourcetype>
-                <D:displayname>你好2</D:displayname>
-            </D:prop>
-        </D:propstat>
-    </D:response>
-</D:multistatus>`*/
   return body
 }
 
-class WebDAV {
+class Request {
+  /**
+   * Initialize a new Request for WebDAV
+   *
+   * @param {Object} ctx
+   */
   constructor(ctx) {
-    this.path = null
     this.ctx = ctx
     this.davPoweredBy = null
     this.httpAuthRealm = "ShareList WebDAV"
-
     this.allows = ['GET', 'PUT', 'HEAD', 'OPTIONS', 'PROPFIND']
   }
 
-  async request(ctx, next) {
-    this.ctx = ctx
+  /**
+   * Execute handler
+   * 
+   * @api private
+   */
+  async exec(){
+    let { ctx } = this
 
-    this.path = /*this.ctx.protocol + '://' + this.ctx.host +*/ this.ctx.path
+    this.path = /*this.ctx.protocol + '://' + this.ctx.host +*/ ctx.path
 
     this.setHeader("X-Dav-Powered-By", this.davPoweredBy || 'ShareList')
 
     this.depth = ctx.webdav.depth
 
-    this.incompatibleUserAgents = /(WebDAVFS|Microsoft-WebDAV-MiniRedir)/i.test(ctx.get('user-agent'))
+    this.incompatibleUserAgents = true ///(WebDAVFS|Microsoft-WebDAV-MiniRedir|davfs2)/i.test(ctx.get('user-agent'))
 
-    let method = this.ctx.method.toLowerCase()
+    let method = ctx.method.toLowerCase()
 
     const wrapperFn = "http_" + method;
     if (
@@ -208,16 +223,35 @@ class WebDAV {
     }
   }
 
+  /**
+   * Set header
+   *
+   * @param  {string} [k] key
+   * @param  {string} [v] value
+   * @return void
+   */
   setHeader(k, v) {
     this.ctx.set(k, v)
   }
 
+  /**
+   * Set body
+   *
+   * @param  {mixed} [body] 
+   * @return void
+   */
   setBody(body) {
     this.ctx.type = 'text/xml; charset="utf-8"'
     this.setHeader('Content-Length', body.length);
     this.ctx.body = body
   }
 
+  /**
+   * Set body status
+   *
+   * @param  {string|boolean} [status] 
+   * @return void
+   */
   setStatus(status) {
     if (status === true) {
       status = "200 OK"
@@ -228,6 +262,12 @@ class WebDAV {
     this.setHeader('X-WebDAV-Status', status)
   }
 
+  /**
+   * OPTIONS method
+   *
+   * @param  void
+   * @return void
+   */
   async http_options() {
 
     const allows = this.allows
@@ -252,7 +292,6 @@ class WebDAV {
    * @return void
    */
   async http_propfind() {
-    
     let options = propfindParse(this.ctx.webdav.data)
     options.path = this.path
     options.depth = this.depth
@@ -313,35 +352,6 @@ class WebDAV {
     await api(this.ctx)
   }
   /*
-  //create
-  async http_put() {
-    let ret = await api(this.ctx)
-    this.setStatus("200 Success")
-  }
-
-  // put时 webdav 将lock文件 此方法没有实现
-  async http_lock(){
-    if( !virtualFile[this.ctx.path] ){
-      virtualFile[this.ctx.path] = {}
-    }
-
-    virtualFile[this.ctx.path]['locked'] = true
-    this.setStatus("200 Success")
-    this.setBody(`<?xml version="1.0" encoding="utf-8" ?> <D:multistatus xmlns:D='DAV:'> <D:response> <D:href>${this.ctx.path}</D:href> <D:propstat> <D:prop> <D:lockdiscovery> <D:activelock> <D:locktype><D:write/></D:locktype> <D:lockscope><D:exclusive/></D:lockscope> <D:depth>0</D:depth> <D:owner>ShareList</D:owner> <D:timeout>Infinite</D:timeout> <D:locktoken> <D:href>opaquelocktoken:f81de2ad-7f3d-a1b3-4f3c-00a0c91a9d76</D:href> </D:locktoken> </D:activelock> </D:lockdiscovery> </D:prop> <D:status>HTTP/1.1 200 OK</D:status> </D:propstat> </D:response> </D:multistatus>`)
-
-  }
-
-  async http_unlock(){
-    if( !virtualFile[this.ctx.path] ){
-      virtualFile[this.ctx.path] = {}
-    }
-    virtualFile[this.ctx.path]['locked'] = false
-
-    this.setStatus("200 Success")
-  }
-  */
-
-  /*
   http_head() {}
 
   http_copy() {}
@@ -360,4 +370,9 @@ class WebDAV {
   */
 }
 
-module.exports = new WebDAV()
+const webdav = async (ctx , next) => {
+  let req = new Request(ctx)
+  return await req.exec()
+}
+
+module.exports = webdav

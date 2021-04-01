@@ -1,0 +1,17 @@
+extends partial/layout
+
+block content
+  .preview
+    header
+      .wrap.detail
+        a.home.ellipsis #{data.name}
+        -if(displayDownloadLabel)
+          a.download-menu(rel="noreferrer",href=url)
+            i.ic.ic-download
+    section
+      .detail
+        -if(data.body)
+          | !{data.body}
+        -else
+          p= __('unable_to_preview')   
+  // include partial/footer

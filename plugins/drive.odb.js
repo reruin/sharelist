@@ -146,5 +146,5 @@ module.exports = ({ request, cache, getConfig , datetime }) => {
     }
   }
 
-  return { name, label:'* OD Business 非API', version, drive: { protocols, folder, file } }
+  return { name, label:'(废弃)OD Business', version, drive: { protocols, folder, file } }
 }

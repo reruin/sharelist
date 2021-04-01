@@ -81,7 +81,7 @@ class Manager {
       if(hit){
         return { ...hit, path:data.path }
       }else{
-        return { error:'挂在失败，请确保账号或者密码正确' }
+        return { error:'挂载失败，请确保账号或者密码正确' }
       }
     }
 
@@ -127,7 +127,7 @@ class Manager {
     }
   }
   //create cookies
-  async create(username , password){
+  async create(username , password , path = '/'){
     //0 准备工作： 获取必要数据
     let headers = {'User-Agent':'Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/69.0.3497.100 Safari/537.36'}
     let { body , headers:headers2} = await this.request.get('https://cloud.189.cn/udb/udb_login.jsp?pageId=1&redirectURL=/main.action',{headers})
@@ -187,6 +187,8 @@ class Manager {
           imgBase64 = "data:" + resp.headers["content-type"] + ";base64," + Buffer.from(resp.body).toString('base64');
         }
         let { error , code } = await this.ocr(imgBase64)
+        console.log('validateCode:['+code+']')
+
         //服务不可用
         if(error){
           formdata.validateCode = ''
@@ -195,7 +197,6 @@ class Manager {
         }
         else if(code){
           formdata.validateCode = code
-          console.log('validateCode:['+code+']')
         }
         //无法有效识别
         else{
@@ -221,18 +222,24 @@ class Manager {
 
         continue;
       }
+
       if( resp.body && resp.body.toUrl ){
         resp = await this.request.get(resp.body.toUrl , { followRedirect:false, headers })
         let cookies = resp.headers['set-cookie'].join('; ')
-        let client = { username , password , cookies , updated_at: Date.now() }
-
-        await this.updateHandle(this.stringify({username , password}))
+        let client = { username , password , cookies , updated_at: Date.now() , path }
+        if(this.clientMap[username]){
+          client.path = this.clientMap[username].path
+        }
 
         this.clientMap[username] = client
+
+        await this.updateHandle(this.stringify({username , password, path:client.path}))
+
         result = true
         break;
       }else{
         msg = resp.body.msg
+        break;
       }
 
     }
@@ -242,7 +249,6 @@ class Manager {
 
   async update(id){
     let data = this.parse(id)
-
     if(data.username){
       let hit = this.clientMap[data.username]
       if(hit){
@@ -316,14 +322,14 @@ module.exports = ({ request, cache, getConfig, querystring, base64, saveDrive, g
   }
 
   const fetchData = async (id,rest) => {
-    let resp , retry_times = 5
+    let resp = { error:false }, retry_times = 5
     while(true && --retry_times){
-      resp = await request({async:true,...rest})
+      resp.data = await request({async:true,...rest})
       //cookie失效
-      if(resp.headers['Content-Type'] && resp.headers['Content-Type'].includes('text/html')){
+      if(resp.data.headers['Content-Type'] && resp.data.headers['Content-Type'].includes('text/html')){
         let { result , msg } = await manager.update(id)
         if( result ){
-          resp = { msg }
+          resp = { msg , error:true }
           break;
         }else{
           continue
@@ -358,39 +364,55 @@ module.exports = ({ request, cache, getConfig, querystring, base64, saveDrive, g
     }
    
     if(!path) path = -11
-    let resp = await fetchData(id,{
-      url:`https://cloud.189.cn/v2/listFiles.action?fileId=${path}&mediaType=&keyword=&inGroupSpace=false&orderBy=1&order=ASC&pageNum=1&pageSize=9999&noCache=${Math.random()}`,
-      method:'GET',
-      headers:{
-        'User-Agent':'Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/69.0.3497.100 Safari/537.36',
-        'Cookie': cookies,
-      },
-      json:true
-    })
 
-    if (!resp || !resp.body) {
-      return { id, type: 'folder', protocol: defaultProtocol,body:resp.msg || '解析错误' }
+    let children = [] , pageNum = 1
+    while(true){
+      let { data , msg, error } = await fetchData(id,{
+        url:`https://cloud.189.cn/v2/listFiles.action?fileId=${path}&mediaType=&keyword=&inGroupSpace=false&orderBy=1&order=ASC&pageNum=${pageNum}&pageSize=9999&noCache=${Math.random()}`,
+        method:'GET',
+        headers:{
+          'User-Agent':'Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/69.0.3497.100 Safari/537.36',
+          'Cookie': cookies,
+        },
+        json:true
+      })
+    
+      if (error || !data || !data.body) {
+        return { id, type: 'folder', protocol: defaultProtocol,body:msg || '解析错误' }
+      }
 
+      for(let file of data.body.data){
+        let item = {
+          id: manager.stringify({username , path:file.fileId}),
+          name: file.fileName,
+          protocol: defaultProtocol,
+          created_at: file.createTime,
+          updated_at: file.lastOpTime,
+          type: file.isFolder ? 'folder' : 'file',
+          thumb:file.icon ? file.icon.smallUrl : ''
+        }
+        if( item.type != 'folder' ){
+          item.ext = file.fileType
+          item.size = parseInt(file.fileSize)
+          item.url = 'https:'+file.downloadUrl
+
+          if(file.icon) item.icon = file.icon.smallUrl
+        }
+        children.push(item)
+      }
+      
+      let count = data.body.recordCount
+      let currentCount = data.body.pageNum * data.body.pageSize
+
+      if( currentCount < count ){
+        //翻页
+        pageNum++
+        continue
+      }else{
+        break;
+      }
     }
-    let children = resp.body.data.map( file => {
-      let item = {
-        id: manager.stringify({username , path:file.fileId}),
-        name: file.fileName,
-        protocol: defaultProtocol,
-        created_at: file.createTime,
-        updated_at: file.lastOpTime,
-        type: file.isFolder ? 'folder' : 'file',
-      }
-      if( item.type != 'folder' ){
-        item.ext = file.fileType
-        item.size = parseInt(file.fileSize)
-        item.downloadUrl = 'https:'+file.downloadUrl
-
-        if(file.icon) item.icon = file.icon.smallUrl
-      }
-
-      return item
-    })
+    
     let result = { id, type: 'folder', protocol: defaultProtocol }
     result.$cached_at = Date.now()
     result.children = children
@@ -408,10 +430,12 @@ module.exports = ({ request, cache, getConfig, querystring, base64, saveDrive, g
 
     let { path, cookies , username } = await prepare(id)
 
-    let data = options.data || {}
+    let filedata = options.data || {}
 
-    let resp = await fetchData(id,{
-      url:data.downloadUrl,
+    let url = filedata.url
+
+    let { data , error , msg } = await fetchData(id,{
+      url,
       method:'GET',
       followRedirect:false ,
       headers:{
@@ -420,20 +444,30 @@ module.exports = ({ request, cache, getConfig, querystring, base64, saveDrive, g
       }
     })
 
-    if(!resp) return false
-
-    let url = resp.headers.location
-
-    resp = {
+    if(error || !data) return false
+    if(data.headers.location){
+      let redir = await request({
+        async:true,
+        url:data.headers.location,
+        method:'GET',
+        followRedirect:false ,
+        headers:{
+          'User-Agent':'Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/69.0.3497.100 Safari/537.36',
+        }
+      })
+      url = redir.headers.location
+    }
+    console.log(url)
+    return {
       id,
       url,
-      name: data.name,
-      ext: data.ext,
+      name: filedata.name,
+      ext: filedata.ext,
       protocol: defaultProtocol,
-      size:data.size,
+      size:filedata.size,
+      thumb:filedata.thumb
     }
 
-    return resp
   }
 
   const createReadStream = async ({id , size , options = {}} = {}) => {
@@ -444,6 +478,38 @@ module.exports = ({ request, cache, getConfig, querystring, base64, saveDrive, g
       let readstream = request({url:resp.url , method:'get'})
       return wrapReadableStream(readstream , { size: size } )
     }
+  }
+
+    /**
+   * create folder
+   *
+   * @param {string} [id] folder id
+   * @param {string} [target] file path
+   * @return {string} 
+   *
+   * @api private
+   */
+  const mkdir = async (id , folder , cookies) => {
+    if( typeof folder == 'string' ) folder = [folder]
+    //递归创建
+    for(let i = 0; i < folder.length; i++){
+      let resp = await axios({
+        url:`https://cloud.189.cn/v2/createFolder.action?parentId=${id}&fileName=${children[i]}&noCache=${Math.random()}`,
+        method:'GET',
+        headers:{
+          'User-Agent':'Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/69.0.3497.100 Safari/537.36',
+          'Cookie': cookies,
+        },
+      })
+
+      if (!resp || !resp.data) {
+        return false
+      }
+
+      id = resp.data.fileId
+    }
+
+    return id
   }
 
   return { name, label:'天翼云 账号登录版', version, drive: { protocols, folder, file , createReadStream  } }

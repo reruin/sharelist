@@ -201,5 +201,5 @@ module.exports = ({ request , getConfig , datetime , cache , wrapReadableStream 
     }
   }
 
-  return { name ,label:'GD ID挂载版', version, drive:{ protocols, folder , file , createReadStream } }
+  return { name ,label:'GoogleDrive ID', version, drive:{ protocols, folder , file , createReadStream } }
 }

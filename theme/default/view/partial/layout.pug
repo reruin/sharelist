@@ -1,0 +1,16 @@
+doctype html
+html
+  head
+    title= _config_('title')
+    meta(charset='utf8')
+    meta(name='viewport', content='width=device-width, initial-scale=1.0,minimum-scale=1.0, maximum-scale=1.0, user-scalable=no')
+    meta(name='referrer', content="never")
+    // META
+    link(rel='stylesheet', href='//cdn.bootcss.com/bootstrap/3.3.7/css/bootstrap.min.css')
+    link(rel='stylesheet', type='text/css',href='https://fonts.loli.net/css?family=Source+Code+Pro')
+    link(rel='stylesheet', type='text/css', href='/style/main.css?'+__timestamp__)
+    -if(g_config && g_config.custom_style)
+      .
+        !{g_config.custom_style}
+  body
+    block content

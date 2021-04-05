@@ -176,16 +176,20 @@ class Manager {
     //0 准备工作： 获取必要数据
     let resp
     try{
-      resp = await this.helper.request.post('https://websv.aliyundrive.com/token/refresh', { refresh_token }, {
+      resp = await this.helper.request.post('https://auth.aliyundrive.com/v2/account/token', { 
+        refresh_token, 
+        grant_type: "refresh_token"
+      }, {
         headers: {
           'User-Agent': 'None',
         },
+        body:true,
         json:true
       })
     }catch(e){
-      
+      resp = e
     }
-    console.log(resp.body)
+
     if( !resp || !resp.body || !resp.body.access_token) return { error: true, msg: '无法获取登录token' }
 
     let { user_id , access_token , default_drive_id:drive_id , expires_in } = resp.body
@@ -390,7 +394,7 @@ module.exports = class Driver {
       if (!resp.body) return false
 
       if (!resp.body.items) return manager.error('error', false)
-
+console.log(resp.body.items)
       const ts = Date.now()
       let children = resp.body.items.map((i) => {
         return {

@@ -378,7 +378,10 @@ module.exports = class Driver {
       try { 
         resp = await this.helper.request.post(`https://api.aliyundrive.com/v2/file/list`,{
             drive_id, 
-            parent_file_id
+            parent_file_id,
+            limit: 10000,
+            order_by: 'updated_at',
+            order_direction: 'DESC'
           },
           {
             headers: {

@@ -193,7 +193,9 @@ class Manager {
     if( !resp || !resp.body || !resp.body.access_token) return { error: true, msg: '无法获取登录token' }
 
     let { user_id , access_token , default_drive_id:drive_id , expires_in } = resp.body
-   
+    
+    refresh_token = resp.body.refresh_token
+    
     let expires_at = Date.now() + expires_in * 1000
 
     let client = { user_id, access_token, refresh_token, expires_at, drive_id, path:`/` }

@@ -444,7 +444,7 @@ console.log(resp.body.items)
         ext: hit.ext,
         protocol: protocol,
         size: hit.size,
-        thumb: i.thumbnail,
+        thumb: hit.thumb,
         // $expired_at: expired_at,
         //proxy:true,
         headers:{

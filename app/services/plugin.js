@@ -422,6 +422,7 @@ const loader = (type, ...rest) => {
     services.sendStream = getStream
 
     for (let i = 0; i<files.length;i++) {
+      if(!files[i].endsWith('.js')) continue
       let filepath = path.join(path.resolve(__dirname,'../../'+type),files[i])
       let instance = new (require(filepath))(services)
       let name = instance.name || (type+'_' + files[i].replace(/\./g,'_'))

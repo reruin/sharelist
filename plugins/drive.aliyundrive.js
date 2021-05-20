@@ -193,7 +193,9 @@ class Manager {
     if( !resp || !resp.body || !resp.body.access_token) return { error: true, msg: '无法获取登录token' }
 
     let { user_id , access_token , default_drive_id:drive_id , expires_in } = resp.body
-   
+    
+    refresh_token = resp.body.refresh_token
+    
     let expires_at = Date.now() + expires_in * 1000
 
     let client = { user_id, access_token, refresh_token, expires_at, drive_id, path:`/` }
@@ -378,7 +380,8 @@ module.exports = class Driver {
       try { 
         resp = await this.helper.request.post(`https://api.aliyundrive.com/v2/file/list`,{
             drive_id, 
-            parent_file_id
+            parent_file_id,
+            limit:10000
           },
           {
             headers: {
@@ -394,7 +397,7 @@ module.exports = class Driver {
       if (!resp.body) return false
 
       if (!resp.body.items) return manager.error('error', false)
-console.log(resp.body.items)
+
       const ts = Date.now()
       let children = resp.body.items.map((i) => {
         return {
@@ -444,8 +447,9 @@ console.log(resp.body.items)
         protocol: protocol,
         size: hit.size,
         // $expired_at: expired_at,
-        //proxy:true,
+        // proxy:true,
         headers:{
+          'referer': 'https://www.aliyundrive.com/',
           'Referrer-Policy':'no-referrer',
           //'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/88.0.4324.104 Safari/537.36'
         }

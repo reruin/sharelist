@@ -147,6 +147,8 @@ class Manager {
           <form class="form-horizontal" method="post">
             <input type="hidden" name="act" value="install" />
             <div class="form-group"><input class="sl-input" type="text" name="refresh_token" value="" placeholder="refresh_token" /></div>
+            <div class="form-group"><input class="sl-input" type="text" name="rootPath" value="" placeholder="初始地址" /></div>
+            <p style="font-size:11px;color:#555;">初始地址 可用于选定初始文件夹。留空时sharelist会匹配默认值。 <br><br>https://www.aliyundrive.com/drive/folder/xxxxxxxxxxx</p>
             <button class="sl-button btn-primary" id="signin" type="submit">确定</button></form>
         </div>
       </div>
@@ -172,7 +174,7 @@ class Manager {
    * @return {object}
    * @api private
    */
-  async create({refresh_token}) {
+  async create({refresh_token , root_id}) {
     //0 准备工作： 获取必要数据
     let resp
     try{
@@ -198,11 +200,11 @@ class Manager {
     
     let expires_at = Date.now() + expires_in * 1000
 
-    let client = { user_id, access_token, refresh_token, expires_at, drive_id, path:`/` }
+    let client = { user_id, access_token, refresh_token, expires_at, drive_id, root_id, path: root_id ? `/${root_id}/`: `/` }
 
     this.clientMap[user_id] = client
 
-    await this.updateDrives(this.stringify({ user_id, path: client.path , expires_at , drive_id, access_token , refresh_token }))
+    await this.updateDrives(this.stringify({ user_id, path: client.path, expires_at, drive_id, access_token, refresh_token }))
 
     return { error:false }
   }
@@ -241,7 +243,10 @@ class Manager {
     if( unmounted ){
       let data
       if (req.body && req.body.refresh_token && req.body.act == 'install') {
-        let options = { refresh_token: req.body.refresh_token }
+        let { refresh_token, rootPath } = req.body
+        let options = { refresh_token }
+        options.root_id = (rootPath.match(/(?<=\/folder\/)([^\/]+)/) || [''])[0]
+
         let { error, msg } = await this.create(options)
         if (error) {
           data = this.error(msg)

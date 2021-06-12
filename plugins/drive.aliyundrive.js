@@ -338,6 +338,10 @@ module.exports = class Driver {
 
   }
 
+  async nextAction(){
+
+  }
+
   /**
    * Get data by path
    *
@@ -381,46 +385,60 @@ module.exports = class Driver {
     }
 
     if (is_folder) {
-      let resp
-      try { 
-        resp = await this.helper.request.post(`https://api.aliyundrive.com/v2/file/list`,{
-            drive_id, 
-            parent_file_id,
-            limit:10000
-          },
-          {
-            headers: {
-              'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/69.0.3497.100 Safari/537.36',
-              'Authorization': access_token,
-            },
-            body:true, 
-            json:true
-          }
-        )
-      }catch(e){ }
-      
-      if (!resp.body) return false
+      let children = [] , marker , ts = Date.now()
 
-      if (!resp.body.items) return manager.error('error', false)
-
-      const ts = Date.now()
-      let children = resp.body.items.map((i) => {
-        return {
-          id: manager.stringify({
-            user_id,
-            path: i.type == 'folder' ? `/${i.file_id}/` : `/${parent_file_id}/${i.file_id}`
-          }),
-          name: i.name,
-          ext: i.file_extension,
-          protocol,
-          size: i.size,
-          created_at: i.created_at,
-          updated_at: i.updated_at,
-          type: i.type == 'folder' ? 'folder' : 'file',
-          $download_url:i.download_url,
-          $cached_at: ts
+      do{
+        let resp
+        let params = {
+          drive_id, 
+          parent_file_id,
+          limit:200
         }
-      })
+
+        if( marker ){
+          params.marker = marker
+        }
+
+        try { 
+          resp = await this.helper.request.post(`https://api.aliyundrive.com/v2/file/list`,params,
+            {
+              headers: {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/69.0.3497.100 Safari/537.36',
+                'Authorization': access_token,
+              },
+              body:true, 
+              json:true
+            }
+          )
+        }catch(e){
+          console.log(e)
+        }
+
+        if (!resp.body) return false
+
+        if (!resp.body.items) return manager.error('error', false)
+
+        for(let i of resp.body.items){
+          children.push({
+            id: manager.stringify({
+              user_id,
+              path: i.type == 'folder' ? `/${i.file_id}/` : `/${parent_file_id}/${i.file_id}`
+            }),
+            name: i.name,
+            ext: i.file_extension,
+            protocol,
+            size: i.size,
+            created_at: i.created_at,
+            updated_at: i.updated_at,
+            type: i.type == 'folder' ? 'folder' : 'file',
+            $download_url:i.download_url,
+            $cached_at: ts
+          })
+        }
+
+        marker = resp.body.next_marker
+
+      }while( marker )
 
       let result = {
         id,

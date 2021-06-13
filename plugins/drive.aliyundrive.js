@@ -174,7 +174,7 @@ class Manager {
    * @return {object}
    * @api private
    */
-  async create({refresh_token , root_id}) {
+  async create({refresh_token , path}) {
     //0 准备工作： 获取必要数据
     let resp
     try{
@@ -200,7 +200,7 @@ class Manager {
     
     let expires_at = Date.now() + expires_in * 1000
 
-    let client = { user_id, access_token, refresh_token, expires_at, drive_id, root_id, path: root_id ? `/${root_id}/`: `/` }
+    let client = { user_id, access_token, refresh_token, expires_at, drive_id, path }
 
     this.clientMap[user_id] = client
 
@@ -245,7 +245,8 @@ class Manager {
       if (req.body && req.body.refresh_token && req.body.act == 'install') {
         let { refresh_token, rootPath } = req.body
         let options = { refresh_token }
-        options.root_id = (rootPath.match(/(?<=\/folder\/)([^\/]+)/) || [''])[0]
+        rootPath = (rootPath.match(/(?<=\/folder\/)([^\/]+)/) || [''])[0]
+        options.path = rootPath ? `/${rootPath}/` : '/'
 
         let { error, msg } = await this.create(options)
         if (error) {
@@ -335,10 +336,6 @@ module.exports = class Driver {
   }
 
   async fetch(){
-
-  }
-
-  async nextAction(){
 
   }
 

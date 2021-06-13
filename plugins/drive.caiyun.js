@@ -650,13 +650,13 @@ class CY {
 
     if (!fileId) {
       let children = [],
-        pageNum = 1
+        startNumber = 1
       while (true) {
         let resp = await this.fetch('/caiyun/openapi/storage/catalog/getDisk', {
           "catalogID": folderId,
           "sortDirection": 1,
-          "startNumber": pageNum,
-          "endNumber": 1000,
+          "startNumber": startNumber,
+          "endNumber": startNumber + 200 - 1, // max
           "filterType": 0,
           "catalogSortType": 0,
           "contentSortType": 0
@@ -705,9 +705,13 @@ class CY {
         }
         
 
-        break;
-        // let count = parseInt(resp.listFiles.fileList[0].count)
-        // let currentCount = resp.body.pageNum * resp.body.pageSize
+        // break;
+        let count = parseInt(content.nodeCount)
+        if( startNumber + 200 - 1 < count ){
+          startNumber += 200 
+        }else{
+          break
+        }
 
         // if (currentCount < count) {
         //   //翻页

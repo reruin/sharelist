@@ -74,7 +74,7 @@ class Manager {
       let credentials = this.clientMap[data.user_id]
       let { expires_at } = credentials
 
-      if ((expires_at - Date.now()) < 10 * 60 * 1000) {
+      if ((expires_at - Date.now()) < 60 * 1000) {
         let result = await this.refreshAccessToken(credentials)
         if (result.error) {
           return result
@@ -82,10 +82,7 @@ class Manager {
           credentials = this.clientMap[data.user_id]
         }
       }
-
-      credentials.path = data.path ? data.path : '/'
-
-      return { credentials }
+      return { credentials:{...credentials , path: data.path ? data.path : '/'} }
     }
 
     return { unmounted: true }
@@ -204,7 +201,7 @@ class Manager {
 
     this.clientMap[user_id] = client
 
-    await this.updateDrives(this.stringify({ user_id, path: client.path, expires_at, drive_id, access_token, refresh_token }))
+    await this.updateDrives(this.stringify(client))
 
     return { error:false }
   }
@@ -374,9 +371,8 @@ module.exports = class Driver {
 
     let is_folder = path.endsWith('/')
 
-    let drive_path = path.replace(/(^\/|\/$)/g, '').split('/')
+    let [ parent_file_id , file_id ] = path.replace(/(^\/|\/$)/g, '').split('/')
 
-    let [ parent_file_id , file_id ] = drive_path
     if(!parent_file_id){
       parent_file_id = 'root' 
     }

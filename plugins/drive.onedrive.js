@@ -124,9 +124,7 @@ class Manager {
         }
       }
 
-      credentials.path = data.path ? data.path : '/'
-
-      return { credentials }
+      return { credentials:{...credentials , path:data.path ? data.path : '/'} }
     }
 
     return { unmounted: true }

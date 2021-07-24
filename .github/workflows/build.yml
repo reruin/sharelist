@@ -4,7 +4,6 @@ on:
   push:
     branches:
       - 'master'
-      - 'docker-archs'
 
 jobs:
   docker:
@@ -28,7 +27,7 @@ jobs:
         uses: docker/build-push-action@v2
         with:
           push: true
-          tags: rility/sharelist:latest
+          tags: reruin/sharelist:latest
           platforms: linux/amd64,linux/arm64
       -
         name: Image digest

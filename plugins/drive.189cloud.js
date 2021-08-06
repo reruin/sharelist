@@ -130,7 +130,7 @@ class Manager {
   async create(username , password , path = '/'){
     //0 准备工作： 获取必要数据
     let headers = {'User-Agent':'Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/69.0.3497.100 Safari/537.36'}
-    let { body , headers:headers2} = await this.request.get('https://cloud.189.cn/udb/udb_login.jsp?pageId=1&redirectURL=/main.action',{headers})
+    let { body , headers:headers2} = await this.request.get('https://cloud.189.cn/api/portal/loginUrl.action?redirectURL=https://cloud.189.cn/web/redirect.html',{headers})
 
     let captchaToken = (body.match(/name='captchaToken' value='(.*?)'>/) || ['',''])[1],
     returnUrl = (body.match(/returnUrl = '(.*?)'\,/) || ['',''])[1],

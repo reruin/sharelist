@@ -1,0 +1,8 @@
+version: "3"
+services:
+  sharelist:
+    image: reruin/sharelist
+    volumes:
+      - $HOME/sharelist:/sharelist/cache
+    ports:
+      - "33001:33001"

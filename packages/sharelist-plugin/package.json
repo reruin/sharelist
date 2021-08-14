@@ -1,0 +1,10 @@
+{
+  "name": "sharelist-plugin",
+  "version": "0.2.0",
+  "private": true,
+  "scripts": {
+    "build": "echo \"\" && exit ",
+    "changelog": "conventional-changelog -p angular -i CHANGELOG.md -s --commit-path .",
+    "release": "node ../../scripts/release.js --skipNpmPublish"
+  }
+}

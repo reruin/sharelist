@@ -1,0 +1,135 @@
+.drive-body{
+  padding:12px 28px;
+  .item{
+    display: flex;
+    width:100%;
+    justify-content: space-between;
+    align-items: center;
+    padding:12px;
+    transition: all 0.3s;
+    cursor: pointer;
+    &:hover{
+      background-color: rgba(132,133,141,0.08);
+    }
+
+
+    .item-name{
+      flex: 1;
+      min-width: 0;
+      width:100%;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .item-icon{
+      margin-right: 16px;
+      flex:none;
+    }
+    .item-meta{
+      flex:auto;
+      display: flex;
+      justify-content:space-between;
+      align-items: center;
+      overflow: hidden;
+    }
+    .item-ctime{
+      flex: 0 0 auto;
+      // padding:0 24px;
+      // width: 200px;
+      color:rgba(37, 38, 43, 0.72);
+      font-size: 12px;
+      text-align: left;
+    }
+    
+    .item-size{
+      color:rgba(37, 38, 43, 0.72);
+      font-size: 12px;
+      text-align: right;
+      flex:0 0 80px;
+    }
+  }
+}
+
+.drive-body--grid{
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  grid-gap: 12px;
+  .item{
+    .item-meta{
+      flex-direction: column;
+      align-items: flex-start;
+      width:100%;
+      overflow: hidden;
+    }
+  
+    .item-ctime{
+      // display: none;
+    }
+    .item-size{
+      display: none;
+    }
+  }
+}
+
+.drive-header{
+  padding:12px 40px;
+  background-color: #e3e6e9;
+  color: #fff;
+  font-size: 21px;
+  overflow: hidden;
+  display: flex;
+  justify-content: space-between;
+  border-bottom: 1px solid rgba(0,0,0,.02);
+  color:#555;
+  
+  .drive-header__name{
+    cursor: pointer;
+  }
+  .drive-action{
+    color:#555;
+  }
+  .drive-action-search{
+    margin-right:16px;
+  }
+
+}
+
+.drive-routes{
+  padding:16px 40px 0px;
+  // background-color: #c1c1c1;
+  .ant-breadcrumb-link{
+    // background-color: rgb(66, 133, 244);
+    // border-radius: 20px;
+    // color:#fff;
+    // padding:6px 8px;
+    // a{
+    //   color: #fff;
+    // }
+  }
+}
+
+.drive-routes--hidden{
+  display: none;
+}
+
+footer{
+  border-top: 1px solid #ddd;
+  margin: 35px 15px;
+  padding: 15px;
+  text-align: center;
+  a{
+    padding:0 12px;
+    color:#666;
+  }
+}
+@media screen and (max-width:480px) {
+  .drive-header{
+    padding:12px;
+  }
+  .drive-routes{
+    padding: 12px 12px 0px;
+  }
+  .drive-body{
+    padding:12px 0;
+  }
+}

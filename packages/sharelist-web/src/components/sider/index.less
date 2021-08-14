@@ -1,0 +1,61 @@
+.sider {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  height: 100%;
+
+  .menu{
+    button{
+      color:#aaa;
+      font-size:20px;
+      display: block;
+      width:100%;
+      height:48px;
+      line-height: 48px;
+      text-align: center;
+      border:none;
+      border-radius:0;
+      i{
+        color:currentColor;
+      }
+
+      &:hover{
+        color:#fff;
+      }
+
+      &.active{
+        background:#bb040f;
+        color:#fff;
+      }
+    }
+  }
+
+  .logo {
+    text-align:center;
+    font-size: 14px;
+    padding:24px 0;
+    font-weight: 600;
+    color: #fff;
+    line-height: 1em;
+    font-family: -apple-system, BlinkMacSystemFont, Helvetica Neue, Helvetica, Roboto, Arial, PingFang SC, Hiragino Sans GB, Microsoft Yahei, Microsoft Jhenghei, sans-serif;
+    text-shadow: 0 0 1px rgba(0, 0, 0, .1);
+  }
+
+  .sider-body{
+
+  }
+  .sider-footer {
+
+    font-size: 13px;
+    color: #fff;
+    margin: 0 auto;
+    padding: 16px 0;
+    button{
+      border-color:transparent;
+      color:#aaa;
+      &.active{
+        color:#fff;
+      }
+    }
+  }
+}

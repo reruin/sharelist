@@ -1,0 +1,31 @@
+name: "Bug report"
+description: 问题报告
+labels: [pending triage]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to fill out this bug report!
+  - type: textarea
+    id: bug-description
+    attributes:
+      label: 问题描述 / Describe the bug
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: 复现链接 / Reproduction
+      description: |
+        请提供能复现此问题的链接
+        Please provide a link to a repo that can reproduce the problem you ran into. 
+    validations:
+      required: false
+  - type: textarea
+    id: logs
+    attributes:
+      label: 日志 / Logs
+      description: |
+        请复制错误日志，或者截图
+        Please copy paste the log text.
+      render: shell

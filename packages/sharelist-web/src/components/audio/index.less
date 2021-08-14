@@ -1,0 +1,43 @@
+.widget-audio{
+  display: none;
+  position: fixed;
+  bottom:16px;
+  margin:auto;
+  display: none;
+  .aplayer{
+    margin: auto;
+    max-width: 500px;
+    position: relative !important;
+  }
+
+  .aplayer.aplayer-fixed{
+    .aplayer-body{
+      position: relative !important;
+    }
+    .aplayer-list{
+      margin-bottom: 0 !important;
+    }
+  } 
+}
+
+.widget-audio--visible{
+  display: block;
+  // align-items: top;
+}
+
+.widget-close{
+  position: absolute;
+  z-index:1002;
+  right:0;
+  top:0;
+  font-size:20px;
+  color:#666;
+  width:18px;height:18px;
+  text-align: center;
+  line-height: 18px;
+  cursor: pointer;
+
+  &:hover{
+    color:rgb(223,73,62);
+  }
+}

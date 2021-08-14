@@ -1,0 +1,19 @@
+{
+  "name": "@sharelist/core",
+  "version": "0.1.2",
+  "repository": "https://github.com/reruin/sharelist",
+  "license": "MIT",
+  "main": "index.js",
+  "scripts": {
+    "build": "echo \"Info: no specified\" && exit ",
+    "test": "node test/index.js",
+    "changelog": "conventional-changelog -p angular -i CHANGELOG.md -s --commit-path .",
+    "release": "node ../../scripts/release.js"
+  },
+  "dependencies": {
+    "mime": "^2.5.2",
+    "node-fetch": "^2.6.1",
+    "write-file-atomic": "^3.0.3",
+    "yaml": "^1.10.2"
+  }
+}

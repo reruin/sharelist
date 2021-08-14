@@ -1,0 +1,50 @@
+name: CI
+
+on:
+  push:
+    tags:
+      - 'v*'
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+      - name: Use Node.js
+        uses: actions/setup-node@v2
+        with:
+          node-version: '16'
+      - name: Get Env
+        uses: actions/github-script@v4
+        with:
+          script: |
+            const tag = process.env.GITHUB_REF.split('/').slice(-1)[0]
+            const createChangelog = require('./scripts/changelog.js')
+            const content = await createChangelog('https://github.com/'+process.env.GITHUB_REPOSITORY)
+            core.exportVariable('CHANGELOG', content)
+            core.exportVariable('VERSION', tag)
+      - name: Install dependencies
+        run: yarn install
+      - name: Build
+        run: |
+          yarn build-web
+          mkdir -p ./packages/sharelist/theme/default
+          mkdir -p ./packages/sharelist/plugins
+          cp -r ./packages/sharelist-web/dist/* ./packages/sharelist/theme/default
+          cp -r ./packages/sharelist-plugin/lib/* ./packages/sharelist/plugins
+          yarn build-server
+      - name: Release
+        run: |
+          cd ./packages/sharelist/build
+          tar --transform='flags=r;s|sharelist-win.exe|sharelist.exe|' -zcvf sharelist_windows_amd64.tar.gz sharelist-win.exe
+          tar --transform='flags=r;s|sharelist-macos|sharelist|' -zcvf sharelist_macos_amd64.tar.gz sharelist-macos
+          tar --transform='flags=r;s|sharelist-linux|sharelist|' -zcvf sharelist_linux_amd64.tar.gz sharelist-linux
+          gh release create ${{ env.VERSION }} -n "${{ env.NOTE }}" -t "${{ env.VERSION }}" ${{ env.FILES }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VERSION: ${{ env.VERSION }}
+          NOTE: ${{ env.CHANGELOG }}
+          TITLE: ${{ env.VERSION }}
+          FILES: ./*.gz

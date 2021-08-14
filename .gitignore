@@ -1,0 +1,8 @@
+node_modules
+build/
+dist/
+/packages/sharelist/theme/
+.vscode/
+*.lock
+*.log
+*.exe

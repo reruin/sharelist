@@ -1,0 +1,24 @@
+name: "Feature request"
+description: 功能需求
+labels: ["enhancement: pending triage"]
+body:
+  - type: textarea
+    id: feature-description
+    attributes:
+      label: 需求描述 / Description of the feature
+    validations:
+      required: true
+  - type: textarea
+    id: suggested-solution
+    attributes:
+      label: 实现思路 / Suggested solution
+      description: 实现此需求的解决思路。
+    validations:
+      required: false
+  - type: textarea
+    id: additional-context
+    attributes:
+      label: 附件 / Additional context
+      description: |
+        相关的任何其他上下文或截图。 
+        Any other context or screenshots about the feature request here.

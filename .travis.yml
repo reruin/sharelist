@@ -1,7 +1,7 @@
 language: node_js
 branches:
   only:
-  - master
+  - 0.1
 node_js:
   - 'lts/*'
 services:

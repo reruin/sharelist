@@ -1,6 +1,6 @@
 # ShareList
 
-[![Build Status](https://github.com/reruin/sharelist/actions/workflows/ci.yml/badge.svg?branch=next)](https://github.com/reruin/sharelist/actions/workflows/ci.yml)
+[![Build Status](https://github.com/reruin/sharelist/actions/workflows/ci.yml/badge.svg)](https://github.com/reruin/sharelist/actions/workflows/ci.yml)
 
 ShareList 是一个易用的网盘工具，支持快速挂载 GoogleDrive、OneDrive ，可通过插件扩展功能。  
 新版正在开发中，欢迎[提交反馈](https://github.com/reruin/sharelist/issues/new/choose)。

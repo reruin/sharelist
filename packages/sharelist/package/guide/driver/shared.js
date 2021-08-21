@@ -33,7 +33,9 @@ exports.render = (ctx, cnt) => {
     .auth{
       width: 80%;
       margin: 10% auto;
-      max-width: 560px;
+      max-width: 720px;
+      word-wrap:break-word;
+      word-break:normal; 
     }
     .l-center{
       margin:auto;

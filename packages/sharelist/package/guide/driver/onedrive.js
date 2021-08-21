@@ -164,7 +164,12 @@ module.exports = async function (ctx, next) {
           }
         }
 
-        ctx.body = Object.keys(ret).map(i => `<div>${i}:${ret[i]}</div>`).join('<br />')
+        let cnt = Object.keys(ret).map(i => `<div>${i}:${ret[i]}</div>`).join('<br />')
+        render(ctx, `
+        <div class="auth">
+          ${cnt}
+        </div >
+      `)
       }
     }
     else if (ctx.query.error) {

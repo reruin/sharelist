@@ -4,13 +4,13 @@ const googledrive = require('./driver/googledrive')
 const aliyundrive = require('./driver/aliyundrive')
 
 module.exports = (app) => {
-  const vendor = { onedrive, googledrive, baidu, aliyundrive }
+  const vendor = { app, onedrive, googledrive, baidu, aliyundrive }
   app.router
-    .all('/@guide/:type', (ctx, next) => {
-      vendor[ctx.params.type]?.call({ app }, ctx, next)
+    .all('/@guide/:type', async (ctx, next) => {
+      await vendor[ctx.params.type]?.(ctx, next)
     })
-    .get('/@guide/:type/:pairs(.*)/callback', (ctx, next) => {
-      vendor[ctx.params.type]?.call({ app }, ctx, next)
+    .get('/@guide/:type/:pairs(.*)/callback', async (ctx, next) => {
+      await vendor[ctx.params.type]?.(ctx, next)
     })
 
   app.addSingleton('guide', async (options) => {

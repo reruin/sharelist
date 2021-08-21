@@ -38,9 +38,10 @@ jobs:
       - name: Release
         run: |
           cd ./packages/sharelist/build
-          tar --transform='flags=r;s|sharelist-win.exe|sharelist.exe|' -zcvf sharelist_windows_amd64.tar.gz sharelist-win.exe
-          tar --transform='flags=r;s|sharelist-macos|sharelist|' -zcvf sharelist_macos_amd64.tar.gz sharelist-macos
-          tar --transform='flags=r;s|sharelist-linux|sharelist|' -zcvf sharelist_linux_amd64.tar.gz sharelist-linux
+          tar --transform='flags=r;s|sharelist-win-x64.exe|sharelist.exe|' -zcvf sharelist_windows_amd64.tar.gz sharelist-win-x64.exe
+          tar --transform='flags=r;s|sharelist-macos-x64|sharelist|' -zcvf sharelist_macos_amd64.tar.gz sharelist-macos-x64
+          tar --transform='flags=r;s|sharelist-linux-x64|sharelist|' -zcvf sharelist_linux_amd64.tar.gz sharelist-linux-x64
+          tar --transform='flags=r;s|sharelist-linux-arm64|sharelist|' -zcvf sharelist_linux_arm64.tar.gz sharelist-linux-arm64
           gh release create ${{ env.VERSION }} -n "${{ env.NOTE }}" -t "${{ env.VERSION }}" ${{ env.FILES }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

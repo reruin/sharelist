@@ -6,6 +6,8 @@ const { URL } = require('url')
 
 const urlFormat = require('url').format
 
+const DEFAULT_ROOT_ID = '00019700101000000001'
+
 const NodeRSA = require('node-rsa')
 
 const crypto = require('crypto')
@@ -17,8 +19,9 @@ const md5 = (v) => {
 }
 
 const getRandomSring = (e) => {
-  let n = ''
-  for (let t = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789", a = 0; a < e; a++) {
+  let n = '',
+    t = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789"
+  for (a = 0; a < e; a++) {
     let o = Math.floor(Math.random() * t.length);
     n += t.substring(o, o + 1)
   }
@@ -60,8 +63,49 @@ const getSign = (params, extra, timestamp, rndstring) => {
   return md5(key).toUpperCase()
 }
 
+//base64 encode
+const btoa = (v) => {
+  return Buffer.from(v).toString('base64')
+}
+
+const utob = (str) => {
+  const u = String.fromCharCode
+  return str.replace(/[\uD800-\uDBFF][\uDC00-\uDFFFF]|[^\x00-\x7F]/g, (t) => {
+    if (t.length < 2) {
+      var e = t.charCodeAt(0);
+      return e < 128 ? t : e < 2048 ? u(192 | e >>> 6) + u(128 | 63 & e) : u(224 | e >>> 12 & 15) + u(128 | e >>> 6 & 63) + u(128 | 63 & e)
+    }
+    e = 65536 + 1024 * (t.charCodeAt(0) - 55296) + (t.charCodeAt(1) - 56320);
+    return u(240 | e >>> 18 & 7) + u(128 | e >>> 12 & 63) + u(128 | e >>> 6 & 63) + u(128 | 63 & e)
+  })
+}
+
+const signUitls = {
+  encode(str) {
+    return btoa(utob(str))
+  }
+}
+
+const getNewSign = (e, t, a, n) => {
+  var r = "",
+    i = "";
+  if (t) {
+    var s = Object.assign({}, t);
+    i = JSON.stringify(s),
+      i = i.replace(/\s*/g, ""),
+      i = encodeURIComponent(i);
+    var c = i.split(""),
+      u = c.sort();
+    i = u.join("")
+  }
+  var A = md5(signUitls.encode(i)),
+    l = md5(a + ":" + n);
+  return md5(A + l).toUpperCase()
+}
+
+
 const rsaEncrypt = (data, publicKey) => {
-  publicKey = '-----BEGIN PUBLIC KEY-----\n'+publicKey+'\n-----END PUBLIC KEY-----'
+  publicKey = '-----BEGIN PUBLIC KEY-----\n' + publicKey + '\n-----END PUBLIC KEY-----'
 
   //前端 pkcs1 加密
   let key = new NodeRSA(publicKey, { encryptionScheme: 'pkcs1' });
@@ -139,7 +183,7 @@ const moment = (a, expr = 'yyyy-MM-dd hh:mm:ss') => {
   })
 }
 
-const datetimeFormat = d => d ? d.replace(/(\d{4})(\d{2})(\d{2})(\d{2})(\d{2})(\d{2})/,'$1-$2-$3 $4:$5:$6') : ''
+const datetimeFormat = d => d ? d.replace(/(\d{4})(\d{2})(\d{2})(\d{2})(\d{2})(\d{2})/, '$1-$2-$3 $4:$5:$6') : ''
 
 /**
  * auth manager class
@@ -205,15 +249,15 @@ class Manager {
     if (data.username) {
       let hit = this.clientMap[data.username]
       if (hit) {
-        if( hit.cookie && (hit.expires_at && (hit.expires_at - Date.now() > 3 * 3600 * 1000) ) ) {
+        if (hit.cookie && (hit.expires_at && (hit.expires_at - Date.now() > 3 * 3600 * 1000))) {
           hit = this.clientMap[data.username]
-        }else{
-          return { error:'Cookie 即将到期 请重新登录' }
+        } else {
+          return { error: 'Cookie 即将到期 请重新登录' }
         }
       }
 
       if (hit) {
-        let p = (data.path == '/' || data.path == '') ? '00019700101000000001' : data.path
+        let p = (data.path == '/' || data.path == '') ? DEFAULT_ROOT_ID : data.path
         return { ...hit, path: p }
       } else {
         return { error: '挂载失败，请确保账号或者密码正确' }
@@ -256,11 +300,11 @@ class Manager {
    * @return {string}
    * @api public
    */
-  stringify({ path, username, password, cookie , expires_at }) {
+  stringify({ path, username, password, cookie, expires_at }) {
     let query = {}
     if (password) query.password = password
     if (cookie) query.cookie = cookie
-    if(expires_at) query.expires_at = expires_at
+    if (expires_at) query.expires_at = expires_at
     return urlFormat({
       protocol: protocol,
       hostname: username,
@@ -285,8 +329,7 @@ class Manager {
 
   async resumeSMSTask(id, code) {
     let { username, password } = this.SMSTask[id]
-    return await this.create(username, password, null
-      , null, code)
+    return await this.create(username, password, null, null, code)
   }
 
   async install(msg) {
@@ -333,14 +376,17 @@ class Manager {
     `
   }
 
-  async getPublicKey(){
-    let resp = await this.fetch('/caiyun/openapi/authentication/key/getRsaPublicKey',{
-      "clientCode":"0010101",
-      "type":1
+  async getPublicKey() {
+    if (this._publicKey) {
+      return this._publicKey
+    }
+    let resp = await this.fetch2('/orchestration/auth/key/v1.0/getRsaPublicKey', {
+      clientCode: "10701",
+      type: 1
     })
-
-    if( resp.body && resp.body.statusCode == 200 ) {
-      return resp.body.data
+    if (resp.body && resp.body.success) {
+      this._publicKey = resp.body.data.publicKey
+      return this._publicKey
     }
   }
 
@@ -348,16 +394,16 @@ class Manager {
     let timestamp = Date.now()
     let key = getRandomSring(16)
     let headers = {
-      'caller':'web',
+      'caller': 'web',
       'CMS-CLIENT': '0010101',
       'CMS-DEVICE': 'default',
       'CMS-SIGN': timestamp + "," + key + "," + getSign(undefined, body, timestamp, key),
       'x-DeviceInfo': '||9|85.0.4183.83|chrome|85.0.4183.83|||windows 10||zh-CN|||'
     }
 
-    let { method = 'POST' , skey , json = true } = options
+    let { method = 'POST', skey, json = true } = options
 
-    if( skey ){
+    if (skey) {
       headers['CMS-SKey'] = skey
     }
 
@@ -369,29 +415,75 @@ class Manager {
       body,
       ...options
     }
-    
-    if( json ) data.json = true
+
+    if (json) data.json = true
 
     return await this.helper.request(data)
   }
+  async fetch2(url, body, options = {}) {
+    let timestamp = moment(new Date())
+    let key = getRandomSring(16)
+    let { method = 'POST', skey, params, json = true, ...rest } = options
 
-  async searchRootId(username,path){
+    let sign = getNewSign(params, body, timestamp, key)
+    let headers = {
+      'x-huawei-channelSrc': '10000034',
+      'x-inner-ntwk': '2',
+      'mcloud-channel': '1000101',
+      'mcloud-client': '10701',
+      'mcloud-sign': timestamp + "," + key + "," + sign,
+      'mcloud-skey': skey || '',
+
+      'Content-Type': "application/json;charset=UTF-8",
+      'caller': 'web',
+      'CMS-DEVICE': 'default',
+      'x-DeviceInfo': '||9|85.0.4183.83|chrome|85.0.4183.83|||windows 10||zh-CN|||',
+      'x-SvcType': '1',
+      'referer': 'https://yun.139.com/w/',
+      'Origin': 'https://yun.139.com'
+    }
+
+    let data = {
+      async: true,
+      url: 'https://yun.139.com' + url,
+      method,
+      headers: headers,
+      body,
+      ...rest
+    }
+
+    if (json) data.json = true
+
+    return await this.helper.request(data)
+  }
+  async searchRootId(username, path) {
     const req = this.helper.getRuntime('req')
-    let id = this.stringify({ username, path:req.path + path  })
-    let data = await this.helper.command('ls',req.path + path)
-    if(data && data.id){
+    let id = this.stringify({ username, path: req.path + path })
+    let data = await this.helper.command('ls', req.path + path)
+    if (data && data.id) {
       data = this.parse(data.id)
       return data.path
     }
   }
 
-  async getSmsPass(mobile){
-    let resp = await this.fetch('/caiyun/openapi/authentication/getdyncpassword', {"account":mobile,"reqType":"3"})
-    console.log(resp.body)
-    if( resp.body.mcsCode == '0' ){
-      return { err:0 , random:resp.body.data.random }
-    }else{
-      return { err:1 , msg:resp.body.message }
+  async getSmsPass(mobile) {
+    let publicKey = await this.getPublicKey()
+    let formdata = {
+      "account": mobile, 
+      "reqType": "3",
+      // puzzleVerfyCode: undefined,
+      mode: 0
+    }
+    let key = getRandomSring(16)
+    let skey = rsaEncrypt(key, publicKey)
+    let resp = await this.fetch2('/orchestration/auth/sms/v1.0/getSmsVerifyCode', {
+      encryptMsg: aesEncrypt(JSON.stringify(formdata), key)
+    }, { skey })
+
+    if (resp.body.success) {
+      return { err: 0, random: resp.body.data.random }
+    } else {
+      return { err: 1, msg: resp.body.message }
     }
   }
 
@@ -411,15 +503,15 @@ class Manager {
       account: username,
       dycPwd: password,
       loginStyle: 'passSMS',
-      verifyCode: ""
+      ifOpenAccount: '1',
+      verType: 2,
     }
-    
+
     let error = false
 
     let publicKey = await this.getPublicKey()
-    console.log('publicKey',publicKey)
 
-    if( !publicKey ){
+    if (!publicKey) {
       return { error: '无法获取公钥' }
     }
 
@@ -427,41 +519,42 @@ class Manager {
     let key = getRandomSring(16)
     let body = {
       autoLogin: true,
-      clientId: "0010101",
+      clientId: "10701",
       encryptMsg: aesEncrypt(JSON.stringify(formdata), key)
     }
-    let resp = await this.fetch('/caiyun/openapi/authentication/login', body, {
-      skey:rsaEncrypt(key,publicKey)
+
+    let resp = await this.fetch2('/orchestration/auth/permission/v1.0/login', body, {
+      skey: rsaEncrypt(key, publicKey)
     })
-    if (resp && resp.body && resp.body.statusCode == 200) {
-      let code = resp.body.mcsCode
-  
-      if( code == '0' ){
+
+    if (resp && resp.body && resp.body.data.result) {
+      let code = resp.body.data.result.resultCode
+
+      if (code == '0') {
         let cookie = resp.headers['set-cookie'].join('; ')
         // cookie 有效期30天
-        let client = { username, password, cookie, expires_at:Date.now() + 30 * 86400 * 1000 }
+        let client = { username, password, cookie, expires_at: Date.now() + 30 * 86400 * 1000 }
         if (this.clientMap[username]) {
           client.path = this.clientMap[username].path
         }
         this.clientMap[username] = client
-        await this.updateDrives(this.stringify({ username, password, path: client.path, cookie,expires_at:client.expires_at }))
+        await this.updateDrives(this.stringify({ username, password, path: client.path, cookie, expires_at: client.expires_at }))
 
-        if( path ){
-          let realPath = await this.searchRootId(username,path)
-          if( realPath ){
+        if (path) {
+          let realPath = await this.searchRootId(username, path)
+          if (realPath) {
             client.path = realPath
-            await this.updateDrives(this.stringify({ username, password, path: client.path, cookie , expires_at:client.expires_at }))
+            await this.updateDrives(this.stringify({ username, password, path: client.path, cookie, expires_at: client.expires_at }))
           }
         }
 
         error = false
       }
       // The verification code has expired
-      else if( code = '9442' ){
-        return { error : '验证码已过期 请重新获取 / The verification code has expired' }
-      }
-      else {
-        return { error : resp.body.message }
+      else if (code = '9442') {
+        return { error: '验证码已过期 请重新获取 / The verification code has expired' }
+      } else {
+        return { error: resp.body.data.result.resultDesc }
       }
     }
 
@@ -497,7 +590,7 @@ class Manager {
 
     let baseUrl = req.origin + req.path
 
-    if( req.body && req.body.act == 'getsmspass' ){
+    if (req.body && req.body.act == 'getsmspass') {
       return { id, type: 'folder', protocol: protocol, body: await this.getSmsPass(req.body.mobile) }
     }
 
@@ -508,7 +601,6 @@ class Manager {
     } else {
       if (req.body && req.body.username && req.body.password && req.body.act == 'install') {
         let { username, password, path } = req.body
-        console.log(username, password, path,'<<<<')
         let data = await this.create(username, password, path)
         if (!data.error) {
           return { id, type: 'folder', protocol: protocol, redirect: req.origin + req.path }
@@ -552,26 +644,39 @@ class CY {
     this.manager.init(drives)
   }
 
-  async fetch(url, body, id , retry_times = 3) {
-    let timestamp = Date.now()
-    let key = getRandomSring(16)
+  async fetch(url, body, id, retry_times = 3) {
     let { cookie } = await this.manager.prepare(id)
+
+    let timestamp = moment(new Date())
+    let key = getRandomSring(16)
+    let sign = getNewSign(undefined, body, timestamp, key)
+    let publicKey = await this.manager.getPublicKey()
+    let skey = rsaEncrypt(key, publicKey)
+
     let headers = {
+      'x-huawei-channelSrc': '10000034',
+      'x-inner-ntwk': '2',
+      'mcloud-channel': '1000101',
+      'mcloud-client': '10701',
+      'mcloud-sign': timestamp + "," + key + "," + sign,
+      'mcloud-skey': skey || '',
+
+      'Content-Type': "application/json;charset=UTF-8",
       'caller': 'web',
-      'CMS-CLIENT': '0010101',
       'CMS-DEVICE': 'default',
-      'CMS-SIGN': timestamp + "," + key + "," + getSign(undefined, body, timestamp, key),
-      'x-DeviceInfo': '||9|85.0.4183.102|chrome|85.0.4183.102|||windows 10||zh-CN|||',
-      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/85.0.4183.102 Safari/537.36',
-      'Cookie':cookie,
-      'Referer': 'https://c.139.com/w/'
+      'x-DeviceInfo': '||9|85.0.4183.83|chrome|85.0.4183.83|||windows 10||zh-CN|||',
+      'x-SvcType': '1',
+      'referer': 'https://yun.139.com/w/',
+
+      'Cookie': cookie,
+
     }
 
     let resp = { error: 'request error' }
 
     let options = {
       async: true,
-      url: 'https://c.139.com' + url,
+      url: 'https://yun.139.com' + url,
       method: 'POST',
       headers: headers,
       json: true,
@@ -580,18 +685,16 @@ class CY {
 
     let failCode = ["401", "1809111401", "200000401", "200000413", "1909011501"]
 
-    try{
+    try {
       resp = await this.helper.request(options)
-    }catch(e){
+    } catch (e) {
 
     }
-
-    if (resp && resp.body && resp.body.statusCode == 200) {
-      let code = resp.body.mcsCode
+    if (resp && resp.body && resp.body.success) {
+      let code = resp.body.data.result.resultCode
       if (code == '0') {
-        
-      } 
-      else if (failCode.includes(code)) {
+
+      } else if (failCode.includes(code)) {
 
         let { error } = await this.manager.update(id)
 
@@ -603,7 +706,7 @@ class CY {
       } else {
         resp = { error: resp.body.message }
       }
-    }else{
+    } else {
       resp = { error: resp.body.message || 'unknow error' }
     }
 
@@ -652,14 +755,18 @@ class CY {
       let children = [],
         startNumber = 1
       while (true) {
-        let resp = await this.fetch('/caiyun/openapi/storage/catalog/getDisk', {
+        let resp = await this.fetch('/orchestration/personalCloud/catalog/v1.0/getDisk', {
           "catalogID": folderId,
           "sortDirection": 1,
           "startNumber": startNumber,
           "endNumber": startNumber + 200 - 1, // max
           "filterType": 0,
           "catalogSortType": 0,
-          "contentSortType": 0
+          "contentSortType": 0,
+          commonAccountInfo: {
+            account: username,
+            accountType: 1
+          }
         }, id)
 
         if (resp.error) {
@@ -671,45 +778,46 @@ class CY {
           }
         }
 
-        let content = resp.body.data
-        if( content.catalogList){
-          for(let file of content.catalogList.catalogInfo){
+        let content = resp.body.data.getDiskResult || {}
+        if (content.catalogList) {
+          for (let file of content.catalogList) {
             children.push({
-              id: manager.stringify({ username, path: `/${file.catalogID}`}),
+              id: manager.stringify({ username, path: `/${file.catalogID}` }),
               name: file.catalogName,
               protocol: protocol,
-              created_at: datetimeFormat(file.uploadTime),
+              created_at: datetimeFormat(file.createTime),
               updated_at: datetimeFormat(file.updateTime),
-              thumb:file.thumbnailURL,
+              thumb: file.thumbnailURL,
               type: 'folder',
             })
           }
         }
-        if( content.contentList ){
-          for(let file of content.contentList.contentInfo){
+        if (content.contentList) {
+          for (let file of content.contentList) {
             let item = {
-              id: manager.stringify({ username, path: `/${folderId}/${file.contentID}`}),
+              id: manager.stringify({ username, path: `/${folderId}/${file.contentID}` }),
               name: file.contentName,
               protocol: protocol,
               created_at: datetimeFormat(file.uploadTime),
               updated_at: datetimeFormat(file.updateTime),
               type: 'file',
-              ext:file.contentSuffix,
-              size:file.contentSize,
-              md5:file.digest,
-              thumb:file.thumbnailURL,
+              ext: file.contentSuffix,
+              size: file.contentSize,
+              md5: file.digest,
+              thumb: file.thumbnailURL,
             }
             if (file.bigthumbnailURL) item.icon = file.bigthumbnailURL
-            children.push(item)  
+            if(file.presentHURL) item.preview_url = file.presentHURL
+            children.push(item)
           }
         }
-        
+
 
         // break;
-        let count = parseInt(content.nodeCount)
-        if( startNumber + 200 - 1 < count ){
-          startNumber += 200 
-        }else{
+        let count = parseInt(content.nodeCount || 0)
+        if (startNumber + 200 - 1 < count) {
+          startNumber += 200
+        } else {
           break
         }
 
@@ -726,7 +834,7 @@ class CY {
       result.$cached_at = Date.now()
       result.children = children
 
-      result.downloadable = path != '00019700101000000001'
+      result.downloadable = path != DEFAULT_ROOT_ID
 
       helper.cache.set(id, result)
 
@@ -740,9 +848,13 @@ class CY {
 
       if (!hit) return false
 
-      let resp = await this.fetch('/caiyun/openapi/storage/download/downloadRequest', {
+      let resp = await this.fetch('/orchestration/personalCloud/uploadAndDownload/v1.0/downloadRequest', {
         "appName": "",
-        "contentID": fileId
+        "contentID": fileId,
+        commonAccountInfo: {
+          account: username,
+          accountType: 1
+        }
       }, id)
       if (resp.error) {
         return {
@@ -754,18 +866,19 @@ class CY {
       }
 
       let expires_at = Date.now() + 50 * 1000
-      let downloadUrl = resp.body.data
+      let downloadUrl = resp.body.data.downloadURL
 
       resp = {
         id,
         url: downloadUrl,
+        preview_url:hit.preview_url,
         name: hit.name,
         ext: hit.ext,
         protocol: protocol,
         size: hit.size,
         $expires_at: expires_at,
         $cached_at: Date.now(),
-        thumb:hit.thumb
+        thumb: hit.thumb
       }
 
       helper.cache.set(id, resp)
@@ -806,21 +919,25 @@ class CY {
 
     if (!data.cookie) return data
 
-    let { path, cookie } = data
+    let { path, cookie, username } = data
 
     let pathArgs = path.replace(/(^\/|\/$)/, '').split('/')
 
     let [folderId] = pathArgs
 
-    let resp = await this.fetch('/caiyun/openapi/storage/download/downloadZipPkgReq', {
+    let resp = await this.fetch('/orchestration/personalCloud/uploadAndDownload/v1.0/downloadZipPkgReq', {
       "catalogList": { "catalogBriefs": [{ "id": folderId }] },
       "contentList": { "contentInfos": [] },
       "zipFileName": name || folderId,
-      "recursive": 1
+      "recursive": 1,
+      commonAccountInfo: {
+        account: username,
+        accountType: 1
+      }
     }, id)
 
-    if (resp && resp.body && resp.body.data) {
-      return resp.body.data
+    if (resp && resp.body && resp.body.data.downloadURL) {
+      return resp.body.data.downloadURL
     } else {
       return false
     }

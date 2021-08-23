@@ -151,7 +151,7 @@ const output = async (ctx , data)=>{
         if( data.headers ){
           ctx.set(data.headers)
         }
-        ctx.redirect( url )
+        ctx.redirect( ctx.query.preview_page ? ( data.preview_url || url) : url )
       }
     }
   }

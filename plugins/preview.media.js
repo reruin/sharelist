@@ -32,10 +32,10 @@ module.exports = ({getSource , getPluginOption , setPluginOption , getConfig}) =
     setPluginOption(videoPlayerKey,{value:videoPlayer , label:'视频预览播放器',options:[{'label':'默认','value':'default'},{'label':'DPlayer','value':'dplayer'}]})
   }
 
-  const convUrl = (req) => {
+  const convUrl = (req,append = {}) => {
     let query = req.query || {}
     delete query.preview
-    let querystr = qs.stringify(query)
+    let querystr = qs.stringify({...query,...append})
     return req.path + ( querystr ? ('?' + querystr) : '')
   }
 
@@ -52,7 +52,7 @@ module.exports = ({getSource , getPluginOption , setPluginOption , getConfig}) =
         <script src="https://cdn.bootcss.com/dplayer/1.25.1/DPlayer.min.js"></script>
         <div id="dplayer" style="height:100%;"></div>
         <script>
-          var url = '${convUrl(req)}' , subtitle = url.replace(/\\.[^\\.]+?(\\?|$)/,'.vtt$1');
+          var url = '${convUrl(req,{'preview_page':1})}' , subtitle = url.replace(/\\.[^\\.]+?(\\?|$)/,'.vtt$1');
           var type=(url.split('?')[0].split(".").pop() == "flv") ? 'flv' : 'auto';
           var options = {
             container: document.getElementById('dplayer'),
@@ -69,7 +69,7 @@ module.exports = ({getSource , getPluginOption , setPluginOption , getConfig}) =
           var dp = new DPlayer(options);
         </script>
       ` : `
-        <iframe></iframe><script>var content='<style>video{width:100%;height:100%;background:#000;}body{margin:0;padding:0;}</style><video src="${convUrl(req)}" controls="controls" autoplay="autoplay"></video>';document.querySelector("iframe").contentWindow.document.write(content);</script>
+        <iframe></iframe><script>var content='<style>video{width:100%;height:100%;background:#000;}body{margin:0;padding:0;}</style><video src="${convUrl(req,{'preview_page':1})}" controls="controls" autoplay="autoplay"></video>';document.querySelector("iframe").contentWindow.document.write(content);</script>
       `
     }
   }

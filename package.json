@@ -8,8 +8,7 @@
     "start": "node app.js",
     "dev": "./node_modules/.bin/nodemon app.js -i ./cache",
     "prd": "pm2 start app.js --name sharelist --env prod",
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "build": "pkg . -t node12-win-x64 --output build/sharelist_windows_amd64.exe && pkg . -t node12-macos-x64 --output build/sharelist_macos_amd64 && pkg . -t node12-linux-x64 --output build/sharelist_linux_amd64"
+    "test": "echo \"Error: no test specified\" && exit 1"
   },
   "dependencies": {
     "@koa/cors": "^2.2.1",
@@ -42,18 +41,6 @@
   },
   "devDependencies": {
     "nodemon": "^1.18.4",
-    "pkg": "^4.4.0",
     "pm2": "^2.10.1"
-  },
-  "pkg": {
-    "scripts": [
-      "./app/plugins/**/*",
-      "./plugins/*",
-      "./locales/*"
-    ],
-    "assets": [
-      "./app/views/**/*",
-      "./app/public/**/*"
-    ]
   }
 }

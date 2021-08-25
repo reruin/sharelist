@@ -27,9 +27,9 @@ module.exports = async function (ctx, next) {
       if (credentials.error) {
         ctx.body = credentials.error
       } else {
-        let ret = { client_id, client_secret, redirect_uri, access_token: credentials.access_token, refresh_token: credentials.refresh_token }
+        let ret = { AppKey: client_id, SecretKey: client_secret, redirect_uri: PROXY_URL, access_token: credentials.access_token, refresh_token: credentials.refresh_token }
 
-        ctx.body = Object.keys(credentials).map(i => `<div>${i}:${credentials[i]}</div>`).join('<br />')
+        ctx.body = Object.keys(ret).map(i => `<div>${i}:${ret[i]}</div>`).join('<br />')
       }
     }
     else if (ctx.query.error) {
@@ -39,14 +39,14 @@ module.exports = async function (ctx, next) {
     render(ctx, `
       <div class="auth">
         <h3>挂载Baidu Netdisk</h3>
-        <p>1. 前往 <a target="_blank" style="margin-right:5px;cursor:pointer;" href="https://pan.baidu.com/union/console/createapp">Baidu网盘开发平台</a> 注册应用获取 API KEY" 和 SECRET KEY，注册类别 请选择为【软件】。<br />2. 前往 <a target="_blank" style="margin-right:5px;cursor:pointer;" href="http://developer.baidu.com/console#app/project">开发者服务管理</a> 设置网盘应用的授权回调页为: </p>
+        <p>1. 前往 <a target="_blank" style="margin-right:5px;cursor:pointer;" href="https://pan.baidu.com/union/console/createapp">Baidu网盘开发平台</a> 注册应用获取 API KEY" 和 SECRET KEY，注册类别 请选择为【软件】。<br />2. 前往 <a target="_blank" style="margin-right:5px;cursor:pointer;" href="https://pan.baidu.com/union/console/applist">应用详情->安全设置</a> 将【OAuth授权回调页】设置为: </p>
         <p><a target="_blank" href="https://github.com/reruin/reruin.github.io/blob/master/sharelist/redirect.html" style="font-size:12px;margin-right:5px;color:#337ab7;">https://reruin.github.io/sharelist/redirect.html</a></p>
   
         <form class="form-horizontal" method="post">
           <input type="hidden" name="act" value="install" />
           <div class="form-item" style="font-size:12px;"><label class="flex"><input disabled checked="true" name="custom" id="j_custom" type="checkbox"> 使用自己的应用ID 和 应用机密</label>，请遵循 <a href="https://pan.baidu.com/union/document/protocol" target="_blank">使用协议</a>。</div>
-          <div class="form-item"><input id="j_client_id" class="sl-input" type="text" name="client_id" placeholder="应用ID / Client ID" /></div>
-          <div class="form-item"><input id="j_client_secret" class="sl-input" type="text" name="client_secret" placeholder="应用机密 / Client Secret" /></div>
+          <div class="form-item"><input id="j_client_id" class="sl-input" type="text" name="client_id" placeholder="应用ID / AppKey" /></div>
+          <div class="form-item"><input id="j_client_secret" class="sl-input" type="text" name="client_secret" placeholder="应用机密 / SecretKey" /></div>
           <button class="sl-button btn-primary" id="signin" type="submit">验证 / Verify</button>
         </form>
         <script>

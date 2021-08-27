@@ -18,7 +18,6 @@ export default defineComponent({
         if (idx == -1) {
           saveData.push(modifyData)
         } else {
-          console.log('mod', idx, modifyData)
           saveData[idx] = modifyData
         }
         setConfig({ drives: saveData })

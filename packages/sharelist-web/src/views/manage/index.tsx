@@ -12,10 +12,15 @@ import General from './partial/general'
 import Drive from './partial/disk'
 import Signin from './partial/signin'
 import { useSetting } from '@/hooks/useSetting'
+import useConfirm from '@/hooks/useConfirm'
 
 export default defineComponent({
   setup() {
     const { loginState, isLoading, signout, clearCache } = useSetting()
+
+    const confirmClearCache = useConfirm(clearCache, '确认', '确认清除缓存？')
+
+    const confirmSignout = useConfirm(signout, '确认', '确认退出？')
 
     return () => (
       <div class="setting">
@@ -24,8 +29,8 @@ export default defineComponent({
           <div>设置</div>
           {loginState.value == 1 ? (
             <div class="setting-header__actions">
-              <DeleteOutlined onClick={clearCache} style={{ fontSize: '18px', marginRight: '16px' }} />
-              <PoweroffOutlined onClick={signout} style={{ fontSize: '18px' }} />
+              <DeleteOutlined onClick={confirmClearCache} style={{ fontSize: '18px', marginRight: '16px' }} />
+              <PoweroffOutlined onClick={confirmSignout} style={{ fontSize: '18px' }} />
             </div>
           ) : null}
         </div>

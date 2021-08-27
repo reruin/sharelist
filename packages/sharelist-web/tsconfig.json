@@ -20,7 +20,7 @@
       "scripthost"
     ],
     "types": [
-      "vite/client"
+      // "vite/client"
     ],
     "paths": {
       "@/*": [

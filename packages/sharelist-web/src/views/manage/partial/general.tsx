@@ -24,23 +24,28 @@ const valueDisplay = (value: any, type: string) => {
 export default defineComponent({
   setup() {
     const fields = [
+      { code: 'token', label: '后台密码', type: 'string', hiddenDesc: true },
       { code: 'title', label: '网站标题', type: 'string' },
       { code: 'index_enable', label: '目录索引', type: 'boolean' },
       { code: 'expand_single_disk', label: '展开单一挂载盘', type: 'boolean' },
       { code: 'anonymous_download_enable', label: '允许下载', type: 'boolean' },
       { code: 'fast_mode', label: '快速模式', type: 'boolean' },
       { code: 'ignores', label: '忽略路径', type: 'array' },
+      { code: 'webdav_path', label: 'WebDAV路径', type: 'string' },
     ]
     const { config, setConfig } = useSetting()
 
     const createInputModifier = (label: string, code: string) => {
       const modifier = ref(config[code])
+      const handleChange = (e: any) => modifier.value = e.target.value
+
+      //modal 下的input v-model 有bug
       Modal.confirm({
         title: label,
         class: 'fix-modal--narrow-padding',
         content: (
           <div>
-            <TextArea v-model={[modifier.value, 'value']} placeholder="请输入" />
+            <TextArea defaultValue={modifier.value} onChange={handleChange} placeholder="请输入" />
           </div>
         ),
         onOk: () => {
@@ -51,12 +56,14 @@ export default defineComponent({
 
     const createListModifier = (label: string, code: string) => {
       const modifier = ref(config[code].join('\n'))
+      const handleChange = (e: any) => modifier.value = e.target.value
+
       Modal.confirm({
         title: label,
         class: 'fix-modal--narrow-padding',
         content: (
           <div>
-            <TextArea v-model={[modifier.value, 'value']} style={{ height: '150px' }} placeholder="请输入" />
+            <TextArea defaultValue={modifier.value} onChange={handleChange} style={{ height: '150px' }} placeholder="请输入" />
           </div>
         ),
         onOk: () => {
@@ -64,7 +71,6 @@ export default defineComponent({
         },
       })
     }
-
     return () => (
       <div>
         {fields.map((i) => (
@@ -72,14 +78,14 @@ export default defineComponent({
             <div class="item__header">
               <div class="item__meta">
                 <h4 class="item__meta-title">{i.label}</h4>
-                <div class="item__meta-desc">{valueDisplay(config[i.code], i.type)}</div>
+                <div class="item__meta-desc">{i.hiddenDesc ? '' : valueDisplay(config[i.code], i.type)}</div>
               </div>
             </div>
             <div class="item-action">
               {i.type == 'boolean' ? (
                 <Switch checked={config[i.code]} onChange={(e) => setConfig({ [i.code]: e })} />
               ) : i.type == 'string' ? (
-                <a onClick={() => createInputModifier(i.label, i.code)}>修改</a>
+                <a onClick={() => createInputModifier(i.label, i.code, i.isPassword)}>修改</a>
               ) : i.type == 'array' ? (
                 <a onClick={() => createListModifier(i.label, i.code)}>修改</a>
               ) : null}

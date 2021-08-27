@@ -38,7 +38,19 @@ module.exports = (app) => {
     return ret
   }
 
-  const get = async ({ id }) => {
+  const get = async ({ paths = [], id }) => {
+    if (!id && paths) {
+      if (paths.length == 0) {
+        return {
+          id: 'root://sharelist', name: 'Sharelist', type: 'folder', size: 0, ctime: Date.now(), mtime: Date.now()
+        }
+      } else {
+        id = await getIdFromPath(paths)
+      }
+    }
+
+    if (!id) return { error: { code: 404, message: `can't find file in this paths: ${paths.join('/')}` } }
+
     const [protocol, fid] = parseProtocol(id)
 
     let driver = app.getDriver(protocol)
@@ -53,6 +65,16 @@ module.exports = (app) => {
     }
 
     return data
+  }
+
+  const getIdFromPath = async (paths) => {
+    let parentPath = paths.slice(0, paths.length - 1)
+    let filename = paths[paths.length - 1]
+    let parent = await forwardTrack(parentPath)
+
+    if (parent.error) return undefined
+
+    return parent?.files.find(i => i.name == filename)?.id
   }
 
   const getStream = async (id, options) => {

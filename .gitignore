@@ -2,6 +2,7 @@ node_modules
 build/
 dist/
 /packages/sharelist/theme/
+/packages/sharelist/cache/
 .vscode/
 *.lock
 *.log

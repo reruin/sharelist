@@ -205,11 +205,11 @@ exports.send = async (ctx, app, data) => {
     }
   } else {
     let range = getRange(ctx.header.range, data.size) || { start: 0, end: data.size - 1 }
-    let { stream, error, acceptRanges = false } = await app.sharelist.getStream(data.id, range || {})
+    let { stream, error, headers, acceptRanges = false } = await app.sharelist.getStream(data.id, range || {})
     if (stream) {
       let options = acceptRanges ? { range } : {}
-      let headers = createHeaders(data, options)
-      ctx.set(headers)
+      let resHeaders = createHeaders(data, options)
+      ctx.set({ ...headers, ...resHeaders })
       ctx.status = acceptRanges ? 206 : 200
       ctx.body = stream
     } else {

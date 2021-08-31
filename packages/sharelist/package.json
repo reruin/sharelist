@@ -16,6 +16,7 @@
   "dependencies": {
     "@koa/cors": "^3.1.0",
     "@sharelist/core": "^0.1",
+    "@sharelist/webdav": "^0.1",
     "bonjour": "^3.5.0",
     "etag": "^1.8.1",
     "global": "^4.4.0",

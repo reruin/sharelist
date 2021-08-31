@@ -1,3 +1,6 @@
+const utils = require('./utils')
+const request = require('./request')
+
 const clone = (obj) => {
   // console.log(obj)
   let type = typeof obj
@@ -21,6 +24,16 @@ const clone = (obj) => {
 }
 
 module.exports = (app) => {
+
+  /**
+   * 列出指定id
+   * @param {object} options 
+   * @param {string} options.id
+   * @param {array} options.paths
+   * @param {object} options.query
+   * 
+   * @returns { files | error  }
+   */
   const list = async ({ paths = [], id, query } = {}) => {
     const filter = app.hookLifetime('onListed')
 
@@ -77,20 +90,38 @@ module.exports = (app) => {
     return parent?.files.find(i => i.name == filename)?.id
   }
 
-  const getStream = async (id, options) => {
+  /**
+   * 返回指定id的内容
+   * @param {string} id file id
+   * @param {object} options 
+   * @param {object | undefined} options.reqHeaders
+   * @param {number} options.start offset start
+   * @param {number} options.end offset end
+   * 
+   * @returns { stream , acceptRanges, error  }
+   */
+  const createReadStream = async (id, options = {}) => {
     let data = await get({ id })
 
     if (data.error) return data
 
     if (data.download_url) {
-      let reqHeaders = {}
+      let reqHeaders = options.reqHeaders || {}
+
       if (data.extra.proxy?.headers) {
         Object.assign(reqHeaders, data.extra.proxy.headers)
       }
 
-      let { data, headers } = await app.request(data.download_url, { headers: reqHeaders, responseType: 'stream' })
-      if (data) {
-        return { stream: data, acceptRanges: headers?.['accept-ranges'] == 'bytes' }
+      if (options.start) {
+        reqHeaders['range'] = `bytes=${options.start}-${options.end || ''}`
+      }
+
+      console.log('reqHeaders', reqHeaders)
+
+      let { data: stream, headers, status, error } = await request(data.download_url, { headers: reqHeaders, responseType: 'stream' })
+
+      if (!error) {
+        return { stream, headers, status, acceptRanges: headers?.['accept-ranges'] == 'bytes' }
       }
     } else {
       const [protocol] = parseProtocol(data.id)
@@ -101,7 +132,7 @@ module.exports = (app) => {
       }
     }
 
-    return { error: { message: "CAN'T GET STREAM" } }
+    return { error: { code: 501, message: "Not implemented" } }
   }
 
   //获取文本内容
@@ -111,6 +142,74 @@ module.exports = (app) => {
     if (!stream || stream.error) return ''
 
     return await app.utils.transfromStreamToString(stream)
+  }
+
+  const createWriteStream = async (id, options) => {
+    const [protocol, fid] = parseProtocol(id)
+
+    let driver = app.getDriver(protocol)
+
+    if (driver?.createWriteStream) {
+      let writeStream = await driver.createWriteStream(id, options)
+
+      if (writeStream.error) return writeStream
+
+      return writeStream
+    }
+
+    return { error: { code: 501, message: "Not implemented" } }
+  }
+
+  const mkdir = async (id, options) => {
+    const [protocol, fid] = parseProtocol(id)
+    let driver = app.getDriver(protocol)
+
+    if (driver?.mkdir) {
+      return await driver.mkdir(id, options)
+    }
+
+    return { error: { code: 501, message: "Not implemented" } }
+  }
+
+  const rm = async (id, options = {}) => {
+    const [protocol, fid] = parseProtocol(id)
+    let driver = app.getDriver(protocol)
+
+    if (!driver?.rm) {
+      return { error: { code: 501, message: "Not implemented" } }
+    }
+
+    return await driver.rm(id, options)
+  }
+
+  const rename = async (id, name) => {
+    const [protocol, fid] = parseProtocol(id)
+
+    let driver = app.getDriver(protocol)
+
+    if (!driver?.rename) {
+      return { error: { code: 501, message: "Not implemented" } }
+    }
+
+    return await driver.rename(id, name)
+
+  }
+
+  const mv = async (id, target) => {
+    const [protocol, fid] = parseProtocol(id)
+
+    const [targetProtocol] = parseProtocol(target)
+
+    //only support same protocol
+    if (targetProtocol === protocol) {
+      let driver = app.getDriver(protocol)
+
+      if (driver?.mv) {
+        return await driver.mv(id, target)
+      }
+    }
+
+    return { error: { code: 501, message: "Not implemented" } }
   }
 
   const root = () => {
@@ -138,7 +237,7 @@ module.exports = (app) => {
 
     if (!driver) return { error: { code: 500, message: 'miss driver' } }
 
-    let data = await driver.path(fid, { ...query })
+    let data = await driver.list(fid, { ...query })
 
     if (filter) {
       await filter(data, query, filter)
@@ -202,5 +301,17 @@ module.exports = (app) => {
     return hit
   }
 
-  return { list, get, getStream, getContent }
+  return {
+    list,
+    get,
+    mkdir,
+    rm,
+    rename,
+    mv,
+    createReadStream,
+    createWriteStream,
+
+    getStream: createReadStream,
+    getContent
+  }
 }

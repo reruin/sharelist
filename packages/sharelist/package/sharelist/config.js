@@ -29,6 +29,7 @@ const defaultConfig = {
 
   anonymous_download_enable: true,
 
+  webdav_path: '',
   //代理路径
   proxy_paths: [],
 

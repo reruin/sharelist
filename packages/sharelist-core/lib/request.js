@@ -1,5 +1,7 @@
 const fetch = require('node-fetch')
 
+const https = require('https')
+
 const btoa = (v) => Buffer.from(v).toString('base64')
 
 const querystring = require('querystring')
@@ -46,6 +48,16 @@ const request = async (url, options = {}) => {
 
   let args = { method, size: 0, agent, compress, timeout, headers }
 
+  // if (!args.agent) {
+  //   args.agent = function (_parsedURL) {
+  //     if (_parsedURL.protocol == 'https:') {
+  //       return new https.Agent({
+  //         rejectUnauthorized: false,
+  //       })
+  //     }
+  //   }
+  // }
+
   if (auth) {
     args.headers['authorization'] = `Basic ${btoa(auth)}`
   }
@@ -60,7 +72,7 @@ const request = async (url, options = {}) => {
   if (!args.headers['content-type'] && method != 'GET') {
     if (contentType === 'json') {
       args.headers['content-type'] = 'application/json'
-    } else {
+    } else if (contentType != 'stream') {
       args.headers['content-type'] = 'application/x-www-form-urlencoded'
     }
   }
@@ -71,12 +83,14 @@ const request = async (url, options = {}) => {
     } else if (['POST', 'PUT', 'DELETE'].includes(method)) {
       if (args.headers['content-type'].includes('application/json')) {
         args.body = JSON.stringify(data)
+      } else if (contentType == 'stream') {
+        args.body = data
+        retry = 0
       } else {
         args.body = querystring.stringify(data)
       }
     }
   }
-
   while (true) {
     try {
       // console.log(url, args)

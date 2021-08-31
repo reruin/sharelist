@@ -14,6 +14,7 @@ export default defineComponent({
     if (props.value.code == 401 && props.value.message) {
       message.error(props.value.message)
     }
+    console.log(props.value)
     return () => {
       if (props.value.code) {
         return props.value.code == 401 ? (
@@ -21,7 +22,7 @@ export default defineComponent({
         ) : (
           <div class="err">
             <h1 class="err__status">{props.value.code}</h1>
-            <div class="err__msg">{props.value.msg}</div>
+            <div class="err__msg">{props.value.message}</div>
           </div>
         )
       } else {

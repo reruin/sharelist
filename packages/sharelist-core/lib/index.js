@@ -205,7 +205,7 @@ module.exports = async (options) => {
     cache,
     request,
     utils,
-    ocr: ocr,
+    ocr,
 
     decode,
     encode,

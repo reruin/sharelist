@@ -17,7 +17,6 @@ const diff = (nv, ov) => {
   return [needUpdate, needRemove]
 }
 
-
 module.exports = (app) => {
   app.addSingleton('sharelist', async (options) => {
     const config = createConfig(path.join(options.cacheDir, 'config.json'))

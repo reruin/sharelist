@@ -78,10 +78,12 @@ module.exports = {
     let sharelist = this.app.sharelist
     let runtime = await createRuntime(ctx)
     let data = await sharelist.getFile(runtime)
-
+    console.log(data)
     if (data.type == 'file') {
       if (runtime.query.download) {
-        await send(ctx, this.app, data)
+        if (sharelist.config.anonymous_download_enable) {
+          await send(ctx, this.app, data)
+        }
       } else if (runtime.query.preview) {
         if (data.extra.category == 'video' && data.extra.sources?.length > 0) {
           //let download_url = selectSource(data.extra.sources) || data.download_url
@@ -101,6 +103,9 @@ module.exports = {
     let runtime = await createRuntime(ctx)
     let data = await sharelist.getFiles(runtime)
 
+    if (data.error && !data.error.code) {
+      data.error.code = 500
+    }
     if (data.files?.length > 0) {
       data.files
         .sort((a, b) => (a.type == 'folder' ? -1 : 1))

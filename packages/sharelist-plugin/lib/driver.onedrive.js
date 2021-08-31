@@ -141,7 +141,7 @@ class Manager {
       qs,
     )}`
     try {
-      ;({
+      ; ({
         data,
         headers,
         error: error,
@@ -301,6 +301,7 @@ const mountData = () => {
       key: 'type',
       label: 'OneDrive 挂载类型',
       type: 'string',
+      required: true,
       options: [
         { value: 'onedrive', label: 'OneDrive' },
         { value: 'sharepoint', label: 'SharePoint' },
@@ -478,7 +479,7 @@ class Driver {
     return app.cache.set(cacheId, data, 3500 * 1000)
   }
 
-  async search() {}
+  async search() { }
 
   /**
    * @param {string} [graph] api graph
@@ -590,9 +591,9 @@ class Driver {
     }
   }
 
-  async mkdir() {}
+  async mkdir() { }
 
-  async rm() {}
+  async rm() { }
 
   async createReadStream(id, options = {}) {
     let resp = await this.path(id)
@@ -604,7 +605,7 @@ class Driver {
     }
   }
 
-  async createWriteStream() {}
+  async createWriteStream() { }
 }
 
 module.exports = Driver

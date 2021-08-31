@@ -12,6 +12,16 @@ body:
       label: 问题描述 / Describe the bug
     validations:
       required: true
+  - type: dropdown
+    id: version
+    attributes:
+      label: Sharelist 版本 / Sharelist Version
+      description: Sharelist Version
+      options:
+        - v0.1
+        - v0.2
+    validations:
+      required: true
   - type: textarea
     id: reproduction
     attributes:

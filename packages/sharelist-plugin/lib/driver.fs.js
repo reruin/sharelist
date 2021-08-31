@@ -2,7 +2,7 @@
  * Mount file system
  */
 
-const { basename, posix, resolve } = require('path')
+const { basename, posix, resolve, join, dirname } = require('path')
 const fs = require('fs')
 const os = require('os')
 
@@ -49,6 +49,19 @@ const parseRelativePath = (p) => p.replace(/\.\//, slpath(process.cwd()) + '/')
 // let stat = fs.statSync('D:\CloudMusic\Falcom Sound Team jdk - 浮游大陆アルジェス -Introduction-.mp3')
 // console.log(stat)
 
+const ERROR_CODE = {
+  'EBUSY': 423,
+}
+
+const createError = (e) => {
+  console.log(e)
+  let error = { message: e.code }
+  if (ERROR_CODE[e.code]) {
+    error.code = ERROR_CODE[e.code]
+  }
+  return { error }
+}
+
 class FileSystem {
   constructor(app) {
     this.name = 'LocalFile'
@@ -85,17 +98,50 @@ class FileSystem {
     return this.decode(p)?.path
   }
 
-  mkdir(p) {
-    if (fs.existsSync(p) == false) {
-      this.mkdir(path.dirname(p))
-      fs.mkdirSync(p)
+  mkdir(id, { name } = {}) {
+    let posixPath = this.parsePath(id)
+    let filepath = ospath(posixPath)
+    let target = join(filepath, name)
+
+    if (fs.existsSync(target) == false) {
+      fs.mkdirSync(target)
     }
+
+    return { id: `${this.protocol}://${normalize(posixPath + '/' + name)}`, name }
   }
 
-  rm(p) {
-    if (fs.existsSync(p)) {
-      fs.unlinkSync(p)
+  rm(id) {
+    let posixPath = this.parsePath(id)
+    let filepath = ospath(posixPath)
+    try {
+      fs.rmSync(filepath, { force: false, recursive: true })
+    } catch (e) {
+      console.log(e)
+      return createError(e)
     }
+    return true
+  }
+
+  rename(id, name) {
+    let posixPath = this.parsePath(id)
+    let filepath = ospath(posixPath)
+
+    let dir = dirname(filepath)
+    let targetpath = join(dir, name)
+    try {
+      fs.renameSync(filepath, targetpath)
+    } catch (e) {
+      return createError(e)
+    }
+
+    return { id: `${this.protocol}://${posixPath + '/' + name}`, name }
+  }
+
+  mv(id, target) {
+    let filepath = ospath(this.parsePath(id))
+    let targetpath = ospath(this.parsePath(target))
+    fs.renameSync(filepath, targetpath)
+    return true
   }
 
   async list(id) {
@@ -150,7 +196,7 @@ class FileSystem {
       id: id,
       name: basename(path),
       size: stat.size,
-      type: 'file',
+      type: stat.isDirectory() ? 'folder' : 'file',
       ctime: stat.ctimeMs,
       mtime: stat.mtimeMs,
     }
@@ -161,11 +207,10 @@ class FileSystem {
     return fs.createReadStream(filepath, { ...options, highWaterMark: 64 * 1024 })
   }
 
-  async createWriteStream({ id, options = {}, target = '' } = {}) {
-    let fullpath = path.join(id, target)
-    let parent = (fullpath.split('/').slice(0, -1).join('/') + '/').replace(/\/+$/g, '/')
-    this.mkdir(parent)
-    return fs.createWriteStream(ospath(fullpath), options)
+  async createWriteStream(id, options = {}) {
+    let filepath = ospath(this.parsePath(id))
+    let target = join(filepath, options.name)
+    return fs.createWriteStream(target, options)
   }
 }
 

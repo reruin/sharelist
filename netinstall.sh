@@ -28,11 +28,11 @@ fi
 
 
 echo -e "|\n|  Download ShareList Package ... "
-wget -O sharelist-master.zip https://github.com/reruin/sharelist/archive/master.zip >/dev/null 2>&1
+wget -O sharelist-master.zip https://codeload.github.com/reruin/sharelist/zip/refs/heads/0.1 >/dev/null 2>&1
 
 unzip -q -o sharelist-master.zip -d ./
 
-mv sharelist-master sharelist
+mv sharelist-0.1 sharelist
 rm -f sharelist-master.zip
 
 cd sharelist

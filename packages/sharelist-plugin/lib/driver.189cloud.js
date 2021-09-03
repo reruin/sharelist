@@ -105,7 +105,7 @@ class Manager {
    * @return {object} { credentials | error }
    * @api private
    */
-  async refreshCookie({ account, password }) {
+  async refreshCookie({ account, password ,...rest}) {
     const { request } = this.app
     //0 准备工作： 获取必要数据
     let defaultHeaders = {
@@ -206,6 +206,7 @@ class Manager {
           password,
           cookie: `COOKIE_LOGIN_USER=${cookie};`,
           updated_at: Date.now(),
+          ...rest
         },
       }
     }
@@ -377,7 +378,7 @@ module.exports = class Driver {
 
     if (expired_at) {
       expired_at = +expired_at * 1000
-      app.cache.set(id, data, expired_at - Date.now() - 3000)
+      app.cache.set(cacheId, data, expired_at - Date.now() - 3000)
     }
 
     // console.log('data', data)

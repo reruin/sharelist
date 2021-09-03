@@ -1,6 +1,6 @@
 # ShareList
 
-[![Build Status](https://api.travis-ci.com/reruin/sharelist.svg?branch=master)](https://travis-ci.com/reruin/sharelist)
+[![Build Status](https://api.travis-ci.com/reruin/sharelist.svg?branch=0.1)](https://travis-ci.com/reruin/sharelist)
 
 
 ShareList is an easy-to-use netdisk tool which supports that quickly mount GoogleDrive and OneDrive, and extends functions with plugins.
@@ -501,7 +501,7 @@ bash install.sh
 Remote install/Netinstall
 
 ```bash
-wget --no-check-certificate -qO- https://raw.githubusercontent.com/reruin/sharelist/master/netinstall.sh | bash
+wget --no-check-certificate -qO- https://raw.githubusercontent.com/reruin/sharelist/0.1/netinstall.sh | bash
 ```
 
 Update 

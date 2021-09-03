@@ -1,3 +1,7 @@
+## [0.2.5](https://github.com/reruin/sharelist/compare/v0.2.4...v0.2.5) (2021-09-03)
+
+
+
 ## [0.2.3](https://github.com/reruin/sharelist/compare/v0.2.2...v0.2.3) (2021-08-21)
 
 

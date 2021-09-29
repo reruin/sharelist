@@ -92,7 +92,9 @@ export default defineComponent({
       }
     }
     onMounted(() => {
-      player = new Plyr(el.value)
+      player = new Plyr(el.value,{
+        fullscreen:{ enabled: true, fallback: true, iosNative: true, container: null }
+      })
       player.on('exitfullscreen', existFullScreen)
       player.on('timeupdate', onProgress)
     })

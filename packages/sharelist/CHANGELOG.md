@@ -1,3 +1,12 @@
+## [0.3.2](https://github.com/reruin/sharelist/compare/v0.3.1...v0.3.2) (2021-10-09)
+
+
+### Features
+
+* **webdav:** auth ([2499979](https://github.com/reruin/sharelist/commit/2499979dcd8392864f505268411dbce15cd810dc))
+
+
+
 ## [0.3.1](https://github.com/reruin/sharelist/compare/v0.3.0...v0.3.1) (2021-10-09)
 
 

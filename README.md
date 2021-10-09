@@ -18,7 +18,7 @@ AliyunDrive   |  ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
 CaiYun   |  ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
 CTCloud   |  ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
 Baidu Netdisk   |  ✓ | x | ✓ | ✓ | ✓ | ✓ | ✓ |
-OneDrive   |  ✓ | x | ✓ | ✓ | ✓ | ✓ | ✓ |
+OneDrive   |  ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
 
 - [ ] 中转器
 

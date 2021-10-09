@@ -29,7 +29,6 @@ export const useSetting: IUseSetting = (): any => {
           }
         }
       } else {
-        config.value = resp.data
         loginState.value = 1
         updateSetting(resp.data as ISetting)
       }
@@ -53,6 +52,9 @@ export const useSetting: IUseSetting = (): any => {
     for (const i in data) {
       config[i] = data[i]
     }
+  }
+  const clearSetting = () => {
+    Object.keys(config).forEach((key) => Reflect.deleteProperty(config, key))
   }
 
   const getValue = (code: string) => {

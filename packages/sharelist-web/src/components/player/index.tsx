@@ -91,8 +91,13 @@ export default defineComponent({
         playerProgress.value = Math.floor((100 * plyr.currentTime) / plyr.duration) + '%'
       }
     }
+
+    const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent)
+
     onMounted(() => {
-      player = new Plyr(el.value)
+      player = new Plyr(el.value, {
+        fullscreen: { enabled: true, fallback: true, iosNative: isIOS, container: undefined }
+      })
       player.on('exitfullscreen', existFullScreen)
       player.on('timeupdate', onProgress)
     })

@@ -10,11 +10,10 @@ export default defineComponent({
   setup() {
     const { config, setConfig } = useSetting()
 
-    const drives = config.drives
-
     const createModifier = (data: IDrive, idx = -1) => {
       const updateData = (modifyData: IDrive) => {
-        const saveData = [...drives]
+        const saveData = [...config.drives]
+        console.log(saveData, idx)
         if (idx == -1) {
           saveData.push(modifyData)
         } else {
@@ -50,11 +49,12 @@ export default defineComponent({
     }
 
     const remove = (data: IDrive, idx: number) => {
-      setConfig({ drives: drives.filter((_: any, i: number) => i != idx) })
+      setConfig({ drives: config.drives.filter((_: any, i: number) => i != idx) })
     }
 
     const orderUp = (data: IDrive, idx: number) => {
       if (idx > 0) {
+        const drives = config.drives
         const saveData = [...drives]
         const a = drives[idx - 1],
           b = drives[idx]

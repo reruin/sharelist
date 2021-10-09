@@ -10,6 +10,8 @@ const request = require('./request')
 
 const createDriver = require('./driver')
 
+const { createRectifier, createReadStream } = require('./rectifier')
+
 const { isFunction, isClass, createCache } = utils
 
 const injectFunctions = (sharelist, protocol) => {
@@ -91,12 +93,18 @@ const compose = (middlewares, context) => {
     )(context)
 }
 
+const error = (error) => {
+  throw error
+}
+
 const chain =
   (fns) =>
-    async (...args) => {
+    async (data, ...options) => {
       for (let fn of fns) {
-        await fn(...args)
+        data = await fn(data, ...options)
+        if (data.error) break
       }
+      return data
     }
 
 module.exports = async (options) => {
@@ -126,10 +134,14 @@ module.exports = async (options) => {
     return resources.driverMap.get(protocol)
   }
 
+  const isSameDisk = async (id, target) => {
+    let a = decode(id), b = decode(target)
+    return a.protocol === b.protocol && a.key === b.key
+  }
+
   const decode = (p) => {
     let hasProtocol = p.includes('://')
     if (!hasProtocol) p = 'sharelist://' + p
-
     let data = new URL(p)
     let protocol = data.protocol.replace(':', '')
 
@@ -138,6 +150,7 @@ module.exports = async (options) => {
     }
 
     let result = {
+      protocol,
       key: data.host,
       path: decodeURIComponent(data.pathname || ''),
     }
@@ -173,6 +186,14 @@ module.exports = async (options) => {
   }
 
   const ocr = async (image, type, lang) => {
+    if (config.ocr_server) {
+      let { data } = await request.post(config.ocr_server, {
+        method: 'post',
+        contentType: 'json',
+        data: { image }
+      })
+      return { code: data.result }
+    }
     return { error: { message: 'ocr server is NOT ready!' } }
   }
 
@@ -205,14 +226,17 @@ module.exports = async (options) => {
     cache,
     request,
     utils,
+    error,
     ocr,
-
+    isSameDisk,
     decode,
     encode,
     hookLifetime,
     getDriver,
     onListed: useLifetime('onListed'),
     onGeted: useLifetime('onGeted'),
+    createRectifier,
+    createReadStream
   }
 
   const driver = createDriver(sharelist)
@@ -226,6 +250,7 @@ module.exports = async (options) => {
     reload,
     decode,
     encode,
-    getDrivers
+    getDrivers,
+    isSameDisk
   }
 }

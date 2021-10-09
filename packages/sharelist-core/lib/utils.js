@@ -227,3 +227,8 @@ exports.createCache = () => {
   }
 }
 
+exports.waitStreamFinish = (src, dst) => new Promise((resolve) => {
+  dst.on('finish', () => resolve(true)).on('error', () => resolve(false))
+  src.pipe(dst)
+  src.resume?.()
+})

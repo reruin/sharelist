@@ -30,6 +30,21 @@ const each = (src, fn) => {
   return ret
 }
 
+const convToLowerCase = (props) => {
+  let ret = {}
+  Object.keys(props).forEach(key => {
+    ret[key.toLowerCase()] = props[key]
+  })
+  return ret
+}
+
+const qs = (data) => {
+  let c = {}
+  Object.keys(data).forEach(i => {
+    c[i] = typeof data[i] == 'object' ? JSON.stringify(data[i]) : data[i]
+  })
+  return new URLSearchParams(c)
+}
 const request = async (url, options = {}) => {
   let {
     data,
@@ -46,7 +61,7 @@ const request = async (url, options = {}) => {
     retry = 2,
   } = options
 
-  let args = { method, size: 0, agent, compress, timeout, headers }
+  let args = { method: method.toUpperCase(), size: 0, agent, compress, timeout, headers: convToLowerCase(headers) }
 
   // if (!args.agent) {
   //   args.agent = function (_parsedURL) {
@@ -62,6 +77,10 @@ const request = async (url, options = {}) => {
     args.headers['authorization'] = `Basic ${btoa(auth)}`
   }
 
+  if (!args.headers['user-agent']) {
+    args.headers['user-agent'] = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/92.0.4515.159 Safari/537.36'
+  }
+
   if (followRedirect) {
     args.redirect = 'follow'
     if (maxRedirects) args.follow = maxRedirects
@@ -69,37 +88,39 @@ const request = async (url, options = {}) => {
     args.redirect = 'manual'
   }
 
-  if (!args.headers['content-type'] && method != 'GET') {
-    if (contentType === 'json') {
-      args.headers['content-type'] = 'application/json'
-    } else if (contentType != 'stream') {
-      args.headers['content-type'] = 'application/x-www-form-urlencoded'
-    }
-  }
 
   if (data) {
-    if (['GET', 'HEAD'].includes(method)) {
-      url += (url.includes('?') ? '' : '?') + querystring.stringify(data)
-    } else if (['POST', 'PUT', 'DELETE'].includes(method)) {
-      if (args.headers['content-type'].includes('application/json')) {
+    if (Buffer.isBuffer(data)) {
+      retry = 0
+    }
+    if (['GET', 'HEAD', 'OPTIONS'].includes(args.method)) {
+      url += (url.includes('?') ? '' : '?') + new URLSearchParams(data).toString()
+    } else {
+      if (contentType == 'json') {
         args.body = JSON.stringify(data)
-      } else if (contentType == 'stream') {
-        args.body = data
-        retry = 0
+        if (!args.headers['content-type']) {
+          args.headers['content-type'] = 'application/json'
+        }
+      } else if (contentType == 'form') {
+        args.body = qs(data)
+        // if (!args.headers['content-type']) {
+        //   args.headers['content-type'] = 'application/x-www-form-urlencoded'
+        // }
       } else {
-        args.body = querystring.stringify(data)
+        args.body = data
+        args.timeout = 0
       }
     }
   }
+  // console.log('[REQUEST]', url, args)
   while (true) {
     try {
-      // console.log(url, args)
       let res = await fetch(url, args)
       let status = res.status
       let headers = each(res.headers.raw(), (val) => val.join(','))
-
       if (responseType == 'json' || responseType == 'text' || responseType == 'buffer') {
         let data = await res[responseType]()
+
         return {
           status,
           headers,
@@ -111,22 +132,13 @@ const request = async (url, options = {}) => {
       }
     } catch (e) {
       if (retry-- <= 0) {
-        return { error: { message: '[' + e.code + '] The error occurred during the request.' } }
+        throw { message: '[' + e.code + '] The error occurred during the request.' }
+        // return { error: { message: '[' + e.code + '] The error occurred during the request.' } }
       }
       console.log('request retry', retry, e)
     }
   }
 
-  // return fetch(url, args).then(res => {
-  //   let status = res.status
-  //   let headers = each(res.headers.raw(), val => val.join(','))
-
-  //   if (responseType == 'json' || responseType == 'text' || responseType == 'buffer') {
-  //     return res[responseType]().then(data => ({ status, headers, data, body: data }))
-  //   } else {
-  //     return { status, headers, data: res.body }
-  //   }
-  // })
 }
 
 request.post = (url, options) => request(url, { ...options, method: 'POST' })

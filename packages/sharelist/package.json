@@ -1,6 +1,6 @@
 {
   "name": "sharelist",
-  "version": "0.2.3",
+  "version": "0.3.0",
   "bin": "app.js",
   "repository": "https://github.com/reruin/sharelist",
   "license": "MIT",
@@ -34,6 +34,7 @@
     "mime": "^2.5.2",
     "nanoid": "^3.1.23",
     "node-fetch": "^2.6.1",
+    "node-rsa": "^1.1.1",
     "webdav": "^4.6.0",
     "write-file-atomic": "^3.0.3",
     "xml2js": "^0.4.23",

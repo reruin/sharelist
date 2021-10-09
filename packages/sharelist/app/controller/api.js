@@ -77,13 +77,27 @@ module.exports = {
   async get(ctx, next) {
     let sharelist = this.app.sharelist
     let runtime = await createRuntime(ctx)
-    let data = await sharelist.getFile(runtime)
-    console.log(data)
+    let { data, error } = await sharelist.getFile(runtime)
+    // if (runtime.query.download) {
+    //   // let { url, error } = await sharelist.getDownloadUrl(runtime)
+
+    // }
+    if (error) {
+      ctx.body = { error }
+      return
+    }
+
     if (data.type == 'file') {
       if (runtime.query.download) {
-        if (sharelist.config.anonymous_download_enable) {
+        if (runtime.query.preview && data.extra.preview_url) {
+          data.download_url = data.extra.preview_url
           await send(ctx, this.app, data)
+        } else {
+          if (sharelist.config.anonymous_download_enable) {
+            await send(ctx, this.app, data)
+          }
         }
+
       } else if (runtime.query.preview) {
         if (data.extra.category == 'video' && data.extra.sources?.length > 0) {
           //let download_url = selectSource(data.extra.sources) || data.download_url
@@ -101,21 +115,25 @@ module.exports = {
   async list(ctx, next) {
     let sharelist = this.app.sharelist
     let runtime = await createRuntime(ctx)
-    let data = await sharelist.getFiles(runtime)
+    let { data, error } = await sharelist.getFiles(runtime)
 
-    if (data.error && !data.error.code) {
-      data.error.code = 500
+    if (error) {
+      ctx.body = { error }
+    } else {
+      if (data.files?.length > 0) {
+        data.files
+          .sort((a, b) => (a.type == 'folder' ? -1 : 1))
+          .forEach((i) => {
+            if (i.type == 'file') {
+              i.download_url = ctx.origin + '/api/drive/get?download=true&id=' + encodeURIComponent(i.id)
+              if (i.extra?.preview_url) {
+                i.preview_url = ctx.origin + '/api/drive/get?download=true&preview=true&id=' + encodeURIComponent(i.id)
+              }
+            }
+          })
+      }
+      ctx.body = data
     }
-    if (data.files?.length > 0) {
-      data.files
-        .sort((a, b) => (a.type == 'folder' ? -1 : 1))
-        .forEach((i) => {
-          if (i.type == 'file') {
-            i.download_url = ctx.origin + '/api/drive/get?download=true&id=' + encodeURIComponent(i.id)
-            // i.preview_url = ctx.origin + '/api/drive/' + i.path + '?preview=true'
-          }
-        })
-    }
-    ctx.body = data
+
   },
 }

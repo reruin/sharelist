@@ -48,7 +48,7 @@ module.exports = (app) => {
 
     const getFiles = (...rest) => utils.getFiles(instance, ...rest)
     const getFile = (...rest) => utils.getFile(instance, ...rest)
-
+    const getDownloadUrl = (...rest) => utils.getDownloadUrl(instance, ...rest)
     watch(
       () => config.drives,
       (nv, ov) => {
@@ -59,8 +59,9 @@ module.exports = (app) => {
 
     return {
       ...instance,
-      getFiles: getFiles,
-      getFile: getFile
+      getFiles,
+      getFile,
+      getDownloadUrl
     }
   })
 }

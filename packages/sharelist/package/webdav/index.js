@@ -1,18 +1,11 @@
 const { WebDAVServer } = require('@sharelist/webdav')
 const { get } = require('../../../sharelist-core/lib/request')
 
-
-const waitStreamFinish = (src, dst) => new Promise((resolve) => {
-  src.pipe(dst)
-  src.resume()
-  console.log('waitStreamFinish')
-  dst.on('data', (chunk) => {
-    console.log(chunk)
-  })
-  dst.on('finish', () => resolve(true)).on('error', () => resolve(false))
-})
-
 const parsePath = v => v.replace(/(^\/|\/$)/g, '').split('/').map(decodeURIComponent).filter(Boolean)
+
+const safeCall = fn => new Promise((resolve, reject) => {
+  Promise.resolve(fn).then(resolve).catch(() => resolve())
+})
 
 const createDriver = (driver, { proxy, baseUrl } = {}) => {
   const commands = {
@@ -30,11 +23,18 @@ const createDriver = (driver, { proxy, baseUrl } = {}) => {
       }
       return data
     },
-    async get(path) {
-      return await driver.get({ paths: parsePath(path) })
+    async stat(path) {
+      console.log('stat', parsePath(path),)
+
+      try {
+        return await driver.stat({ paths: parsePath(path) })
+      } catch (error) {
+        console.log(error)
+        return { error }
+      }
     },
-    async createReadStream(path, options) {
-      let data = await driver.get({ paths: parsePath(path) })
+    async get(path, options) {
+      let data = await driver.stat({ paths: parsePath(path) })
       let download_url = `${baseUrl}/api/drive/get?download=true&id=${encodeURIComponent(data.id)}`
 
       if (!options.reqHeaders) options.reqHeaders = {}
@@ -51,63 +51,113 @@ const createDriver = (driver, { proxy, baseUrl } = {}) => {
         return res
       }
     },
-    async upload(path, readStream) {
-
-      readStream.pause?.()
+    async upload(path, stream, { size }) {
+      stream.pause?.()
 
       let paths = parsePath(path)
 
       let name = paths.pop()
 
-      let data = await driver.get({ paths })
+      console.log('ipload pre')
+      let data = await driver.stat({ paths })
+      console.log('ipload end ', data)
 
       if (!data.id) {
         return { error: { code: 404 } }
       }
-
-      let writeStream = await driver.createWriteStream(data.id, { name })
-
-      if (writeStream.error) return writeStream
-
-      let ret = await waitStreamFinish(readStream, writeStream)
-
-      if (ret == false) {
+      console.log('data.id', data.id, size)
+      let ret = await driver.upload(data.id, { name, size, stream })
+      console.log(ret, name, size, '<<<')
+      if (!ret) {
         return {
           error: { code: 500 }
         }
+      } else {
+        return ret
       }
 
     },
     async mkdir(path) {
       let paths = parsePath(path)
       let name = paths.pop()
-      let parentData = await driver.get({ paths })
-      return await driver.mkdir(parentData.id, { name })
+      let parentData = await driver.stat({ paths })
+      return await driver.mkdir(parentData.id, name)
     },
     async rm(path) {
       let paths = parsePath(path)
-      let data = await driver.get({ paths })
+      let data = await driver.stat({ paths })
       return await driver.rm(data.id)
     },
-    async mv(path, target) {
-      let paths = parsePath(path)
-      let targetPaths = parsePath(target)
-      let data = await driver.get({ paths })
-
-      //只支持同目录重命名
-      if (data.id && paths.slice(0, -1).join('/') === targetPaths.slice(0, -1).join('/')) {
-        let targetName = targetPaths.pop()
-        let res = await driver.rename(data.id, targetName)
-
-        if (res.error) {
-          return res
-        } else {
-          return { status: 0, data: res }
+    async mv(path, targetPath) {
+      if (path === targetPath) {
+        return {
+          error: { code: 403 }
         }
+      }
+      let paths = parsePath(path)
+      let targetPaths = parsePath(targetPath)
+      let data = await driver.stat({ paths })
 
-      } else {
+      let srcName = paths[paths.length - 1], dstName = targetPaths[targetPaths.length - 1]
+
+      if (!data?.id) {
         return {
           error: { code: 404 }
+        }
+      }
+
+      let target = await safeCall(driver.stat({ paths: targetPaths }))
+
+      if (target?.id) {
+
+        let enableMove = await driver.isSameDisk(data.id, target.id)
+
+        if (!enableMove) {
+          return {
+            error: { code: 501 }
+          }
+        }
+
+        // 目标是文件夹 移动
+        if (target.type == 'folder') {
+          let res = await driver.mv(data.id, target.id)
+          if (res?.error) {
+            return res
+          }
+          return { status: 201 }
+        }
+        //目标是文件 冲突
+        else {
+          return {
+            error: { code: 409 }
+          }
+        }
+      }
+      // 不存在目标 
+      else {
+        // 目标上级
+        let targetParent = await safeCall(driver.stat({ paths: targetPaths.slice(0, -1) }))
+        //存在文件夹上级
+        if (targetParent?.type == 'folder') {
+          //是否在相同磁盘
+          let isSameDisk = await driver.isSameDisk(data.id, targetParent.id)
+          if (isSameDisk) {
+            console.log(data, targetParent)
+            // 相同父级目录
+            if (data.extra.parent_id && data.extra.parent_id == targetParent.extra?.fid) {
+              await driver.rename(data.id, dstName)
+            } else {
+              let options = {}
+              if (dstName && dstName != srcName) options.name = dstName
+              await driver.mv(data.id, targetParent.id, options)
+            }
+
+            return { status: 201 }
+          }
+        }
+
+        return {
+          error: { code: 409 }
         }
       }
 
@@ -142,7 +192,6 @@ module.exports = (app) => {
         }
       }
       console.log('[WebDAV]', ctx.method, ctx.url)
-
       const resp = await webdavServer.request(ctx.req)
 
       const { headers, status, body } = resp

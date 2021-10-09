@@ -11,7 +11,7 @@ module.exports = app => {
     .post('/api/drive/list', controller.api.list)
     .post('/api/drive/get', controller.api.get)
     .get('/api/drive/get', controller.api.get)
-
+    // .get('/api/drive/download', controller.api.download)
 
     .get('/api/drive/path', controller.api.list)
     .get('/api/drive/path/:path(.*)', controller.api.list)

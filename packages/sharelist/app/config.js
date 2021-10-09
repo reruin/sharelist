@@ -19,7 +19,7 @@ const pluginPath = isDev
 module.exports = (appInfo) => ({
   middleware: ['cors', 'koaBody', 'json'],
 
-  plugin: ['sharelist', /*'webdav',*/ 'guide'],
+  plugin: ['sharelist', 'webdav', 'guide'],
 
   sharelist: {
     path: path.join(appInfo.baseDir, './package/sharelist/index.js'),
@@ -28,14 +28,14 @@ module.exports = (appInfo) => ({
       cacheDir: path.join(isPkg ? process.cwd() : appInfo.baseDir, './cache'),
     },
   },
-  /*
+
   webdav: {
     path: path.join(appInfo.baseDir, './package/webdav/index.js'),
     client: {
 
     },
   },
-  */
+
   guide: {
     path: path.join(appInfo.baseDir, './package/guide/index.js'),
     client: {},

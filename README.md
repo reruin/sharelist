@@ -8,8 +8,18 @@ ShareList 是一个易用的网盘工具，支持快速挂载 GoogleDrive、OneD
 ## 进度
 - [x] 核心库支持 
 - [x] 新主题 
-- [x] 插件：onedrive/googledrive/aliyundrive/caiyun/ctcloud/baidu
-- [ ] webdav
+- [x] 插件：onedrive/aliyundrive/caiyun/ctcloud/baidu/localfile
+- [x] webdav
+
+|       | 下载 | 上传 | 列目录 | 创建目录 | 删除 | 重命名 | 远程移动 |
+| ----        | ---- | ---- | ---- | ---- | ---- | ---- | ---- |
+Local File    |  ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+AliyunDrive   |  ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+CaiYun   |  ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+CTCloud   |  ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+Baidu Netdisk   |  ✓ | x | ✓ | ✓ | ✓ | ✓ | ✓ |
+OneDrive   |  ✓ | x | ✓ | ✓ | ✓ | ✓ | ✓ |
+
 - [ ] 中转器
 
 

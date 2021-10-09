@@ -187,11 +187,13 @@ exports.sendfile = async (ctx, path) => {
  * @param {object} data 
  */
 exports.send = async (ctx, app, data) => {
+
   let { download_url } = data
   if (download_url) {
     //the request need proxy
     if (data.extra.proxy) {
       let reqHeaders = mergeHeaders(ctx.headers, data.extra.proxy.headers)
+      console.log(reqHeaders)
       let { data: stream, status, error, headers } = await app.curl(download_url, { headers: reqHeaders, responseType: 'stream' })
       if (error) {
         ctx.status = 500
@@ -205,12 +207,14 @@ exports.send = async (ctx, app, data) => {
     }
   } else {
     let range = getRange(ctx.header.range, data.size) || { start: 0, end: data.size - 1 }
-    let { stream, error, headers, acceptRanges = false } = await app.sharelist.getStream(data.id, range || {})
+    let { stream, error, headers, acceptRanges = false } = await app.sharelist.createReadStream(data.id, range)
+
+    let isReqRange = !!ctx.header.range
     if (stream) {
       let options = acceptRanges ? { range } : {}
       let resHeaders = createHeaders(data, options)
       ctx.set({ ...headers, ...resHeaders })
-      ctx.status = acceptRanges ? 206 : 200
+      ctx.status = isReqRange && acceptRanges ? 206 : 200
       ctx.body = stream
     } else {
       ctx.status = 404

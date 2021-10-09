@@ -31,12 +31,13 @@ exports.getFiles = async (sharelist, runtime) => {
     return { error: { code: 403 } }
   }
 
-  const data = await sharelist.list(runtime)
-
-  if (data.err) {
-    return { error: { code: data.err.code || 500, msg: data.err.msg } }
+  let data
+  try {
+    data = await sharelist.list(runtime)
+  } catch (e) {
+    console.trace(e)
+    return { error: { code: e.code || 500, msg: e.message } }
   }
-
   if (data.files?.length > 0) {
     let base_url = runtime.path == '/' ? '' : runtime.path
     data.files = data.files
@@ -45,10 +46,9 @@ exports.getFiles = async (sharelist, runtime) => {
         &&
         i.hidden !== true
       )
-    return data
   }
+  return { data }
 
-  return data
 }
 
 exports.getFile = async (sharelist, runtime) => {
@@ -63,12 +63,32 @@ exports.getFile = async (sharelist, runtime) => {
     return { error: { code: 404 } }
   }
 
-  const data = await sharelist.get(runtime)
-
-  if (data.err) {
-    return { error: { code: data.err.code || 500, msg: data.err.msg } }
+  let data
+  try {
+    data = await sharelist.get(runtime)
+  } catch (e) {
+    return { error: { code: e.code || 500, msg: e.message } }
   }
 
-  return data
+  return { data }
 }
 
+exports.getDownloadUrl = async (runtime) => {
+  //使用路径模式，提前排除
+  if (runtime.path && isIgnorePath(runtime.path, config)) {
+    return { error: { code: 404 } }
+  }
+
+  if (runtime.path && isForbiddenPath(runtime.path, config)) {
+    return { error: { code: 404 } }
+  }
+
+  try {
+    let url = await sharelist.get_download_url(runtime)
+    return { url }
+
+  } catch (error) {
+    return { error }
+  }
+
+}

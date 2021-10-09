@@ -1,11 +1,14 @@
 /**
  * Aliyun Drive
  *
- * aliyun://userId/driveId/folderId/?password
- * aliyun://userId/driveId/folderId/fileId?password
+ * aliyun://userId/?root_id&refresh_token
+ * aliyun://userId/path
  */
-const { PassThrough } = require('stream')
 const protocol = 'aliyun'
+
+const UPLOAD_PART_SIZE = 10 * 1024 * 1024
+
+const DEFAULT_ROOT_ID = 'root'
 
 /**
  * auth manager class
@@ -27,23 +30,42 @@ class Manager {
   async init() {
     this.clientMap = {}
 
-    let d = await this.app.getDrives()
-    for (let i of d) {
+    for (let i of (await this.app.getDrives())) {
       let data = this.app.decode(i.path)
       let { key, refresh_token } = data
+      let needUpdate = false
 
-      //初始化获取 drive_id 和 user_id
+      //init drive_id and user_id
       if (!data.user_id) {
-        let { credentials, err } = await this.refreshAccessToken(data)
-        if (err) {
+        let credentials
+        try {
+          credentials = await this.refreshAccessToken(data)
+        } catch (e) {
           continue
         }
 
         data.key = data.user_id = key = credentials.user_id
-
-        await this.app.saveDrive(data, { refresh_token })
+        data.refresh_token = credentials.refresh_token
+        needUpdate = true
       }
 
+      //处理相同key的情形
+      if (key) {
+        let isUsedKey = this.clientMap[key]
+        if (isUsedKey) {
+          data.key = key = `${key}.${Date.now()}`
+          needUpdate = true
+        }
+      }
+
+      if (!data.path) {
+        data.path = data.root_id || DEFAULT_ROOT_ID
+        needUpdate = true
+      }
+
+      if (needUpdate) {
+        await this.app.saveDrive(data, { refresh_token })
+      }
       this.clientMap[key] = data
     }
   }
@@ -51,14 +73,17 @@ class Manager {
   /**
    * refreshAccessToken
    *
-   * @param {object} {refresh_token , path}
-   * @return {{ credentials }}
+   * @param {object} options
+   * @param {string} options.refresh_token
+   * @return {object} [credentials]
    * @api private
    */
-  async refreshAccessToken({ refresh_token: lastRefeshToken, root_id }) {
-    let { data, error } = await this.app.request.post('https://api.aliyundrive.com/token/refresh', {
+  async refreshAccessToken({ refresh_token: lastRefeshToken, ...rest }) {
+    //https://api.aliyundrive.com/token/refresh can't support mobile token
+    let { data } = await this.app.request.post('https://api.aliyundrive.com/v2/account/token', {
       data: {
         refresh_token: lastRefeshToken,
+        grant_type: "refresh_token"
       },
       headers: {
         'User-Agent': 'None',
@@ -66,24 +91,22 @@ class Manager {
       contentType: 'json',
     })
 
-    if (error) return { error }
-
-    if (data && !data.access_token)
-      return { error: { message: data.message || 'An error occurred during refresh access token' } }
+    if (data && !data.access_token) {
+      this.app.error({ message: data.message || 'An error occurred during refresh access token' })
+    }
 
     let { user_id, access_token, default_drive_id: drive_id, expires_in, refresh_token } = data
 
+    // expires_in 7200s
     let expires_at = Date.now() + expires_in * 1000
 
     return {
-      credentials: {
-        user_id,
-        access_token,
-        refresh_token,
-        expires_at,
-        drive_id,
-        root_id,
-      },
+      ...rest,
+      user_id,
+      access_token,
+      refresh_token,
+      expires_at,
+      drive_id,
     }
   }
 
@@ -96,37 +119,21 @@ class Manager {
    */
   async getCredentials(key) {
     let credentials = this.clientMap[key]
-
     if (!credentials) {
-      return { error: { message: 'unmounted' } }
+      return this.app.error({ message: 'unmounted' })
     }
 
-    if (!credentials.access_token || (credentials.expires_at && credentials.expires_at - Date.now() < 5 * 60 * 1000)) {
-      let result = await this.refreshAccessToken(credentials)
-      if (result.error) {
-        return result
-      } else {
-        credentials = result.credentials
-        this.clientMap[key] = { ...credentials }
-        await this.app.saveDrive({ key, refresh_token: credentials.refresh_token })
-      }
+
+    if (!(credentials.access_token && credentials.expires_at && credentials.expires_at - Date.now() > 5 * 60 * 1000)) {
+      credentials = await this.refreshAccessToken(credentials)
+
+      this.clientMap[key] = { ...credentials }
+      await this.app.saveDrive({ key, refresh_token: credentials.refresh_token })
     }
 
-    return { credentials }
+    return credentials
   }
 
-  async parse(id) {
-    let { key, path } = this.app.decode(id)
-    let { error, credentials } = await this.getCredentials(key)
-
-    let ret = { key, path, error }
-    if (!error) {
-      ret.drive_id = credentials.drive_id
-      ret.access_token = credentials.access_token
-      ret.root_id = credentials.root_id
-    }
-    return ret
-  }
 }
 
 module.exports = class Driver {
@@ -138,13 +145,13 @@ module.exports = class Driver {
     this.version = '1.0'
     this.protocol = protocol
 
-    this.max_age_dir = 7 * 24 * 60 * 60 * 1000 // 7 days
+    this.max_age_dir = 30 * 24 * 60 * 60 * 1000 // 7 days
 
     this.guide = [
       { key: 'refresh_token', label: 'Refresh Token', type: 'string', required: true },
       {
         key: 'root_id',
-        label: '初始文件夹ID',
+        label: '初始文件夹ID / Root ID',
         help: 'https://www.aliyundrive.com/drive/folder/xxxxxxxxxxx 地址中 xxxx 的部分',
         type: 'string',
       },
@@ -156,199 +163,29 @@ module.exports = class Driver {
     this.manager = Manager.getInstance(app)
   }
 
+  async getCredentials(key) {
+    return await this.manager.getCredentials(key)
+  }
+
   /**
    * list files
    *
    * @param {string} [id] folder id
    * @param {object} [options] list options
    * @param {object} [options.sort] sort methods
-   * @param {object} [options.search] search key
-   * @return {object | error}
+   * @param {object} [options.search] search
+   * @param {object} [key] key
+   * @return {object}
    *
    * @api public
    */
-  async list(id, { sort, search }) {
-    let { manager, app, max_age_dir } = this
-
-    let { error, path, key, access_token, drive_id, root_id } = await manager.parse(id)
-
-    if (error) return { error }
-
-    let cacheId = `${id}#list`
-
-    let r = app.cache.get(cacheId)
-
-    if (r && !search) {
-      console.log(`${new Date().toISOString()} CACHE ${this.name} ${id}`)
-      return r
-    }
-
-    let fid = path || root_id || 'root'
-
-    let data = await this._list(access_token, fid, drive_id)
-
-    if (data.error) return data
-
-    data.forEach((i) => {
-      i.id = this.app.encode({ key, path: i.id })
-    })
-
-    let result = {
-      id,
-      files: data,
-    }
-
-    if (!search) app.cache.set(cacheId, result, max_age_dir)
-
-    return result
-  }
-
-  /**
-   * get file details
-   *
-   * @param {string} [id] file id
-   * @return {object | error}
-   *
-   * @api public
-   */
-  async get(id) {
-    let { manager, app, max_age_dir } = this
-
-    let { error, path, access_token, drive_id, root_id } = await manager.parse(id)
-
-    if (error) return { error }
-
-    let cacheId = `${id}#get`
-
-    let r = app.cache.get(cacheId)
-
-    if (r) {
-      console.log(`${new Date().toISOString()} CACHE ${this.name} ${id}`)
-      return r
-    }
-
-    let fid = path.replace(/\//g, '') || root_id || 'root'
-
-    let data = await this._get(access_token, fid, drive_id)
-
-    if (data.error) return data
-
-    data.id = id
-
-    let expired_at
-    if (data.type == 'file') {
-      //TODO 某些token 的oss地址要求 验证来源
-      if (data.download_url?.includes('x-oss-additional-headers=referer')) {
-        data.extra.proxy = {
-          headers: {
-            // 'referer': 'https://www.aliyundrive.com/',
-            referer: 'https://www.aliyundrive.com/',
-            // 'Referrer-Policy': 'no-referrer',
-          },
-        }
-      }
-      expired_at = data.download_url.match(/x\-oss\-expires=(?<expired_at>\d+)/)?.groups.expired_at
-
-      expired_at = +expired_at * 1000
-    } else {
-      expired_at = max_age_dir
-    }
-
-    if (expired_at) {
-      app.cache.set(id, data, expired_at - Date.now() - 3000)
-    }
-    return data
-  }
-
-
-  /**
-   * create folder
-   *
-   * @param {string} [id] folder id
-   * @param {object} [options] options
-   * @param {object} [options.paths] folder 
-   * @return {string | error}
-   *
-   * @api public
-   */
-  async mkdir(id, { name } = {}) {
-    let { manager, app } = this
-
-    let { error, key, path, access_token, drive_id, root_id } = await manager.parse(id)
-
-    if (error) return { error }
-
-    let fid = path || root_id || 'root'
-
-    let res = this._mkdir(access_token, fid, drive_id, name)
-
-    if (res.error) return res
-
-    // clear cache
-    let cacheId = `${id}#list`
-
-    app.cache.remove(cacheId)
-
-    await this._list(access_token, fid, drive_id)
-
-
-    return { id: this.app.encode({ key, path: fid }), name }
-  }
-
-  /**
-   * remove file/folder
-   *
-   * @param {string} [id] folder id
-   * @return {string | error}
-   *
-   * @api public
-   */
-  async rm(id) {
-    let { manager, app } = this
-
-    let { error, key, path, access_token, drive_id, root_id } = await manager.parse(id)
-
-    let fid = path || root_id || 'root'
-
-    let data = await this._get(access_token, fid, drive_id)
-
-    if (data.error) return data
-
-    if (error) return { error }
-
-    let res = this._rm(access_token, fid, drive_id)
-
-    if (res.error) return res
-
-    let parent_id = this.app.encode({ key, path: data.extra.parent_id == 'root' ? '' : data.extra.parent_id })
-
-    // clear cache
-    let parentCacheId = `${parent_id}#list`
-    let cacheId = `${id}#get`
-
-    app.cache.remove(parentCacheId)
-    app.cache.remove(cacheId)
-
-    await this._list(access_token, data.extra.parent_id, drive_id)
-
-    return { id }
-  }
-
-  /**
-   * list files
-   *
-   * @param {string} [access_token] access_token
-   * @param {string} [id] folder id
-   * @param {string} [drive_id] drive id
-   * @return {array | error}
-   *
-   * @api private
-   */
-  async _list(access_token, id, drive_id) {
+  async list(id, options, key) {
     const {
       request,
       utils: { timestamp },
     } = this.app
+
+    let { drive_id, access_token } = await this.getCredentials(key)
 
     let marker,
       children = []
@@ -366,7 +203,7 @@ module.exports = class Driver {
         params.marker = marker
       }
 
-      let { data, error } = await request.post(`https://api.aliyundrive.com/adrive/v3/file/list`, {
+      let { data } = await request.post(`https://api.aliyundrive.com/adrive/v3/file/list`, {
         data: params,
         headers: {
           'User-Agent':
@@ -376,10 +213,10 @@ module.exports = class Driver {
         contentType: 'json',
       })
 
-      if (error) return { error }
-
       // if (!data.items) return { error: { message: 'An error occurred when list folder' } }
       if (data.error) return data
+
+      if (!data.items) return this.app.error({ message: data.message })
 
       for (let i of data.items) {
         children.push({
@@ -406,34 +243,32 @@ module.exports = class Driver {
   /**
    * get file
    *
-   * @param {string} [id] path id
-   * @param {string} [id] folder id
-   * @param {string} [drive_id] drive id
+   * @param {string} [file_id] path id
+   * @param {string} [key] key
    * @return {object}
    *
-   * @api private
+   * @api public
    */
-  async _get(access_token, id, drive_id) {
+  async get(file_id, key) {
     const {
       request,
       utils: { timestamp },
     } = this.app
 
-    let { data, error } = await request.post(`https://api.aliyundrive.com/v2/file/get`, {
+    let { drive_id, access_token } = await this.getCredentials(key)
+
+    let { data } = await request.post(`https://api.aliyundrive.com/v2/file/get`, {
       headers: {
         Authorization: `Bearer ${access_token}`,
       },
       data: {
         drive_id,
-        file_id: id,
+        file_id,
       },
       contentType: 'json',
     })
 
-    if (error) return { error }
-
     if (data.error) return data.error
-
     let result = {
       id: data.file_id,
       name: data.name,
@@ -448,6 +283,7 @@ module.exports = class Driver {
       },
     }
 
+
     // if (data.category == 'video') {
     //   let sources = await this.video_preview(access_token, id, drive_id)
     //   result.extra.category = 'video'
@@ -456,15 +292,101 @@ module.exports = class Driver {
     //   }
     // }
 
+    if (result.type == 'file') {
+      if (!result.download_url) {
+        let res = await this.get_download_url(file_id, key)
+        result.download_url = res.url
+      }
+      //web refresh_token 的 oss地址要求 验证来源
+      if (result.download_url?.includes('x-oss-additional-headers=referer')) {
+        result.extra.proxy = {
+          headers: {
+            referer: 'https://www.aliyundrive.com/',
+          },
+        }
+      }
+      let expired_at = +(result.download_url.match(/x\-oss\-expires=(?<expired_at>\d+)/)?.groups.expired_at || 0)
+
+      result.max_age = expired_at - Date.now()
+    }
+
     return result
   }
 
-  async _mkdir(access_token, parent_file_id, drive_id, name, check_name_mode = 'refuse') {
-    const {
-      request,
-      utils: { timestamp },
-    } = this.app
-    let { data, error } = await request.post(`https://api.aliyundrive.com/adrive/v2/file/createWithFolders`, {
+  async get_path(file_id, key) {
+    let { drive_id, access_token } = await this.getCredentials(key)
+    const { request } = this.app
+
+    try {
+      let { data } = await request.post(`https://api.aliyundrive.com/adrive/v1/file/get_path`, {
+        headers: {
+          Authorization: `Bearer ${access_token}`,
+        },
+        data: {
+          drive_id,
+          file_id,
+        },
+        contentType: 'json',
+      })
+
+      return data?.items || []
+    } catch (e) {
+    }
+  }
+  /**
+   * get download url
+   *
+   * @param {string} [file_id] file id
+   * @param {string} [key] key
+   * @return {object}
+   *
+   * @api public
+   */
+  async get_download_url(file_id, key) {
+    let { drive_id, access_token } = await this.getCredentials(key)
+    const { request } = this.app
+
+    try {
+      let { data } = await request.post(`https://api.aliyundrive.com/v2/file/get_download_url`, {
+        headers: {
+          Authorization: `Bearer ${access_token}`,
+        },
+        data: {
+          drive_id,
+          file_id,
+        },
+        contentType: 'json',
+      })
+
+      const ret = { url: data?.url, size: data.size, max_age: new Date(data.expiration).getTime() - Date.now() }
+      if (data.url?.includes('x-oss-additional-headers=referer')) {
+        ret.proxy = {
+          headers: {
+            referer: 'https://www.aliyundrive.com/',
+          },
+        }
+      }
+      return ret
+    } catch (e) {
+      return {}
+    }
+  }
+
+  /**
+   * create folder
+   *
+   * @param {string} [id] folder id
+   * @param {string} [name] folder name
+   * @param {object} [options] options
+   * @param {object} [options.check_name_mode] 
+   * @return {object}
+   *
+   * @api public
+   */
+  async mkdir(parent_file_id, name, { check_name_mode = 'refuse' }, key) {
+    let { drive_id, access_token } = await this.getCredentials(key)
+
+    let { data } = await this.app.request.post(`https://api.aliyundrive.com/adrive/v2/file/createWithFolders`, {
       headers: {
         Authorization: `Bearer ${access_token}`,
       },
@@ -478,19 +400,67 @@ module.exports = class Driver {
       contentType: 'json',
     })
 
-    if (error) return { error }
-
     if (data.error) return data.error
 
-    return data
+    return {
+      id: data.file_id,
+      name,
+      parent_id: parent_file_id
+    }
   }
 
+  /**
+   * rename file/folder
+   *
+   * @param {string} [id] folder id
+   * @param {string} [name] new name
+   * @return {object}
+   *
+   * @api public
+   */
+  async rename(file_id, name, { check_name_mode = 'refuse' } = {}, key) {
+    let { drive_id, access_token } = await this.getCredentials(key)
 
-  async _rm(access_token, file_id, drive_id) {
-    const {
-      request,
-    } = this.app
-    let { data, error } = await request.post(`https://api.aliyundrive.com/v2/batch`, {
+    let { data } = await this.app.request.post(`https://api.aliyundrive.com/v3/file/update`, {
+      headers: {
+        Authorization: `Bearer ${access_token}`,
+      },
+      data: {
+        drive_id,
+        file_id,
+        name,
+        check_name_mode,
+      },
+      contentType: 'json',
+    })
+
+    if (data.code) {
+      if (data.code === 'AlreadyExist.File') {
+        return this.app.error({ code: 409 })
+      } else {
+        return this.app.error(data)
+      }
+    }
+
+    return {
+      id: data.file_id,
+      name: data.name,
+      parent_id: data.parent_file_id
+    }
+  }
+
+  /**
+   * remove file/folder
+   *
+   * @param {string} [id] folder id
+   * @return {string}
+   *
+   * @api public
+   */
+  async rm(file_id, key) {
+    let { drive_id, access_token } = await this.getCredentials(key)
+
+    let { data } = await this.app.request.post(`https://api.aliyundrive.com/v2/batch`, {
       headers: {
         Authorization: `Bearer ${access_token}`,
       },
@@ -503,19 +473,125 @@ module.exports = class Driver {
       contentType: 'json',
     })
 
-    if (error) return { error }
+    if (data.code) {
+      return this.app.error(data)
+    }
 
-    if (data.error) return data.error
-
-    return data
+    return { id: file_id }
   }
 
-  async _beforeUpload(access_token, parent_file_id, drive_id, name, extra = {}) {
-    const {
-      request,
-      utils: { timestamp },
-    } = this.app
-    let { data, error } = await request.post(`https://api.aliyundrive.com/adrive/v2/file/createWithFolders`, {
+
+  /**
+   * mv file/folder
+   *
+   * @param {string} [file_id] folder id
+   * @param {string} [target_id] folder id
+   * @return {string | error}
+   *
+   * @api public
+   */
+  async mv(file_id, target_id, key) {
+    let { drive_id, access_token } = await this.getCredentials(key)
+
+    let { data } = await this.app.request.post(`https://api.aliyundrive.com/v3/batch`, {
+      headers: {
+        Authorization: `Bearer ${access_token}`,
+      },
+      data: {
+        "requests":
+          [
+            {
+              "body": { drive_id, file_id, to_drive_id: drive_id, to_parent_file_id: target_id },
+              "headers": { "Content-Type": "application/json" },
+              "id": file_id,
+              "method": "POST",
+              "url": "/file/move"
+            }],
+        "resource": "file"
+      }
+      ,
+      contentType: 'json',
+    })
+
+    if (data.code) {
+      return this.app.error(data)
+    }
+
+    return { id: file_id }
+  }
+
+  /**
+   * upload file
+   *
+   * @param {string} [id] folder id
+   * @param {object} [options] upload file meta
+   * @param {number} [options.size] upload file size
+   * @param {string} [options.name] upload file name
+   * @param {ReadableStream} [options.stream] upload file stream
+   * @param {object} [credentials] credentials
+   * @return {string | error}
+   *
+   * @api public
+   */
+  async upload(id, { size, name, stream, ...rest }, key) {
+    const { app } = this
+
+    let res = await this.beforeUpload(id, { name, size, ...rest }, key)
+
+    let upload_urls = res.part_info_list.map(i => i.upload_url)
+
+    let { file_id, upload_id, file_name, rapid_upload } = res
+
+    if (!rapid_upload) {
+      let passStream = app.createReadStream(stream, { highWaterMark: 2 * UPLOAD_PART_SIZE })
+
+      for (let upload_url of upload_urls) {
+        let chunk = await passStream.read(UPLOAD_PART_SIZE)
+        let headers = {
+          'Referer': 'https://www.aliyundrive.com/',
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/92.0.4515.159 Safari/537.36'
+        }
+        headers['Content-Length'] = chunk.length
+        await app.request(upload_url, {
+          method: 'put',
+          data: chunk,
+          contentType: 'buffer',
+          responseType: 'text',
+          headers
+        })
+      }
+
+      await this.afterUpload(file_id, upload_id, key)
+    }
+
+    return { id: file_id, name: file_name }
+  }
+
+  async haveSameFile(parent_id, name, size, key) {
+    try {
+      let files = this.list(parent_id, {}, key)
+      return files.find(i => i.name === name && i.size === size)
+    } catch (e) {
+
+    }
+    return false
+  }
+
+  // extra = { sha1 }
+  async beforeUpload(parent_file_id, { name, size, check_name_mode, ...extra } = { check_name_mode: 'auto_rename' }, key) {
+    let { drive_id, access_token } = await this.getCredentials(key)
+
+    const partList = new Array(Math.ceil(size / UPLOAD_PART_SIZE)).fill(0).map((i, idx) => ({ part_number: idx + 1 }))
+
+    // 无法提供sha1校验
+    /*
+    if (!extra.sha1) {
+      if (await this.haveSameFile(parent_file_id, name, size, { access_token, drive_id })) {
+        return this.app.error({ code: 409 })
+      }
+    }
+    */
+    let { data } = await this.app.request.post(`https://api.aliyundrive.com/adrive/v2/file/createWithFolders`, {
       headers: {
         Authorization: `Bearer ${access_token}`,
       },
@@ -523,96 +599,76 @@ module.exports = class Driver {
         drive_id,
         parent_file_id,
         name,
+        size,
         type: "file",
-        "check_name_mode": "auto_rename",
-        "part_info_list": [{ "part_number": 1 }],
+        check_name_mode,
+        "part_info_list": partList,
         ...extra
-      }
-      ,
+      },
       contentType: 'json',
     })
 
-    if (error) return { error }
-
-    if (data.error) return data.error
+    if (data.code) {
+      return this.app.error(data)
+    }
 
     return data
   }
 
-  async video_preview(access_token, id, drive_id) {
+  async afterUpload(file_id, upload_id, key) {
+    let { drive_id, access_token } = await this.getCredentials(key)
+
+    const {
+      request,
+    } = this.app
+    let { data } = await request.post(`https://api.aliyundrive.com/v2/file/complete`, {
+      headers: {
+        Authorization: `Bearer ${access_token}`,
+      },
+      data: {
+        drive_id,
+        upload_id,
+        file_id
+      },
+      contentType: 'json',
+    })
+
+    if (data.code) {
+      return this.app.error(data)
+    }
+
+    return data
+  }
+
+  async video_preview(id, key) {
+    let { drive_id, access_token } = await this.getCredentials(key)
+
     const {
       request,
       utils: { videoQuality },
     } = this.app
 
-    let { data, error } = await request.post(`https://api.aliyundrive.com/v2/file/get_video_preview_play_info`, {
-      headers: {
-        Authorization: `Bearer ${access_token}`,
-      },
-      data: {
-        category: 'live_transcoding',
-        drive_id,
-        file_id: id,
-        template_id: '',
-      },
-      contentType: 'json',
-    })
-    if (error) return []
+    let data = []
+    try {
+      let res = await request.post(`https://api.aliyundrive.com/v2/file/get_video_preview_play_info`, {
+        headers: {
+          Authorization: `Bearer ${access_token}`,
+        },
+        data: {
+          category: 'live_transcoding',
+          drive_id,
+          file_id: id,
+          template_id: '',
+        },
+        contentType: 'json',
+      })
+
+      data = res.data
+    } catch (e) {
+    }
+
     return data.video_preview_play_info.live_transcoding_task_list
       .filter((i) => !!i.url)
       .map((i) => ({ size: videoQuality(i.template_id), type: 'video/mp4', quality: i.template_id, src: i.url }))
-  }
-
-  async createReadStream(id, options = {}) {
-    let { key, path } = this.app.decode(id)
-
-    let fid = path.replace(/\//g, '')
-
-    let { error, credentials } = await manager.getCredentials(key)
-
-    if (error) return { error }
-
-    let { access_token, drive_id, root_id } = credentials
-
-    await this.get(access_token, fid)
-
-    // let { data , error } = await this.app.request({ url: resp.url, method: 'get', responseType: 'stream' })
-
-    // return data
-  }
-
-  async createWriteStream(id, options) {
-    const stream = new PassThrough()
-
-    let { manager, app, max_age_dir } = this
-
-    let { error, path, access_token, drive_id, root_id } = await manager.parse(id)
-
-    if (error) return { error }
-
-    let fid = path || root_id || 'root'
-
-    let res = await this._beforeUpload(access_token, fid, drive_id, options.name, { size: options.size })
-
-    if (res.error) return res
-
-    let upload_url = res.part_info_list[0].upload_url
-
-    if (upload_url) {
-      app.request.post(upload_url, {
-        body: stream,
-        contentType: 'stream',
-        responseType: 'text',
-        headers: {
-          'Referer': 'https://www.aliyundrive.com/'
-        }
-      })
-
-      stream.on('finish', () => {
-        app.cache.remove(`${id}#list`)
-      })
-
-      return stream
-    }
   }
 }

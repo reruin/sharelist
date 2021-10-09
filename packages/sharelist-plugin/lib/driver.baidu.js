@@ -20,6 +20,8 @@ const ERR_CODE = {
   42214: '文件基础信息查询失败',
 }
 
+const DEFAULT_ROOT_ID = 'root'
+
 /**
  * auth manager class
  */
@@ -43,7 +45,7 @@ class Manager {
     for (let i of d) {
       let data = this.app.decode(i.path)
       let { key, refresh_token } = data
-
+      if (data.expires_at) data.expires_at = parseInt(data.expires_at)
       let needUpdate = false
       if (!key && data.client_id) {
         data.key = key = data.client_id
@@ -57,6 +59,12 @@ class Manager {
           data.key = key = `${key}::${Date.now()}`
           needUpdate = true
         }
+      }
+
+      // 处理起始目录
+      if (!data.path) {
+        data.path = data.root_id || DEFAULT_ROOT_ID
+        needUpdate = true
       }
 
       if (needUpdate) {
@@ -75,41 +83,36 @@ class Manager {
    * @api private
    */
   async refreshAccessToken(credentials) {
-    let { client_id, client_secret, redirect_uri, refresh_token, path } = credentials
+    console.log('refreshAccessToken')
+    let { client_id, client_secret, redirect_uri, refresh_token, ...rest } = credentials
 
     if (!(client_id && client_secret && refresh_token)) {
-      return { error: { message: 'Invalid parameters: An error occurred during refresh access token' } }
+      return this.app.error({ message: 'Invalid parameters: An error occurred during refresh access token' })
     }
 
     let formdata = {
       client_id: client_id.split('::')[0],
       client_secret,
-      redirect_uri,
+      // redirect_uri,
       refresh_token,
       grant_type: 'refresh_token',
     }
 
-    let { data, error } = await this.app.request.post(`http://openapi.baidu.com/oauth/2.0/token`, { data: formdata })
+    let { data } = await this.app.request.get(`https://openapi.baidu.com/oauth/2.0/token`, { data: formdata })
 
-    if (error) return { error }
+    if (data.error) return this.app.error({ message: data.error_description || data.error })
 
-    if (data.error)
-      return {
-        error: { message: data.error_description || data.error },
-      }
-
+    // expires_in 30 days
     let expires_at = data.expires_in * 1000 + Date.now()
 
     return {
-      credentials: {
-        client_id,
-        client_secret,
-        path,
-        redirect_uri,
-        refresh_token: data.refresh_token, // refresh_token 永久有效
-        access_token: data.access_token,
-        expires_at,
-      },
+      client_id,
+      client_secret,
+      redirect_uri,
+      refresh_token: data.refresh_token, // refresh_token 永久有效
+      access_token: data.access_token,
+      expires_at,
+      ...rest
     }
   }
 
@@ -123,41 +126,28 @@ class Manager {
   async getCredentials(key) {
     let credentials = this.clientMap[key]
     if (!credentials) {
-      return { error: { message: 'unmounted' } }
+      return this.app.error({ message: 'unmounted' })
     }
     // 未初始化(access_token不存在)、即将过期 刷新token
-    if (!credentials.access_token || (credentials.expires_at && credentials.expires_at - Date.now() < 5 * 60 * 1000)) {
-      let result = await this.refreshAccessToken(credentials)
-      if (result.error) {
-        return result
-      } else {
-        credentials = result.credentials
-
-        this.clientMap[key] = {
-          ...credentials,
-        }
-        await this.app.saveDrive({
-          key,
-          expires_at: credentials.expires_at,
-          access_token: credentials.access_token,
-          refresh_token: credentials.refresh_token,
-        })
-      }
+    if (!(credentials.access_token && credentials.expires_at && credentials.expires_at - Date.now() > 5 * 60 * 1000)) {
+      credentials = await this.refreshAccessToken(credentials)
+      this.clientMap[key] = { ...credentials }
+      await this.app.saveDrive({
+        key,
+        expires_at: credentials.expires_at,
+        access_token: credentials.access_token,
+        refresh_token: credentials.refresh_token,
+      })
     }
-
-    return { credentials }
+    return credentials
   }
 
-  async parse(id) {
-    let { key, path } = this.app.decode(id)
-    let { error, credentials } = await this.getCredentials(key)
+}
 
-    let ret = { key, path, error }
-    if (!error) {
-      ret.access_token = credentials.access_token
-    }
-    return ret
-  }
+const getRealId = v => [v.split('/').pop().replace('@f', ''), v.endsWith('@f'), v.split('/').slice(0, -1).join('/')]
+
+const fullpath = (basepath, subpath) => {
+  return (basepath == '/' ? '' : basepath) + '/' + subpath
 }
 
 module.exports = class Driver {
@@ -169,7 +159,7 @@ module.exports = class Driver {
     this.version = '1.0'
     this.protocol = protocol
 
-    this.max_age_dir = 7 * 24 * 60 * 60 * 1000 // 7 days
+    this.max_age_dir = 30 * 24 * 60 * 60 * 1000 // 30 days
 
     this.guide = [
       { key: 'client_id', label: '应用ID / AppKey', type: 'string', required: true },
@@ -187,6 +177,10 @@ module.exports = class Driver {
     this.manager = Manager.getInstance(app)
   }
 
+  async getCredentials(key) {
+    return await this.manager.getCredentials(key)
+  }
+
   /**
    * Lists or search files
    *
@@ -198,110 +192,44 @@ module.exports = class Driver {
    *
    * @api public
    */
-  async list(id, { sort, search } = {}) {
-    let { manager, app, max_age_dir } = this
-
-    let { error, path, key, access_token } = await manager.parse(id)
-
-    if (error) return { error }
-
-    let cacheId = `${id}#list`
-
-    let r = app.cache.get(cacheId)
-
-    if (r && !search) {
-      console.log(`${new Date().toISOString()} CACHE ${this.name} ${id}`)
-      return r
-    }
-
-    let data = await this._list(access_token, { path: '/' + path })
-
-    if (data.error) return data
-
-    data.forEach((i) => {
-      i.id = this.app.encode({ key, path: i.extra.path })
-    })
-
-    let result = {
-      id,
-      files: data,
-    }
-
-    if (!search) app.cache.set(cacheId, result, max_age_dir)
-
-    return result
-  }
-
-  async get(id) {
-    let { manager, app, max_age_dir } = this
-
-    let { error, key, path, access_token } = await manager.parse(id)
-
-    if (error) return { error }
-
-    let cacheId = `${id}#get`
-
-    let r = app.cache.get(cacheId)
-
-    if (r) {
-      console.log(`${new Date().toISOString()} CACHE ${this.name} ${id}`)
-      return r
-    }
-
-    let parentData = await this.list(this.app.encode({ key, path: path.split('/').slice(0, -1).join('/') }))
-
-    if (parentData.error) return parentData
-
-    let file = parentData.files.find((i) => i.id == id)
-
-    if (!file) {
-      return {
-        error: { code: 404, message: 'not found' },
-      }
-    }
-    let data = await this._get(access_token, { id: file.extra.fid })
-
-    // 大于 50M 的文件 无法直接下载，必须代理
-    if (data.size > 50 * 1024 * 1024) {
-      data.extra.proxy = {
-        headers: {
-          'user-agent': 'pan.baidu.com',
-          referer: 'https://pan.baidu.com/',
-        },
-      }
-    }
-
-    // 8 hrs
-    return app.cache.set(cacheId, data, 8 * 3600 * 1000)
-  }
-
   // doc: https://pan.baidu.com/union/document/basic#%E8%8E%B7%E5%8F%96%E6%96%87%E4%BB%B6%E5%88%97%E8%A1%A8
-  async _list(access_token, { path, search }) {
-    const { request } = this.app
+  async list(id, { sort, search }, key) {
 
+    let [fid, isFile] = getRealId(id)
+
+    if (isFile) {
+      return []
+    }
+
+    console.log('list', id, fid)
+    const { request } = this.app
+    let { access_token } = await this.getCredentials(key)
+
+    let data = await this.meta(fid, key)
+    let dir = data.extra.path || '/'
+    console.log(data, dir)
+    if (data.type != 'folder') return []
+
+    // if (data.type != 'folder') return []
     const params = {
       method: 'list',
       access_token,
-      dir: path,
+      dir,
       limit: 10000,
       web: 'web',
     }
 
-    let start = 0,
-      children = []
+    let start = 0, files = []
     do {
-      let { data, error } = await request(`${API}/file`, {
+      let { data } = await request(`${API}/file`, {
         data: { ...params, start },
         contentType: 'json',
       })
-
-      if (error) return { error }
-
-      if (data.errno) return { error: { message: ERR_CODE[data.errno] } }
+      if (data.errno) return this.app.error({ message: ERR_CODE[data.errno] })
 
       data.list.forEach((i) => {
         let item = {
-          id: i.fs_id,
+          id: id + '/' + i.fs_id + (i.isdir ? '' : '@f'),
           name: i.server_filename,
           type: i.isdir ? 'folder' : 'file',
           size: parseInt(i.size),
@@ -309,13 +237,15 @@ module.exports = class Driver {
           mtime: i.server_mtime * 1000,
           thumb: i.thumbs ? i.thumbs.url2 : '',
           extra: {
-            fid: i.fs_id,
-            path: i.path.substring(1),
+            fid: id + '/' + i.fs_id + (i.isdir ? '' : '@f'),
+            parent_id: id,
+            path: i.path,
+            // path: i.path.substring(1),
             md5: i.md5,
           },
         }
 
-        children.push(item)
+        files.push(item)
       })
 
       if (params.limit <= data.list.length) {
@@ -324,17 +254,75 @@ module.exports = class Driver {
         break
       }
     } while (true)
-
-    return children
+    console.log(files)
+    return files
   }
 
-  async _get(access_token, { id }) {
-    const {
-      request,
-      utils: { timestamp },
-    } = this.app
+  /**
+  * get file
+  *
+  * @param {string} [id] id
+  * @param {string} [key] key
+  * @return {object}
+  *
+  * @api public
+  */
+  async get(id, key) {
+    let [fid, isFile] = getRealId(id)
 
-    let { data, error } = await request(`${API}/multimedia`, {
+    let result = await this.meta(fid, key)
+
+    if (result.type == 'file') {
+      let { access_token } = await this.getCredentials(key)
+      // file.dlink 8 小时有效
+      let { headers } = await this.app.request(`${result.extra.dlink}&access_token=${access_token}`, {
+        followRedirect: false,
+        headers: {
+          'user-agent': 'pan.baidu.com',
+        },
+      })
+
+      //http://xxxx.baidupcs.com/file  expires: 8h
+      if (headers.location) {
+        result.download_url = headers.location
+        result.max_age = 8 * 3600 * 1000 - 60 * 1000
+      }
+    }
+
+    if (result.download_url) {
+      // 50M 以上，直接下载包 sign error, 使用中转
+      if (result.size >= 50 * 1024 * 1024) {
+        result.extra.proxy = {
+          headers: {
+            'user-agent': 'pan.baidu.com',
+            'referer': 'https://pan.baidu.com'
+          },
+        }
+      }
+    }
+
+    return result
+  }
+
+  /**
+   * 
+   */
+  async meta(id, key) {
+    if (!id || id === DEFAULT_ROOT_ID) {
+      return {
+        id,
+        type: 'folder',
+        extra: {
+          path: '/'
+        }
+      }
+    }
+
+    const { request } = this.app
+
+    let { access_token } = await this.getCredentials(key)
+
+    let { data } = await request(`${API}/multimedia`, {
       data: {
         method: 'filemetas',
         access_token,
@@ -343,15 +331,12 @@ module.exports = class Driver {
       },
     })
 
-    if (error) return { error }
-
-    if (data.errno) return { error: { message: ERR_CODE[data.errno] } }
+    if (data.errno) return this.app.error({ message: ERR_CODE[data.errno] })
 
     let file = data.list[0]
-
     let result = {
       id,
-      name: file.server_filename,
+      name: file.filename,
       type: file.isdir ? 'folder' : 'file',
       size: parseInt(file.size),
       ctime: file.server_ctime * 1000,
@@ -359,81 +344,145 @@ module.exports = class Driver {
       thumb: file.thumbs ? file.thumbs.url2 : '',
       extra: {
         fid: file.fs_id,
-        path: file.path.substring(1),
+        path: file.path,
         md5: file.md5,
+        dlink: file.dlink
       },
-    }
-
-    // file.dlink 8 小时有效
-    let { headers } = await request(`${file.dlink}&access_token=${access_token}`, {
-      followRedirect: false,
-      headers: {
-        'User-Agent': 'pan.baidu.com',
-      },
-    })
-
-    if (headers.location) {
-      result.download_url = headers.location
     }
 
     return result
   }
+  /**
+   * create folder
+   *
+   * @param {string} [parent_id] folder id
+   * @param {string} [name] folder name
+   * @param {object} [options] options
+   * @param {object} [options.check_name_mode] 
+   * @return {object}
+   *
+   * @api public
+   */
+  async mkdir(parent_id, name, { check_name_mode = 'refuse' }, key) {
+    let [id, isFile] = getRealId(parent_id)
 
-  async mkdir() { }
+    let filedata = await this.meta(id, key)
 
-  async rm() { }
-
-  async isAbusiveFile(url, access_token) {
-    if (url in this.abusiveFilesMap) {
-      return this.abusiveFilesMap[url]
-    } else {
-      const resp = await this.app.request({
-        method: 'HEAD',
-        url,
-        headers: {
-          Authorization: `Bearer ${access_token}`,
-        },
-      })
-
-      this.abusiveFilesMap[url] = resp.status == 403
-
-      return this.abusiveFilesMap[url]
-    }
-  }
-
-  async createReadStream(id, options = {}) {
-    let {
-      manager,
-      app: { request },
-      max_age_dir,
-    } = this
-
-    let { error, path, access_token } = await manager.parse(id)
-
-    if (error) return { error }
-
-    let url = `https://www.googleapis.com/drive/v3/files/${path}?alt=media`
-
-    if (await this.isAbusiveFile(url)) {
-      url += '&acknowledgeAbuse=true'
-    }
-
-    let headers = {
-      Authorization: `Bearer ${access_token}`,
-    }
-
-    if ('start' in options) {
-      headers['range'] = `bytes=${options.start}-${options.end || ''}`
-    }
-
-    let resp = await request(url, {
-      headers,
-      responseType: 'stream',
-      retry: 0,
+    let { access_token } = await this.getCredentials(key)
+    let { data } = await this.app.request.post(`${API}/file?method=create&access_token=${access_token}`, {
+      data: {
+        isdir: 1,
+        size: 0,
+        path: fullpath(filedata.extra.path, name)
+      },
+      contentType: 'form',
     })
 
-    return resp.data
+    if (data.errno) return this.app.error({ message: ERR_CODE[data.errno] })
+
+    return {
+      id: (parent_id ? `${parent_id}/` : '') + data.fs_id,
+      name: data.server_filename,
+      parent_id
+    }
   }
 
-  async createWriteStream() { }
+
+  /**
+   * rename file/folder
+   *
+   * @param {string} [id] folder id
+   * @param {string} [name] new name
+   * @return {object}
+   *
+   * @api public
+   */
+  async rename(id, name, { check_name_mode = 'refuse' } = {}, key) {
+
+    let [fid, isFile, parent_id] = getRealId(id)
+
+    let filedata = await this.meta(fid, key)
+
+    let { access_token } = await this.getCredentials(key)
+    let { data } = await this.app.request.post(`${API}/file?method=filemanager&access_token=${access_token}&opera=rename`, {
+      data: {
+        async: 0,
+        filelist: [{ path: filedata.extra.path, newname: name }],
+        ondup: 'fail'
+      },
+      contentType: 'form',
+    })
+
+    // console.log(data, {
+    //   async: 0,
+    //   filelist: JSON.stringify([{ path: filedata.extra.path, newname: name }]),
+    // })
+    if (data.errno) return this.app.error({ message: ERR_CODE[data.errno] })
+
+    return {
+      id: id,
+      name: name,
+      parent_id
+    }
+  }
+
+  /**
+   * rm file/folder
+   *
+   * @param {string} [id] folder id
+   * @return {object}
+   *
+   * @api public
+   */
+  async rm(id, key) {
+    let [fid, isFile, parent_id] = getRealId(id)
+
+    let filedata = await this.meta(fid, key)
+
+    let { access_token } = await this.getCredentials(key)
+    let { data } = await this.app.request.post(`${API}/file?method=filemanager&access_token=${access_token}&opera=delete`, {
+      data: {
+        filelist: [filedata.extra.path],
+      },
+      contentType: 'form',
+    })
+
+    if (data.errno) return this.app.error({ message: ERR_CODE[data.errno] })
+
+    return { id, name: filedata.name, parent_id }
+  }
+
+  /**
+   * mv file/folder
+   *
+   * @param {string} [id] file/folder id
+   * @param {string} [target_id] folder id
+   * @return {string | error}
+   *
+   * @api public
+   */
+  async mv(id, target_id, key) {
+    let [fid, isFile, parent_id] = getRealId(id)
+
+    let [target_fid] = getRealId(target_id)
+
+    let { access_token } = await this.getCredentials(key)
+
+    let filedata = await this.meta(fid, key)
+
+    let targetData = await this.meta(target_fid, key)
+
+    let { data } = await this.app.request.post(`${API}/file?method=filemanager&access_token=${access_token}&opera=move`, {
+      data: {
+        filelist: [{ path: filedata.extra.path, dest: targetData.extra.path }],
+      },
+      contentType: 'form',
+    })
+
+    if (data.errno) return this.app.error({ message: ERR_CODE[data.errno] })
+
+    let newId = target_id + '/' + id.split('/').pop()
+
+    return { id: newId, parent_id }
+  }
 }

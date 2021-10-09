@@ -14,14 +14,10 @@ const cache = {}
 module.exports = (app) => {
   const { onListed, config, driver, utils: { yaml, safeCall } } = app
 
-  onListed(async (file, query) => {
-
-    if (file.error) return file
-
-    let hit = file?.files.find(i => i.name == config.acl_file)
-
+  onListed(async (data, query) => {
+    let hit = data?.files.find(i => i.name == config.acl_file)
     if (hit) {
-      let { auth } = query
+      let auth = query?.auth
 
       if (auth) {
         let content
@@ -34,21 +30,21 @@ module.exports = (app) => {
           })
         }
 
-        console.log(content, auth)
         if (content) {
           cache[hit.id] = content
 
           if (authMethods?.[content.type]('' + auth, content.data, app)) {
-            return file
+            return req
           }
         }
 
-        file.error = { code: 401, message: 'Invalid password' }
+        return { error: { code: 401, message: 'Invalid password' } }
       } else {
-        file.error = { code: 401 }
+        return { error: { code: 401, message: 'Invalid password' } }
       }
-
     }
+
+    return data
   })
 
 }

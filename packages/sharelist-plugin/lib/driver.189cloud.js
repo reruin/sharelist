@@ -1,9 +1,16 @@
 /**
  * 189Cloud Drive By Cookies
  */
+
 const protocol = 'ctc'
 
 const DEFAULT_ROOT_ID = '-11'
+
+const UPLOAD_PART_SIZE = 10 * 1024 * 1024
+
+const crypto = require('crypto')
+
+const NodeRSA = require('node-rsa')
 
 const safeJSONParse = (data) =>
   JSON.parse(
@@ -16,6 +23,47 @@ const safeJSONParse = (data) =>
     }),
   )
 
+const sleep = (time) => new Promise((resolve) => setTimeout(resolve, time))
+
+const hmac = (v, key) => {
+  return crypto.createHmac('sha1', key).update(v).digest('hex')
+}
+
+const md5 = (v) => crypto.createHash('md5').update(v).digest('hex')
+
+// const base64Hex = v => Buffer.from(v).toString('base64')
+
+const aesEncrypt = (data, key, iv = "") => {
+  let cipher = crypto.createCipheriv('aes-128-ecb', key, iv);
+  let encrypted = cipher.update(data, 'utf8', 'hex');
+  encrypted += cipher.final('hex');
+  return encrypted
+}
+
+const rsaEncrypt = (data, publicKey, charset = 'base64') => {
+  publicKey = '-----BEGIN PUBLIC KEY-----\n' + publicKey + '\n-----END PUBLIC KEY-----'
+
+  let key = new NodeRSA(publicKey, { encryptionScheme: 'pkcs1' })
+  return key.encrypt(data, charset)
+}
+
+const uuid = (v) => {
+  return v.replace(/[xy]/g, (e) => {
+    var t = 16 * Math.random() | 0
+      , i = "x" === e ? t : 3 & t | 8;
+    return i.toString(16)
+  })
+}
+
+const qs = d => Object.keys(d).map(i => `${i}=${encodeURI(d[i])}`).join('&')
+
+const parseHeaders = v => {
+  let ret = {}
+  for (let pair of decodeURIComponent(v).split('&').map(i => i.split('='))) {
+    ret[pair[0].toLowerCase()] = pair.slice(1).join('=')
+  }
+  return ret
+}
 /**
  * auth manager class
  */
@@ -53,7 +101,10 @@ class Manager {
           needUpdate = true
         }
       }
-
+      if (!data.path) {
+        data.path = data.root_id || DEFAULT_ROOT_ID
+        needUpdate = true
+      }
       if (needUpdate) {
         await this.app.saveDrive(data, { account: data.account })
       }
@@ -69,9 +120,11 @@ class Manager {
         cookie: cookie,
         referer: 'https://open.e.189.cn/api/logbox/oauth2/loginSubmit.do',
       },
+      contentType: 'form',
+      responseType: 'text'
     })
 
-    if (resp.data && resp.data == '1') {
+    if (resp?.data == '1') {
       return true
     } else {
       return false
@@ -79,23 +132,23 @@ class Manager {
   }
 
   async getCaptcha(captchaToken, reqId, cookie) {
-    let resp = await request(
+    let resp = await this.app.request(
       `https://open.e.189.cn/api/logbox/oauth2/picCaptcha.do?token=${captchaToken}&REQID=${reqId}&rnd=${Date.now()}`,
       {
         headers: {
-          Cookie: cookie,
+          cookie,
           Referer: 'https://open.e.189.cn/api/logbox/oauth2/loginSubmit.do',
         },
-        contentType: 'buffer',
+        responseType: 'buffer',
       },
     )
 
     if (resp.error) return { error: resp.error }
 
-    let imgBase64 = (imgBase64 =
-      'data:' + resp.headers['content-type'] + ';base64,' + Buffer.from(resp.data).toString('base64'))
+    let imgBase64 =
+      'data:' + resp.headers['content-type'] + ';base64,' + Buffer.from(resp.data).toString('base64')
 
-    await this.app.ocr(imgBase64)
+    return await this.app.ocr(imgBase64)
   }
 
   /**
@@ -105,14 +158,14 @@ class Manager {
    * @return {object} { credentials | error }
    * @api private
    */
-  async refreshCookie({ account, password }) {
+  async refreshCookie({ account, password, ...rest }) {
     const { request } = this.app
     //0 准备工作： 获取必要数据
     let defaultHeaders = {
       'User-Agent':
         'Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/69.0.3497.100 Safari/537.36',
     }
-    let { data, headers, error } = await request.get(
+    let { data, headers } = await request.get(
       'https://cloud.189.cn/api/portal/loginUrl.action?redirectURL=https://cloud.189.cn/web/redirect.html',
       {
         headers: { ...defaultHeaders },
@@ -120,7 +173,12 @@ class Manager {
       },
     )
 
-    if (error) return { error }
+    let { data: data2 } = await request.post(`https://open.e.189.cn/api/logbox/config/encryptConf.do`, {
+      data: {
+        appId: 'cloud'
+      }
+    })
+    let { pubKey, pre, upSmsOn } = data2.data
 
     let captchaToken = (data.match(/name='captchaToken' value='(.*?)'>/) || ['', ''])[1],
       returnUrl = (data.match(/returnUrl = '(.*?)'\,/) || ['', ''])[1],
@@ -128,11 +186,14 @@ class Manager {
       lt = (data.match(/var lt = "(.*?)";/) || ['', ''])[1],
       reqId = (data.match(/reqId = "(.*?)";/) || ['', ''])[1]
 
+    // console.log(headers, pubKey)
     let cookie = headers['set-cookie']
 
     let formdata = {
       appKey: 'cloud',
       accountType: '01',
+      userName: `${pre}${rsaEncrypt(account, pubKey)}`,
+      password: `${pre}${rsaEncrypt(password, pubKey)}`,
       userName: account,
       password: password,
       validateCode: '',
@@ -140,13 +201,14 @@ class Manager {
       returnUrl: returnUrl,
       mailSuffix: '@189.cn',
       dynamicCheck: 'FALSE',
-      clientType: '10010',
+      clientType: '1',
       cb_SaveName: '1',
       isOauth2: 'false',
       state: '',
       paramId: paramId,
     }
-
+    // console.log(pubKey, pre, formdata)
+    // return this.app.error({ message: 'haha' })
     let retry = 3
     let needcaptcha = await this.needCaptcha(
       {
@@ -164,31 +226,36 @@ class Manager {
 
         if (error) return { error }
 
-        formdata.validateCode = code
+        code = code.replace(/\n/g, '')
+        if (code.length == 4) {
+          formdata.validateCode = code
+          console.log('get code', code)
+        } else {
+          continue
+        }
+
       }
 
       // 登陆
-      let { data, error } = await request.post('https://open.e.189.cn/api/logbox/oauth2/loginSubmit.do', {
+      let { data } = await request.post('https://open.e.189.cn/api/logbox/oauth2/loginSubmit.do', {
         headers: {
-          Referer: 'https://cloud.189.cn/udb/udb_login.jsp?pageId=1&redirectURL=/main.action',
-          'User-Agent':
-            'Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/69.0.3497.100 Safari/537.36',
+          Referer: 'https://open.e.189.cn/api/logbox/oauth2/unifyAccountLogin.do',
           REQID: reqId,
           lt: lt,
         },
         data: formdata,
+        contentType: 'form',
+        responseType: 'json'
       })
 
-      if (error) return { error }
-      console.log(data)
       //验证码错误
       if (data.result == -2) {
         console.log('validateCode:[' + formdata.validateCode + '] error')
         continue
       }
 
-      if (!data.toUrl) return { error: { message: data.msg } }
-
+      if (!data.toUrl) return this.app.error({ message: data.msg })
+      console.log(data)
       let { headers } = await request.get(data.toUrl, {
         followRedirect: false,
         headers: defaultHeaders,
@@ -196,21 +263,33 @@ class Manager {
       })
 
       //COOKIE_LOGIN_USER=xxxxx;
-      let cookie = headers?.['set-cookie'].match(/COOKIE_LOGIN_USER=(?<token>[a-z\d]+)/i)?.groups.token
+      let loginUser = headers?.['set-cookie'].match(/COOKIE_LOGIN_USER=(?<token>[a-z\d]+)/i)?.groups.token
 
-      if (!cookie) return { error: { message: 'login failed. Can not get cookies!' } }
+      if (!loginUser) return this.app.error({ message: 'login failed. Can not get cookies!' })
+
+      const cookie = `COOKIE_LOGIN_USER=${loginUser};`
+
+      let { data: baseData } = await request(`https://cloud.189.cn/v2/getUserBriefInfo.action?noCache=${Math.random()}`, {
+        headers: {
+          cookie,
+          // accept: 'application/json;charset=UTF-8'
+        },
+        responseType: 'json'
+      })
+      console.log(baseData)
+      const sessionKey = baseData.sessionKey
 
       return {
-        credentials: {
-          account,
-          password,
-          cookie: `COOKIE_LOGIN_USER=${cookie};`,
-          updated_at: Date.now(),
-        },
+        ...rest,
+        account,
+        password,
+        sessionKey,
+        cookie,
+        updated_at: Date.now(),
       }
     }
 
-    return { error: { message: `Login failed` } }
+    return this.app.error({ message: `Login failed` })
   }
 
   /**
@@ -220,57 +299,36 @@ class Manager {
    * @return {object}
    * @api public
    */
-  async getCredentials(key) {
+  async getCredentials(key, force = false) {
     let credentials = this.clientMap[key]
 
     if (!credentials || !credentials.password || !credentials.account) {
       return { error: { message: 'unmounted' } }
     }
 
-    if (!credentials.cookie) {
-      let result = await this.refreshCookie(credentials)
-      if (result.error) {
-        return result
-      } else {
-        credentials = result.credentials
-        this.clientMap[key] = { ...credentials }
-        await this.app.saveDrive({ key, cookie: credentials.cookie })
-      }
+    if (!credentials.cookie || force) {
+      credentials = await this.refreshCookie(credentials)
+      this.clientMap[key] = { ...credentials }
+      await this.app.saveDrive({ key, cookie: credentials.cookie, sessionKey: credentials.sessionKey })
     }
 
-    return { credentials }
+    return credentials
   }
 
-  async parse(id) {
-    let { key, path } = this.app.decode(id)
-    let { error, credentials } = await this.getCredentials(key)
-    let ret = { key, path, error }
-    if (!error) {
-      ret.cookie = credentials.cookie
-      ret.root_id = credentials.root_id
-    }
-    return ret
-  }
+  async safeRequest(url, options, retry = 3) {
+    let { data, status, headers } = await this.app.request(url, options)
 
-  async safeRequest(url, options, check = true) {
-    let { error, data, status, headers } = await this.app.request(url, options)
-
-    if (error) return { error }
-
-    // cookie is invalid
-    if (data.errorCode === 'InvalidSessionKey' && check) {
+    if (retry > 0 && JSON.stringify(data).includes('InvalidSessionKey')) {
       let key = Object.values(this.clientMap).find((i) => i.cookie === options.headers.cookie)?.account
-      console.log('update cookie for', key)
 
       if (key) {
-        this.clientMap[key].cookie = ''
-        let { error } = await this.getCredentials(key)
-        if (error) return { error }
-        return await this.safeRequest(url, options, false)
+        let credentials = await this.getCredentials(key, true)
+        options.headers.cookie = credentials.cookie
+        return await this.safeRequest(url, options, --retry)
       }
     }
 
-    return { error, data, status, headers }
+    return { data, status, headers }
   }
 }
 
@@ -283,7 +341,7 @@ module.exports = class Driver {
     this.version = '1.0'
     this.protocol = protocol
 
-    this.max_age_dir = 7 * 24 * 60 * 60 * 1000 // 7 days
+    this.max_age_dir = 30 * 24 * 60 * 60 * 1000 // 7 days
 
     this.guide = [
       {
@@ -312,76 +370,8 @@ module.exports = class Driver {
     this.app = app
     this.manager = Manager.getInstance(app)
   }
-
-  async list(id, { sort, search }) {
-    let { manager, app, max_age_dir } = this
-
-    let { error, path, key, cookie, root_id } = await manager.parse(id)
-
-    if (error) return { error }
-
-    let cacheId = `${id}#list`
-
-    let r = app.cache.get(cacheId)
-
-    if (r && !search) {
-      console.log(`${new Date().toISOString()} CACHE ${this.name} ${id}`)
-      return r
-    }
-
-    let fid = path || root_id || DEFAULT_ROOT_ID
-
-    let data = await this._list(fid, cookie, key)
-
-    if (data.error) return data
-
-    data.forEach((i) => {
-      i.id = this.app.encode({ key, path: i.id })
-    })
-
-    let result = {
-      id,
-      files: data,
-    }
-
-    if (!search) app.cache.set(cacheId, result, max_age_dir)
-
-    return result
-  }
-
-  async get(id) {
-    let { manager, app } = this
-
-    let { error, path, cookie } = await manager.parse(id)
-
-    if (error) return { error }
-
-    let cacheId = `${id}#get`
-
-    let r = app.cache.get(cacheId)
-
-    if (r) {
-      console.log(`${new Date().toISOString()} CACHE ${this.name} ${id}`)
-      return r
-    }
-
-    let fid = path
-
-    let data = await this._get(fid, cookie)
-
-    if (data.error) return data
-
-    data.id = id
-
-    let expired_at = data.download_url.match(/Expires=(?<expired_at>\d+)/)?.groups.expired_at
-
-    if (expired_at) {
-      expired_at = +expired_at * 1000
-      app.cache.set(id, data, expired_at - Date.now() - 3000)
-    }
-
-    // console.log('data', data)
-    return data
+  async getCredentials(key) {
+    return await this.manager.getCredentials(key)
   }
 
   /**
@@ -394,10 +384,12 @@ module.exports = class Driver {
    *
    * @api public
    */
-  async _list(id, cookie) {
+  async list(id, options, key) {
     const {
       utils: { timestamp },
     } = this.app
+
+    let { cookie } = await this.getCredentials(key)
 
     let pageNum = 1,
       children = []
@@ -414,25 +406,20 @@ module.exports = class Driver {
         pageSize: 1000,
         noCache: Math.random(),
       }
-
-      let { data, error } = await this.manager.safeRequest('https://cloud.189.cn/api/open/file/listFiles.action', {
+      let { data } = await this.manager.safeRequest('https://cloud.189.cn/api/open/file/listFiles.action', {
         data: params,
         headers: {
-          'User-Agent':
-            'Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/69.0.3497.100 Safari/537.36',
-          cookie: cookie,
-
+          cookie,
           // default format is xml
           accept: 'application/json;charset=UTF-8',
+          // 'sign-type': 1,
         },
         responseType: 'text',
       })
 
       data = safeJSONParse(data)
 
-      if (error) return { error }
-
-      if (data?.errorCode) return { error: { message: data.errorMsg } }
+      if (data?.errorCode) return this.app.error({ message: data.errorMsg })
 
       if (data.fileListAO?.folderList) {
         for (let i of data.fileListAO.folderList) {
@@ -488,11 +475,11 @@ module.exports = class Driver {
    *
    * @api public
    */
-  async _get(id, cookie) {
-    let { data, error } = await this.manager.safeRequest(`https://cloud.189.cn/api/portal/getFileInfo.action`, {
+  async get(id, key, skipDownloadUrl = false) {
+    let { cookie } = await this.getCredentials(key)
+
+    let { data } = await this.manager.safeRequest(`https://cloud.189.cn/api/portal/getFileInfo.action`, {
       headers: {
-        'User-Agent':
-          'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/92.0.4515.131 Safari/537.36',
         cookie,
         // default format is xml
         accept: 'application/json;charset=UTF-8',
@@ -502,10 +489,7 @@ module.exports = class Driver {
         fileId: id,
       },
     })
-    // console.log(data)
-    if (error) return { error }
-
-    if (data.res_code != 0) return { error: { message: data.res_message } }
+    if (data.res_code != 0) return this.app.error({ message: data.res_message })
 
     let result = {
       id: data.fileId,
@@ -514,7 +498,7 @@ module.exports = class Driver {
       size: data.fileSize,
       ctime: data.createTime,
       mtime: data.lastOpTime,
-      download_url: data.isFolder ? '' : `https:${data.downloadUrl}`,
+      // download_url: data.isFolder ? '' : `https:${data.downloadUrl}`,
       extra: {
         fid: data.fileId,
         parent_id: data.parentId,
@@ -525,26 +509,35 @@ module.exports = class Driver {
       result.thumb = data.imageInfo.icon.smallUrl
     }
 
-    if (result.download_url) {
-      result.download_url = await this.get_real_download_url(cookie, result.download_url)
+    if (!skipDownloadUrl && !result.download_url) {
+      let { url, max_age } = await this.get_download_url(id, key)
+      if (url) {
+        result.download_url = url
+        result.max_age = max_age
+      }
     }
-
+    console.log('get', result)
     return result
   }
 
-  async get_real_download_url(cookie, url) {
-    let { headers } = await this.manager.safeRequest(url, {
-      followRedirect: false,
+  async get_download_url(id, key) {
+    let { cookie } = await this.getCredentials(key)
+    let { data } = await this.manager.safeRequest('https://cloud.189.cn/api/open/file/getFileDownloadUrl.action', {
       headers: {
-        'User-Agent':
-          'Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/69.0.3497.100 Safari/537.36',
-        Cookie: cookie,
+        cookie,
+        accept: 'application/json;charset=UTF-8',
       },
-      responseType: 'text',
+      data: {
+        noCache: Math.random(),
+        fileId: id,
+      },
     })
 
-    if (headers?.location) {
-      let { headers: headers2 } = await this.manager.safeRequest(headers.location, {
+    let download_url
+
+    if (data.res_code != 0) return this.app.error({ message: data.res_message })
+    if (data?.fileDownloadUrl) {
+      let { headers } = await this.manager.safeRequest(data.fileDownloadUrl, {
         followRedirect: false,
         responseType: 'text',
         headers: {
@@ -552,33 +545,366 @@ module.exports = class Driver {
             'Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/69.0.3497.100 Safari/537.36',
         },
       })
-      return headers2?.location
+      download_url = headers?.location
+    }
+
+    if (download_url) {
+      let expired_at = download_url.match(/Expires=(?<expired_at>\d+)/i)?.groups.expired_at || 0
+      let max_age = 0
+      if (expired_at) {
+        max_age = +expired_at * 1000 - Date.now()
+      }
+      return { url: download_url, max_age }
+    }
+
+    return { error: {} }
+  }
+
+  async mkdir(id, name, { check_name_mode = 'refuse' }, key) {
+    let { cookie } = await this.getCredentials(key)
+    let { data } = await this.manager.safeRequest(`https://cloud.189.cn/api/open/file/createFolder.action?noCache=${Math.random()}`, {
+      method: 'POST',
+      headers: {
+        cookie,
+        accept: 'application/json;charset=UTF-8',
+      },
+      contentType: 'form',
+      data: {
+        folderName: name,
+        parentFolderId: id,
+      },
+    })
+
+    if (data.res_code != 0) return this.app.error({ message: data.res_message })
+
+    return {
+      id: data.id,
+      name: data.name,
+      parent_id: id
     }
   }
 
-  async createReadStream(id, options = {}) {
-    let { error, path, account, token } = await manager.parse(id)
-
-    if (error) return { error }
-
-    const { request } = this.app
-
-    let [fid] = path.split('@')
-
-    let url = await this.get_download_url(account, token, fid)
-
-    let headers = {}
-
-    if ('start' in options) {
-      headers['range'] = `bytes=${options.start}-${options.end || ''}`
-    }
-
-    let resp = await request.get(url, {
-      headers,
-      responseType: 'stream',
-      retry: 0,
+  async rm(id, key) {
+    let originData = await this.get(id, key, true)
+    let { cookie } = await this.getCredentials(key)
+    let { data } = await this.manager.safeRequest(`https://cloud.189.cn/api/open/batch/createBatchTask.action?noCache=${Math.random()}`, {
+      method: 'POST',
+      headers: {
+        cookie,
+        accept: 'application/json;charset=UTF-8',
+      },
+      contentType: 'form',
+      data: {
+        type: 'DELETE',
+        taskInfos: [{ "fileId": id, "fileName": originData.name, "isFolder": originData.type == 'folder' ? 1 : 0 }],
+        targetFolderId: ''
+      },
     })
 
-    return resp.data
+    if (data.res_code != 0) return this.app.error({ message: data.res_message })
+
+    let taskId = data.taskId
+
+    await this.waitTask({ taskId, type: 'DELETE' }, key)
+
+    return {
+      id: data.id,
+      name: data.name,
+      parent_id: originData.extra.parent_id
+    }
+  }
+
+  async mv(id, target_id, key) {
+    let originData = await this.get(id, key, true)
+
+    let { cookie } = await this.getCredentials(key)
+    let { data } = await this.manager.safeRequest(`https://cloud.189.cn/api/open/batch/createBatchTask.action?noCache=${Math.random()}`, {
+      method: 'POST',
+      headers: {
+        cookie,
+        accept: 'application/json;charset=UTF-8',
+      },
+      contentType: 'form',
+      data: {
+        type: 'MOVE',
+        taskInfos: [{ "fileId": id, "fileName": originData.name, "isFolder": originData.type == 'folder' ? 1 : 0 }],
+        targetFolderId: target_id
+      },
+    })
+
+    if (data.res_code != 0) return this.app.error({ message: data.res_message })
+
+    let taskId = data.taskId
+
+    await this.waitTask({ taskId, type: 'MOVE' })
+
+    return {
+      id: originData.id,
+      name: originData.name,
+      parent_id: originData.extra.parent_id
+    }
+  }
+
+  async copy(id, target_id, key) {
+    let originData = await this.get(id, key, true)
+
+    let { cookie } = await this.getCredentials(key)
+    let { data } = await this.manager.safeRequest(`https://cloud.189.cn/api/open/batch/createBatchTask.action?noCache=${Math.random()}`, {
+      method: 'POST',
+      headers: {
+        cookie,
+        accept: 'application/json;charset=UTF-8',
+      },
+      contentType: 'form',
+      data: {
+        type: 'COPY',
+        taskInfos: [{ "fileId": id, "fileName": originData.name, "isFolder": originData.type == 'folder' ? 1 : 0 }],
+        targetFolderId: target_id
+      },
+    })
+
+    if (data.res_code != 0) return this.app.error({ message: data.res_message })
+
+    let taskId = data.taskId
+
+    await this.waitTask({ taskId, type: 'MOVE' })
+
+    return {
+      id: originData.id,
+      name: originData.name,
+      parent_id: originData.extra.parent_id
+    }
+  }
+
+  /**
+   * rename file/folder
+   *
+   * @param {string} [id] folder id
+   * @param {string} [name] new name
+   * @return {object}
+   *
+   * @api public
+   */
+  async rename(id, name, { check_name_mode = 'refuse' } = {}, key) {
+    let { cookie } = await this.getCredentials(key)
+    let { data } = await this.manager.safeRequest(`https://cloud.189.cn/api/open/file/renameFolder.action?noCache=${Math.random()}`, {
+      method: 'POST',
+      headers: {
+        cookie,
+        accept: 'application/json;charset=UTF-8',
+      },
+      contentType: 'form',
+      data: {
+        destFolderName: name,
+        folderId: id,
+      },
+    })
+
+    if (data.res_code != 0) return this.app.error({ message: data.res_message })
+
+    return {
+      id: data.id,
+      name: data.name,
+      parent_id: data.parentId
+    }
+  }
+
+  async generate_rsa_key(key) {
+    if (!this.rsa_key || (this.rsa_key.expire - Date.now() < 5 * 60 * 1000)) {
+      let { cookie } = await this.getCredentials(key)
+      let { data } = await this.manager.safeRequest(`https://cloud.189.cn/api/security/generateRsaKey.action?noCache=${Math.random()}`, {
+        headers: {
+          cookie,
+          accept: 'application/json;charset=UTF-8',
+        },
+        responseType: 'json'
+      })
+      console.log('update rsa_key')
+      this.rsa_key = data
+    }
+
+    return this.rsa_key
+  }
+
+  async createRequest(url, formData, key) {
+    let { sessionKey } = await this.getCredentials(key)
+    let { pkId, pubKey } = await this.generate_rsa_key(key)
+
+    let date = Date.now()
+    let pkey = uuid("xxxxxxxxxxxx4xxxyxxxxxxxxxxxxxxx").slice(0, 16 + 16 * Math.random() | 0)
+    let params = aesEncrypt(qs(formData), pkey.substring(0, 16))
+    let signature = hmac(`SessionKey=${sessionKey}&Operate=GET&RequestURI=${url}&Date=${date}&params=${params}`, pkey)
+    let encryptionText = rsaEncrypt(pkey, pubKey)
+
+    const headers = {
+      signature,
+      sessionKey,
+      encryptionText,
+      pkId,
+      'x-request-id': uuid('xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'),
+      'x-request-date': date,
+      'origin': 'https://cloud.189.cn',
+      'referer': 'https://cloud.189.cn/'
+    }
+
+    return await this.app.request(`https://upload.cloud.189.cn${url}?params=${params}`, { headers })
+  }
+
+  async singleUpload(id, { size, name, stream, ...rest }, key) {
+    const { app } = this
+
+    let passStream = app.createReadStream(stream, { highWaterMark: 2 * UPLOAD_PART_SIZE })
+
+    let buffer = await passStream.read(UPLOAD_PART_SIZE)
+
+    let md5hash = md5(buffer)
+
+    let { data } = await this.createRequest('/person/initMultiUpload', {
+      parentFolderId: id,
+      fileName: name,
+      fileSize: size,
+      sliceSize: UPLOAD_PART_SIZE,
+      sliceMd5: md5hash,
+      fileMd5: md5hash
+    }, key)
+
+    if (!data?.code == 'SUCCESS') return this.app.error({ message: 'a error occurred before upload.' })
+
+    let { uploadFileId, fileDataExists } = data.data
+
+    if (fileDataExists == 0) {
+
+      // Skip step
+      // let { data: d1, status } = await this.createRequest("/person/getUploadedPartsInfo", {
+      //   uploadFileId
+      // }, key)
+
+      let chunk_base64 = Buffer.from(md5hash, 'hex').toString('base64')
+      let { data: uploadData } = await this.createRequest('/person/getMultiUploadUrls', {
+        uploadFileId,
+        partInfo: `1-${chunk_base64}`,
+      }, key)
+
+      uploadData = uploadData?.['uploadUrls'][`partNumber_1`]
+
+      let res = await app.request(uploadData.requestURL, {
+        method: 'put',
+        data: buffer,
+        contentType: 'buffer',
+        responseType: 'text',
+        headers: {
+          ...parseHeaders(uploadData.requestHeader),
+          "referer": 'https://cloud.189.cn/',
+        }
+      })
+
+      if (res.status != 200) app.error({ message: 'a error occurred during upload.' })
+    }
+    let { data: res } = await this.createRequest('/person/commitMultiUploadFile', {
+      uploadFileId,
+      fileMd5: md5hash,
+      //fileSize<=10MB,fileMD5 should equal sliceMd5,
+      sliceMd5: md5hash,
+      lazyCheck: 0,
+    }, key)
+
+    return { id: res.file.userFileId }
+  }
+
+  async fastUpload(id, { size, name, md5 }, key) {
+    if (md5) {
+
+    }
+  }
+
+  async upload(id, { size, name, stream, ...rest }, key) {
+    if (size <= UPLOAD_PART_SIZE) {
+      return await this.singleUpload(id, { size, name, stream, ...rest }, key)
+    }
+
+    const { app } = this
+
+    let { data } = await this.createRequest('/person/initMultiUpload', {
+      parentFolderId: id,
+      fileName: name,
+      fileSize: size,
+      sliceSize: UPLOAD_PART_SIZE,
+      lazyCheck: 1
+    }, key)
+
+    if (!data?.code == 'SUCCESS') return this.app.error({ message: 'a error occurred before upload.' })
+
+    let { uploadFileId } = data.data
+
+    // 此操作疑似无实际效果
+    // await this.createRequest('/person/getUploadedPartsInfo', {
+    //   uploadFileId,
+    // }, key)
+
+    let part = Math.ceil(size / UPLOAD_PART_SIZE)
+    let passStream = app.createReadStream(stream, { highWaterMark: 2 * UPLOAD_PART_SIZE })
+    let md5chunk = []
+    let md5sum = crypto.createHash('md5')
+    for (let i = 1; i <= part; i++) {
+      let buffer = await passStream.read(UPLOAD_PART_SIZE)
+      let chunk_hash = md5(buffer).toUpperCase()
+      let chunk_base64 = Buffer.from(chunk_hash, 'hex').toString('base64')
+
+      md5chunk.push(chunk_hash)
+      md5sum.update(buffer)
+
+      let { data } = await this.createRequest('/person/getMultiUploadUrls', {
+        partInfo: `${i}-${chunk_base64}`,
+        uploadFileId,
+      }, key)
+
+      let uploadData = data['uploadUrls'][`partNumber_${i}`]
+
+      let res = await app.request(uploadData.requestURL, {
+        method: 'put',
+        data: buffer,
+        contentType: 'buffer',
+        responseType: 'text',
+        headers: parseHeaders(uploadData.requestHeader)
+      })
+      console.log(res)
+      if (res.status != 200) app.error({ message: 'a error occurred during upload.' })
+    }
+
+    let uniqueIdentifier = md5sum.digest('hex')
+
+    // commit
+    let { data: res } = await this.createRequest('/person/commitMultiUploadFile', {
+      uploadFileId,
+      fileMd5: uniqueIdentifier,
+      //fileSize<=10MB,fileMD5 should equal sliceMd5,
+      sliceMd5: md5(md5chunk.join('\n')),
+      lazyCheck: 1,
+    }, key)
+    console.log('commitMultiUploadFile', res)
+    return { id: res.file.userFileId }
+  }
+
+  async waitTask(params, key) {
+    let { cookie } = await this.getCredentials(key)
+
+    let retry = 3
+
+    while (retry--) {
+      let { data } = await this.manager.safeRequest(`https://cloud.189.cn/api/open/batch/checkBatchTask.action?noCache=${Math.random()}`, {
+        method: 'POST',
+        headers: {
+          cookie,
+          accept: 'application/json;charset=UTF-8',
+        },
+        contentType: 'form',
+        data: params,
+      })
+      if (data?.taskStatus == 4) {
+        return true
+      }
+
+      await sleep(200)
+    }
   }
 }

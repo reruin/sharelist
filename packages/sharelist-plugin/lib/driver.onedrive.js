@@ -6,7 +6,9 @@ const { URL } = require('url')
 
 const protocol = 'onedrive'
 
-const querystring = require('querystring')
+const DEFAULT_ROOT_ID = 'root'
+
+const UPLOAD_PART_SIZE = 4 * 1024 * 1024
 
 const support_zone = {
   GLOBAL: ['https://login.microsoftonline.com', 'https://graph.microsoft.com', '国际版'],
@@ -14,6 +16,8 @@ const support_zone = {
   DE: ['https://login.microsoftonline.de', 'https://graph.microsoft.de', 'Azure Germany'],
   US: ['https://login.microsoftonline.us', 'https://graph.microsoft.us', 'Azure US GOV'],
 }
+
+const qs = (d) => new URLSearchParams(d).toString()
 
 class Manager {
   static getInstance(app) {
@@ -34,6 +38,7 @@ class Manager {
     for (let i of d) {
       let data = this.app.decode(i.path)
       let { key, refresh_token } = data
+      if (data.expires_at) data.expires_at = +data.expires_at
       let needUpdate = false
       if (!key) {
         if (data.type == 'sharelink' && data.share_url) {
@@ -45,7 +50,6 @@ class Manager {
         }
       }
 
-      //由于使用key作为 处理相同的 client_id，大部分情况
       if (key) {
         let isUsedKey = this.clientMap[key]
         if (isUsedKey) {
@@ -54,8 +58,8 @@ class Manager {
         }
       }
 
-      if (!data.path && data.root_id) {
-        data.path = data.root_id
+      if (!data.path) {
+        data.path = data.root_id || DEFAULT_ROOT_ID
         needUpdate = true
       }
 
@@ -86,7 +90,7 @@ class Manager {
 
   /**
    * 从分享链接中解析 credentials
-   * access token 有效期 5 * 60 * 60 s
+   * access token 有效期 5h
    *
    * @param {string} url
    * @param {object} { credentials }
@@ -100,7 +104,7 @@ class Manager {
 
     const url = decodeURIComponent(atob(client_id))
 
-    let { data, headers, error } = await request(url, {
+    let { headers } = await request(url, {
       responseType: 'text',
       followRedirect: false,
       headers: {
@@ -108,8 +112,6 @@ class Manager {
           'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_14_4) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/79.0.3945.88 Safari/537.36',
       },
     })
-
-    if (error) return { error }
 
     let cookie = headers['set-cookie']
     let obj = new URL(headers['location'])
@@ -120,7 +122,7 @@ class Manager {
       .replace('/Shared', '')
       .replace(/Documents.*?$/, '')
 
-    let qs = {
+    let query = {
       a1: `'${rootFolder.replace(/(?<=Documents).*$/, '')}'`,
       RootFolder: rootFolder,
       TryNewExperienceSingle: 'TRUE',
@@ -137,39 +139,25 @@ class Manager {
       },
     }
 
-    let newurl = `${origin}${account}/_api/web/GetListUsingPath(DecodedUrl=@a1)/RenderListDataAsStream?@${querystring.stringify(
-      qs,
-    )}`
-    try {
-      ; ({
-        data,
-        headers,
-        error: error,
-      } = await request.post(newurl, {
-        data: formdata,
-        headers: {
-          origin,
-          cookie,
-          accept: 'application/json;odata=verbose',
-          'content-type': 'application/json;odata=verbose',
-        },
-      }))
-    } catch (e) {
-      console.log(e)
+    let newurl = `${origin}${account}/_api/web/GetListUsingPath(DecodedUrl=@a1)/RenderListDataAsStream?@${qs(query)}`;
+
+    let { data } = await request.post(newurl, {
+      data: formdata,
+      headers: {
+        origin,
+        cookie,
+        accept: 'application/json;odata=verbose',
+        'content-type': 'application/json;odata=verbose',
+      },
+    })
+
+
+    if (data?.error) {
+      return this.app.error({ message: data.error.message.value })
     }
 
-    if (error) return { error }
-
-    if (data && data.error) {
-      return { error: { message: data.error.message.value } }
-    }
-
-    if (!data.ListSchema['.driveAccessToken']) {
-      return {
-        error: {
-          message: '请将分享文件夹设置[拥有链接的任何人都可编辑] / The shared folder must be given editing permissions',
-        },
-      }
+    if (!data?.ListSchema['.driveAccessToken']) {
+      return this.app.error({ message: '请将分享文件夹设置[拥有链接的任何人都可编辑] / The shared folder must be given editing permissions' })
     }
 
     let access_token = data['ListSchema']['.driveAccessToken'].replace('access_token=', '')
@@ -177,11 +165,9 @@ class Manager {
     let expires_at = parseInt(JSON.parse(atob(access_token.split('.')[1]))['exp']) * 1000
 
     return {
-      credentials: {
-        access_token,
-        expires_at,
-        graph,
-      },
+      access_token,
+      expires_at,
+      graph,
     }
   }
 
@@ -193,7 +179,7 @@ class Manager {
    * @api private
    */
   async refreshAccessToken(credentials) {
-    let { client_id, client_secret, redirect_uri, refresh_token, zone, tenant_id, site_id, type, key, root_id } =
+    let { client_id, client_secret, redirect_uri, refresh_token, zone, tenant_id, type, key, ...rest } =
       credentials
     if (type == 'sharelink') {
       return this.refreshShareAccessToken(key)
@@ -213,29 +199,24 @@ class Manager {
 
     let metadata = this.getAuthority(zone, tenant_id)
 
-    let { data, error } = await this.app.request.post(`${metadata}/oauth2/v2.0/token`, { data: formdata })
-
-    if (error) return { error }
+    let { data } = await this.app.request.post(`${metadata}/oauth2/v2.0/token`, { data: formdata, contentType: 'form' })
 
     if (data.error) {
-      return { error: { message: data.error_description || data.error } }
+      return this.app.error({ message: data.error_description || data.error })
     }
 
     let expires_at = data.expires_in * 1000 + Date.now()
-
+    console.log('expires_in', data.expires_in)
     return {
-      credentials: {
-        client_id,
-        client_secret,
-        zone,
-        tenant_id,
-        site_id,
-        root_id,
-        redirect_uri,
-        refresh_token: data.refresh_token,
-        access_token: data.access_token,
-        expires_at,
-      },
+      client_id,
+      client_secret,
+      zone,
+      tenant_id,
+      redirect_uri,
+      refresh_token: data.refresh_token,
+      access_token: data.access_token,
+      expires_at,
+      ...rest
     }
   }
 
@@ -253,38 +234,18 @@ class Manager {
     }
 
     // 未初始化(access_token不存在)、即将过期 刷新token
-    if (!credentials.access_token || (credentials.expires_at && credentials.expires_at - Date.now() < 5 * 60 * 1000)) {
-      let result = await this.refreshAccessToken(credentials)
-      if (result.error) {
-        return result
-      } else {
-        credentials = result.credentials
-        if (!credentials.graph) {
-          credentials.graph = this.getGraphEndpoint(credentials.zone, credentials.site_id)
-        } else {
-          await this.app.saveDrive({ key, refresh_token: credentials.refresh_token })
-        }
+    if (!(credentials.access_token && credentials.expires_at && credentials.expires_at - Date.now() > 2 * 60 * 1000)) {
+      credentials = await this.refreshAccessToken(credentials)
 
-        this.clientMap[key] = {
-          ...credentials,
-        }
-      }
+      await this.app.saveDrive({ key, refresh_token: credentials.refresh_token })
+
+      this.clientMap[key] = { ...credentials }
     }
 
-    return { credentials }
-  }
-
-  async parse(id) {
-    let { key, path } = this.app.decode(id)
-    let { error, credentials } = await this.getCredentials(key)
-
-    let ret = { key, path, error }
-    if (!error) {
-      ret.graph = credentials.graph
-      ret.access_token = credentials.access_token
-      ret.root_id = credentials.root_id
+    if (!credentials.graph) {
+      credentials.graph = this.getGraphEndpoint(credentials.zone, credentials.site_id)
     }
-    return ret
+    return credentials
   }
 }
 
@@ -334,59 +295,9 @@ const mountData = () => {
       ],
     },
   ]
-
-  /*[{
-    key: 'type',
-    label: 'OneDrive 挂载类型',
-    type: 'string',
-    options: [
-      { value: 'onedrive', label: 'OneDrive' },
-      { value: 'sharepoint', label: 'SharePoint URL' },
-      { value: 'sharelink', label: '分享链接' }
-    ],
-    fields: [
-      [
-        { key: 'zone', label: '地域', type: 'string', options: zone, required: true },
-        {
-          key: 'custom_client', type: 'boolean', label: '使用自己的应用ID 和 应用机密', fields: [
-            { key: 'client_id', label: '应用ID / Client ID', required: true },
-            { key: 'client_secret', label: '应用机密 / App Secret', type: 'string', required: true },
-            { key: 'redirect_uri', label: '回调地址 / Redirect URI', required: true },
-          ]
-        },
-        { key: 'refresh_token', label: '刷新令牌 / Refresh Token', required: true },
-        { key: 'tenant_id', label: '租户ID / Tenant ID' },
-        { key: 'path', label: '初始目录' },
-      ]
-      ,
-      [
-        { key: 'zone', label: '地域', type: 'string', options: zone, required: true },
-        {
-          key: 'custom_client', type: 'boolean', label: '使用自己的应用ID 和 应用机密', fields: [
-            { key: 'client_id', label: '应用ID / Client ID', required: true },
-            { key: 'client_secret', label: '应用机密 / App Secret', type: 'string', required: true },
-            { key: 'redirect_uri', label: '回调地址 / Redirect URI', required: true },
-          ]
-        },
-        { key: 'refresh_token', label: '刷新令牌 / Refresh Token', required: true },
-        { key: 'sharepoint_site', label: 'SharePoint 站点URL', type: 'string' },
-        { key: 'tenant_id', label: '租户ID / Tenant ID', type: 'string' },
-        { key: 'path', label: '初始目录', type: 'string' },
-      ]
-      ,
-      [
-        { key: 'share_url', label: '分享链接URL', type: 'string', required: true },
-        { key: 'path', label: '初始目录', type: 'string' },
-      ]
-    ]
-  }]
-  */
 }
 
-/**
- *
- *
- */
+
 class Driver {
   constructor() {
     this.name = 'OneDrive'
@@ -406,6 +317,10 @@ class Driver {
     this.manager = Manager.getInstance(app)
   }
 
+  async getCredentials(key) {
+    return await this.manager.getCredentials(key)
+  }
+
   /**
    * Lists or search files
    *
@@ -416,86 +331,14 @@ class Driver {
    * @return {object | error}
    *
    * @api public
-   */
-
-  async list(id, { sort, search }) {
-    let { manager, app, max_age_dir } = this
-
-    let { error, path, key, graph, access_token, root_id } = await manager.parse(id)
-
-    if (error) return { error }
-
-    let cacheId = `${id}#list`
-
-    let r = app.cache.get(cacheId)
-
-    if (r && !search) {
-      console.log(`${new Date().toISOString()} CACHE ${this.name} ${id}`)
-      return r
-    }
-
-    let fid = path || root_id || ''
-
-    let data = await this._list(graph, access_token, { id: fid, search })
-
-    if (data.error) return data
-
-    data.forEach((i) => {
-      i.id = this.app.encode({ key, path: i.id })
-    })
-
-    let result = {
-      id,
-      files: data,
-    }
-
-    if (!search) app.cache.set(cacheId, result, max_age_dir)
-
-    return result
-  }
-
-  async get(id) {
-    let { manager, app } = this
-
-    let { error, path, graph, access_token } = await manager.parse(id)
-
-    if (error) return { error }
-
-    let cacheId = `${id}#get`
-
-    let r = app.cache.get(cacheId)
-
-    if (r) {
-      console.log(`${new Date().toISOString()} CACHE ${this.name} ${id}`)
-      return r
-    }
-
-    let data = await this._get(graph, access_token, { id: path })
-
-    if (data.error) return data
-
-    data.id = id
-    // the download link expires after 3600s
-    return app.cache.set(cacheId, data, 3500 * 1000)
-  }
-
-  async search() { }
-
-  /**
-   * @param {string} [graph] api graph
-   * @param {string} [access_token] access token for query
-   * @param {object} [options]
-   * @param {string} [options.id] the file id
-   * @param {string} [options.search] search key
-   *
-   * @return { array | error}
    *
    * docs: https://docs.microsoft.com/zh-cn/onedrive/developer/rest-api/api/driveitem_list_children?view=odsp-graph-online
-   * TODO: there are two ways to rquest
+   * TODO: there are two methods for request
    * With a known id:  GET /drives/{drive-id}/items/{item-id}/children
    * With a known path: GET /drives/{drive-id}/root:/{path-relative-to-root}:/children
    */
-  async _list(graph, access_token, { id, search }) {
+  async list(id, { search, sort }, key) {
+    let { graph, access_token } = await this.getCredentials(key)
     const {
       request,
       utils: { timestamp },
@@ -513,18 +356,16 @@ class Driver {
       $orderby: 'name asc',
     }
 
-    let { data, error } = await request.get(url, {
+    let { data } = await request.get(url, {
       headers: {
         Authorization: `Bearer ${access_token}`,
       },
       data: params,
     })
 
-    if (error) return { error }
-
-    if (data.error) return { error: data.error.message }
-
-    let children = data.value.map((i) => {
+    if (data.error) this.app.error({ message: data.error.message })
+    //console.log(data)
+    let files = data.value.map((i) => {
       let item = {
         id: i.id,
         name: i.name,
@@ -535,10 +376,9 @@ class Driver {
         thumb: i.thumbnails.length > 0 ? i.thumbnails[0].medium.url : '',
         extra: {
           fid: i.id,
-          parent_id: i.parentReference?.id,
+          parent_id: id //i.parentReference?.id,
         },
       }
-
       if (i.file) {
         if (i.file.hashes) {
           item.extra.sha1 = i.file.hashes.sha1Hash
@@ -551,15 +391,26 @@ class Driver {
       return item
     })
 
-    return children
+    return files
   }
 
-  async _get(graph, access_token, { id }) {
+
+  /**
+   * get file
+   *
+   * @param {string} [id] file id
+   * @param {string} [key] key
+   * @return {object}
+   *
+   * @api public
+   */
+  async get(id, key) {
+    let { graph, access_token } = await this.getCredentials(key)
+
     const {
       request,
       utils: { timestamp },
     } = this.app
-
     let url = `${graph}/items/${id}`
 
     let { data, error } = await request(url, {
@@ -574,8 +425,8 @@ class Driver {
     if (error) return { error: error }
 
     if (data.error) return { error: data.error.message }
-
-    return {
+    console.log(data.parentReference)
+    let result = {
       id: data.id,
       name: data.name,
       type: data.folder ? 'folder' : 'file',
@@ -584,28 +435,227 @@ class Driver {
       mtime: timestamp(data.lastModifiedDateTime),
       download_url: data['@microsoft.graph.downloadUrl'] || data['@content.downloadUrl'],
       thumb: data.thumbnails.length > 0 ? data.thumbnails[0].medium.url : '',
+      // the download link expires after 3600s
+      max_age: 3600 * 1000,
       extra: {
         fid: data.id,
+        parent_id: data.parentReference.path.endsWith('root:') ? DEFAULT_ROOT_ID : data.parentReference?.id,
         path: data.parentReference ? data.parentReference.path.split('root:')[1] : '',
       },
     }
+
+    return result
   }
 
-  async mkdir() { }
+  /**
+   * create folder
+   *
+   * @param {string} [parent_id] folder id
+   * @param {string} [name] folder name
+   * @param {object} [options] options
+   * @param {object} [options.check_name_mode] 
+   * @return {object}
+   *
+   * @api public
+   */
+  async mkdir(parent_id, name, { check_name_mode = 'rename' }, key) {
+    let { graph, access_token } = await this.getCredentials(key)
+    let url = graph + `${parent_id == DEFAULT_ROOT_ID ? '/root' : `/items/${parent_id}`}` + '/children'
+    let { data } = await this.app.request.post(url, {
+      headers: {
+        Authorization: `Bearer ${access_token}`,
+      },
+      data: {
+        name,
+        "folder": {},
+        "@microsoft.graph.conflictBehavior": "rename"
+      },
+      contentType: 'json',
+    })
 
-  async rm() { }
+    if (data.error) return this.app.error({ message: data.error.message })
 
-  async createReadStream(id, options = {}) {
-    let resp = await this.path(id)
-    if (resp.body) {
-      return resp
-    } else {
-      let readstream = this.app.request({ url: resp.url, method: 'get' })
-      return this.app.wrapReadableStream(readstream, { size: resp.size })
+    return {
+      id: data.id,
+      name,
+      parent_id
     }
   }
 
-  async createWriteStream() { }
+  /**
+   * rename file/folder
+   *
+   * @param {string} [id] folder id
+   * @param {string} [name] folder name
+   * @param {object} [options] options
+   * @param {object} [options.check_name_mode] 
+   * @param {string} [key] key
+   * @return {object}
+   *
+   * @api public
+   */
+  async rename(id, name, { check_name_mode = 'rename' }, key) {
+    let { graph, access_token } = await this.getCredentials(key)
+    let url = graph + (id == DEFAULT_ROOT_ID ? '/root' : `/items/${id}`)
+
+    let { data } = await this.app.request(url, {
+      method: 'patch',
+      headers: {
+        Authorization: `Bearer ${access_token}`,
+      },
+      data: {
+        name
+      },
+      contentType: 'json',
+    })
+
+    if (data.error) return this.app.error({ message: data.error.message })
+    return {
+      id: data.id,
+      name,
+    }
+  }
+
+  /**
+   * remove file/folder
+   *
+   * @param {string} [id] id
+   * @param {string} [key] key
+   * @return {object}
+   *
+   * @api public
+   */
+  async rm(id, key) {
+    let { graph, access_token } = await this.getCredentials(key)
+    let filedata = await this.get(id, key)
+    let url = graph + `/items/${id}`
+
+    let { data, status } = await this.app.request(url, {
+      method: 'delete',
+      headers: {
+        Authorization: `Bearer ${access_token}`,
+      },
+      responseType: 'text'
+    })
+
+    if (data.error) return this.app.error({ message: data.error.message })
+
+    return {
+      id,
+      parent_id: filedata.extra.parent_id
+    }
+  }
+
+  /**
+   * move file/folder
+   *
+   * @param {string} [id] folder id
+   * @param {string} [target_id] dest folder
+   * @param {string} [key] key
+   * @return {object}
+   *
+   * @api public
+   */
+  async mv(id, target_id, key) {
+
+    let { graph, access_token } = await this.getCredentials(key)
+    let url = graph + `/items/${id}`
+
+    let filedata = await this.get(id, key)
+    let { data } = await this.app.request(url, {
+      method: 'patch',
+      headers: {
+        Authorization: `Bearer ${access_token}`,
+      },
+      data: {
+        "parentReference": {
+          "id": target_id || 'root'
+        },
+      },
+      contentType: 'json',
+    })
+    if (data.error) return this.app.error({ message: data.error.message })
+
+    return {
+      id: data.id,
+      name: data.name,
+      parent: target_id,
+    }
+  }
+
+  async singleUpload(id, { size, name, stream, ...rest }, key) {
+    let { graph, access_token } = await this.getCredentials(key)
+    let url = `${graph}${id == DEFAULT_ROOT_ID ? '/root' : `/items/${id}`}:/${encodeURIComponent(name)}:/content`
+    // console.log(url)
+    let { data } = await this.app.request(url, {
+      method: 'put',
+      headers: {
+        Authorization: `Bearer ${access_token}`,
+        'content-type': 'application/octet-stream'
+      },
+      data: stream,
+      contentType: 'stream',
+    })
+    if (data.error) return this.app.error({ message: data.error.message })
+
+    return { id: data.id, name: data.name, parent_id: id }
+  }
+  /**
+   * upload file
+   *
+   * @param {string} [id] folder id
+   * @param {object} [options] upload file meta
+   * @param {number} [options.size] upload file size
+   * @param {string} [options.name] upload file name
+   * @param {ReadableStream} [options.stream] upload file stream
+   * @param {object} [credentials] credentials
+   * @return {string | error}
+   *
+   * @api public
+   */
+  async upload(id, { size, name, stream, ...rest }, key) {
+    if (size <= UPLOAD_PART_SIZE) {
+      return await this.singleUpload(id, { size, name, stream, ...rest }, key)
+    }
+    let { graph, access_token } = await this.getCredentials(key)
+
+    let { data } = await this.app.request(graph + (id == DEFAULT_ROOT_ID ? '/root' : `/items/${id}`) + `:/${encodeURIComponent(name)}:/` + '/createUploadSession', {
+      method: 'post',
+      headers: {
+        Authorization: `Bearer ${access_token}`,
+      },
+      data: {
+        item: {
+          "@microsoft.graph.conflictBehavior": "rename",
+          // name
+        }
+      },
+      contentType: 'json',
+    })
+    if (data.error) this.app.error({ message: data.error.message })
+
+    // expirationDateTime 5d
+    let { uploadUrl, expirationDateTime } = data
+
+    let { data: uploadData } = await this.app.request(uploadUrl, {
+      method: 'put',
+      headers: {
+        'Content-Length': size,
+        'Content-Range': `bytes ${0}-${size - 1}/${size}`,
+      },
+      data: stream,
+      contentType: 'stream',
+    })
+
+    console.log(uploadData)
+
+    return {
+      id: data.id,
+      name: data.name,
+      parent_id: id
+    }
+
+  }
 }
 
 module.exports = Driver

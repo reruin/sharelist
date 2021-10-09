@@ -3,9 +3,13 @@ import { WebDAVMethod, WebDAVRequest, Driver, DriverMethod, Context, Response } 
 import Commands from './operations/commands'
 import { default as createContext } from './context'
 
+interface WebDAVAuth {
+  (user: string, pass: string): boolean
+}
 export type WebDAVServerOptions = {
   driver?: Driver,
   base?: string,
+  auth?: WebDAVAuth,
   redirect: boolean
 }
 
@@ -23,14 +27,17 @@ export class WebDAVServer {
 
   protected base: string
 
+  protected auth: WebDAVAuth | undefined
+
   protected config: Record<string, any>
 
   protected allow: string
 
-  constructor({ driver, base, redirect }: WebDAVServerOptions = { redirect: false }) {
+  constructor({ driver, base, redirect, auth }: WebDAVServerOptions = { redirect: false, auth: () => true }) {
     this.methods = {}
     this.driver = driver || VirtualDriver
     this.base = base || ''
+    this.auth = auth
     this.config = { redirect }
     const commands: { [key: string]: any } = Commands
     for (const k in commands)
@@ -43,6 +50,17 @@ export class WebDAVServer {
 
   async request(req: WebDAVRequest): Promise<Response> {
     const ctx: Context = createContext(req, this.base)
+    if (this.auth) {
+      if (!ctx.auth || !this.auth(ctx.auth.user, ctx.auth.pass) === true) {
+        return {
+          headers: {
+            'WWW-Authenticate': `Basic realm="ShareList WebDAV"`
+          },
+          status: '401'
+        }
+      }
+    }
+
     ctx.driver = this.driver
     ctx.config = this.config
     ctx.allow = this.allow

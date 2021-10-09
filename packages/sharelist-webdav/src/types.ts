@@ -17,6 +17,10 @@ export type Driver = {
   (actions: DriverMethod, ...options: Array<any>): DriverMethodResponse
 }
 
+export type WebDAVAuthRecord = {
+  user: string,
+  pass: string
+}
 export interface Context {
   req: http.IncomingMessage,
   depth: WebDAVDepth,
@@ -26,7 +30,8 @@ export interface Context {
   get(field: string): any,
   driver?: Driver,
   allow?: string,
-  config: Record<string, any>
+  config: Record<string, any>,
+  auth?: WebDAVAuthRecord
 }
 
 

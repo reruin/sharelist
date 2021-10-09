@@ -1,5 +1,4 @@
 const { WebDAVServer } = require('@sharelist/webdav')
-const { get } = require('../../../sharelist-core/lib/request')
 
 const parsePath = v => v.replace(/(^\/|\/$)/g, '').split('/').map(decodeURIComponent).filter(Boolean)
 
@@ -11,7 +10,10 @@ const createDriver = (driver, { proxy, baseUrl } = {}) => {
   const commands = {
     async ls(path) {
       let p = path.replace(/(^\/|\/$)/g, '')
-      let data = await driver.list({ paths: p ? p.split('/').map(decodeURIComponent) : [] })
+      let data = await driver.list({
+        paths: p ? p.split('/').map(decodeURIComponent) : [],
+        ignoreInterceptor: true
+      })
       if (data.files?.length > 0) {
         data.files
           .sort((a, b) => (a.type == 'folder' ? -1 : 1))
@@ -24,7 +26,7 @@ const createDriver = (driver, { proxy, baseUrl } = {}) => {
       return data
     },
     async stat(path) {
-      console.log('stat', parsePath(path),)
+      //console.log('stat', parsePath(path),)
 
       try {
         return await driver.stat({ paths: parsePath(path) })
@@ -173,15 +175,19 @@ const isWebDAVRequest = (ctx) => {
 module.exports = (app) => {
   app.addSingleton('webdav', async () => {
     const { config } = app.sharelist
-    const webdavPath = config.webdab_path || '/'
+    const webdavPath = config.webdav_path || '/'
     const webdavProxy = config.webdav_proxy || true
 
     const webdavServer = new WebDAVServer({
       driver: createDriver(app.sharelist, {
         request: app.curl,
         proxy: webdavProxy,
-        baseUrl: 'http://localhost:33001/'
-      }), base: webdavPath
+        baseUrl: webdavPath
+      }),
+      base: webdavPath,
+      auth: (user, pass) => {
+        return config.token === pass
+      }
     })
 
     app.router.all(webdavPath + ':path(.*)', async (ctx, next) => {

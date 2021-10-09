@@ -3,7 +3,8 @@ import { Context, WebDAVDepth } from './types'
 import { parseXML } from './operations/shared'
 
 export default (req: http.IncomingMessage, base: string): Context => {
-  return {
+  const value = req.headers?.authorization?.split(' ')[1]
+  const ctx: Context = {
     req: req,
     depth: req.headers?.depth as WebDAVDepth,
     method: (req.method as string || '').toLowerCase(),
@@ -21,5 +22,10 @@ export default (req: http.IncomingMessage, base: string): Context => {
       }
     }
   }
-
+  if (value) {
+    const pairs = Buffer.from(value, "base64").toString("utf8").split(':')
+    ctx.auth = { user: pairs[0], pass: pairs[1] }
+  }
+  console.log(ctx)
+  return ctx
 }

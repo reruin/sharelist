@@ -150,11 +150,12 @@ module.exports = (app) => {
    * @param {string} options.id
    * @param {array} options.paths
    * @param {object} options.query
+   * @param {boolean} options.ignoreInterceptor
    * 
    * @returns {array<file>}
    */
-  const list = async ({ paths = [], id, query } = {}) => {
-    const interceptor = app.hookLifetime('onListed')
+  const list = async ({ paths = [], id, query, ignoreInterceptor = false } = {}) => {
+    const interceptor = ignoreInterceptor ? null : app.hookLifetime('onListed')
 
     let data = id ? await fastTrack(id, query, interceptor) : await forwardTrack([...paths], query, interceptor)
 

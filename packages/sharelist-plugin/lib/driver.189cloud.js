@@ -516,7 +516,6 @@ module.exports = class Driver {
         result.max_age = max_age
       }
     }
-    console.log('get', result)
     return result
   }
 
@@ -881,7 +880,6 @@ module.exports = class Driver {
       sliceMd5: md5(md5chunk.join('\n')),
       lazyCheck: 1,
     }, key)
-    console.log('commitMultiUploadFile', res)
     return { id: res.file.userFileId }
   }
 

@@ -25,10 +25,10 @@ jobs:
             const content = await createChangelog('https://github.com/'+process.env.GITHUB_REPOSITORY)
             core.exportVariable('CHANGELOG', content)
             core.exportVariable('VERSION', tag)
-      - name: Install dependencies
-        run: yarn install
       - name: Build
         run: |
+          rm -rf ./packages/sharelist-webdav
+          yarn install
           yarn build-web
           mkdir -p ./packages/sharelist/theme/default
           mkdir -p ./packages/sharelist/plugins

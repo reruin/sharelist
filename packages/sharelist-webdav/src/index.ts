@@ -31,7 +31,7 @@ export class WebDAVServer {
 
   protected config: Record<string, any>
 
-  protected allow: string
+  protected allows: Array<string>
 
   constructor({ driver, base, redirect, auth }: WebDAVServerOptions = { redirect: false, auth: () => true }) {
     this.methods = {}
@@ -45,11 +45,11 @@ export class WebDAVServer {
         this.unknownMethod = commands[k]
       else
         this.methods[k.toLowerCase()] = commands[k]
-    this.allow = Object.keys(this.methods).map(i => i.toUpperCase()).join(', ')
+    this.allows = Object.keys(this.methods).map(i => i.toUpperCase())//.join(', ')
   }
 
   async request(req: WebDAVRequest): Promise<Response> {
-    const ctx: Context = createContext(req, this.base)
+    const ctx: Context = createContext(req, this.base, this.allows)
     if (this.auth) {
       if (!ctx.auth || !this.auth(ctx.auth.user, ctx.auth.pass) === true) {
         return {
@@ -63,7 +63,6 @@ export class WebDAVServer {
 
     ctx.driver = this.driver
     ctx.config = this.config
-    ctx.allow = this.allow
     const method = this.methods[ctx.method] || this.unknownMethod
 
     const res = await method(ctx)

@@ -197,9 +197,8 @@ module.exports = (app) => {
           return
         }
       }
-      console.log('[WebDAV]', ctx.method, ctx.url)
+      console.log('[WebDAV]', ctx.method, ctx.url, '<-->', ctx.ip)
       const resp = await webdavServer.request(ctx.req)
-
       const { headers, status, body } = resp
 
       if (headers) {

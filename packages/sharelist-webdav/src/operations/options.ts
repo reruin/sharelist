@@ -2,10 +2,19 @@ import { parseXML } from './shared'
 import { Context, Response } from '../types'
 
 export default async (ctx: Context): Promise<Response | undefined> => {
+  const dav = [1]
+
+  if (ctx.allows?.includes('LOCK')) {
+    dav.push(2)
+  }
+
   return {
-    status: '200',
     headers: {
-      'allow': ctx.allow
-    }
+      // For Microsoft clients
+      'MS-Author-Via': 'DAV',
+      'DAV': dav.join(', '),
+      'Allow': ctx.allows?.join(', ') || ''
+    },
+    status: '200'
   }
 }

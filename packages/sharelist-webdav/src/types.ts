@@ -29,7 +29,7 @@ export interface Context {
   base: string,
   get(field: string): any,
   driver?: Driver,
-  allow?: string,
+  allows?: Array<string>,
   config: Record<string, any>,
   auth?: WebDAVAuthRecord
 }

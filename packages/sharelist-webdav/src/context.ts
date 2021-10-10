@@ -1,16 +1,20 @@
 import http from 'http'
 import { Context, WebDAVDepth } from './types'
 import { parseXML } from './operations/shared'
+import { URL } from 'url'
 
-export default (req: http.IncomingMessage, base: string): Context => {
+export default (req: http.IncomingMessage, base: string, allows: Array<string>): Context => {
   const value = req.headers?.authorization?.split(' ')[1]
+
+  const path = new URL(req.url as string, `http://${req.headers.host}`).pathname
   const ctx: Context = {
     req: req,
     depth: req.headers?.depth as WebDAVDepth,
     method: (req.method as string || '').toLowerCase(),
-    path: req.url?.replace(base, ''),
+    path: path.replace(base, ''),
     base,
     config: {},
+    allows,
     get(field: string): string | undefined {
       const req: http.IncomingMessage = this.req
       switch (field = field.toLowerCase()) {

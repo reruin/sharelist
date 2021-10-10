@@ -101,7 +101,7 @@ const createXML = (data: any, options: any) => {
       $: {
         "xmlns": uri
       },
-      response: convData(data?.files || [], options)
+      response: convData(data || [], options)
     }
   }
 
@@ -122,6 +122,8 @@ export default async (ctx: Context): Promise<Response | undefined> => {
   }, propParse(await parseXML(ctx.req)))
 
   const data: any = ctx.depth == '0' ? await ctx.driver?.('stat', ctx.path) : await ctx.driver?.('ls', ctx.path)
+
+  if (!data) return { status: '404' }
 
   if (data.error) {
     if (data.error.code == 401) {
@@ -159,7 +161,7 @@ export default async (ctx: Context): Promise<Response | undefined> => {
         headers: {
           'content-type': 'text/xml; charset="utf-8"'
         },
-        body: createXML(data, options)
+        body: createXML(data.files, options)
       }
     }
   }

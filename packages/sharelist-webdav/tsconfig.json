@@ -7,7 +7,7 @@
     // "sourceMap": true,
     "resolveJsonModule": true,
     "esModuleInterop": true,
-    "importHelpers": true,
+    "importHelpers": false,
     "skipLibCheck": true,
     "allowSyntheticDefaultImports": true,
     "baseUrl": "./src",

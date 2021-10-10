@@ -26,6 +26,5 @@ export default (req: http.IncomingMessage, base: string): Context => {
     const pairs = Buffer.from(value, "base64").toString("utf8").split(':')
     ctx.auth = { user: pairs[0], pass: pairs[1] }
   }
-  console.log(ctx)
   return ctx
 }

@@ -65,7 +65,7 @@ module.exports = (app) => {
       }
     }
 
-    url = 'https://api.reruin.net/proxy?url=' + encodeURIComponent(url)
+    //url = 'https://api.reruin.net/proxy?url=' + encodeURIComponent(url)
 
     while (true) {
       try {

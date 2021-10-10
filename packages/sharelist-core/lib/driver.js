@@ -252,10 +252,11 @@ module.exports = (app) => {
         return { stream, headers, status, acceptRanges: headers?.['accept-ranges'] == 'bytes' }
       }
     } else {
-      const driver = getDriver(data.id)
+      const driver = getDriver(id)
+      let { fid, meta } = decode(id)
 
       if (driver && driver.createReadStream) {
-        return { stream: await driver.createReadStream(id, options), acceptRanges: true }
+        return { stream: await driver.createReadStream(fid, options, meta.key), acceptRanges: true }
       }
     }
 

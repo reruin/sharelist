@@ -208,6 +208,7 @@ class Manager {
     let expires_at = data.expires_in * 1000 + Date.now()
     console.log('expires_in', data.expires_in)
     return {
+      ...rest,
       client_id,
       client_secret,
       zone,
@@ -216,7 +217,6 @@ class Manager {
       refresh_token: data.refresh_token,
       access_token: data.access_token,
       expires_at,
-      ...rest
     }
   }
 

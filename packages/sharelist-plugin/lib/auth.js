@@ -34,7 +34,7 @@ module.exports = (app) => {
           cache[hit.id] = content
 
           if (authMethods?.[content.type]('' + auth, content.data, app)) {
-            return req
+            return data
           }
         }
 

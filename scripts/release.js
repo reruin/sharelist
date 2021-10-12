@@ -28,6 +28,8 @@ const skipBuild = args.skipBuild
 
 const skipNpmPublish = args.skipNpmPublish
 
+const commitPath = args['commit-path'] || ''
+
 /**
  * @type {import('semver').ReleaseType[]}
  */
@@ -125,7 +127,7 @@ async function main() {
   if (!skipBuild && !isDryRun) {
     await run('yarn', ['build'])
   } else {
-    console.log(`(skipped)`)
+    console.log(`(skipped build)`)
   }
 
   step('\nGenerating changelog...')
@@ -134,7 +136,7 @@ async function main() {
   const { stdout } = await run('git', ['diff'], { stdio: 'pipe' })
   if (stdout) {
     step('\nCommitting changes...')
-    await run('git', ['add', '-A'])
+    await run('git', ['add', commitPath, '-A'])
     await run('git', ['commit', '-m', `release: ${tag}`])
   } else {
     console.log('No changes to commit.')

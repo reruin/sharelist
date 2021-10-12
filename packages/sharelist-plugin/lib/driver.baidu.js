@@ -201,13 +201,11 @@ module.exports = class Driver {
       return []
     }
 
-    console.log('list', id, fid)
     const { request } = this.app
     let { access_token } = await this.getCredentials(key)
 
     let data = await this.meta(fid, key)
     let dir = data.extra.path || '/'
-    console.log(data, dir)
     if (data.type != 'folder') return []
 
     // if (data.type != 'folder') return []
@@ -254,7 +252,6 @@ module.exports = class Driver {
         break
       }
     } while (true)
-    console.log(files)
     return files
   }
 

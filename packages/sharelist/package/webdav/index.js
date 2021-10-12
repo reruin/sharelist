@@ -60,16 +60,18 @@ const createDriver = (driver, { proxy, baseUrl } = {}) => {
 
       let name = paths.pop()
 
-      console.log('ipload pre')
       let data = await driver.stat({ paths })
-      console.log('ipload end ', data)
+
+      let existData = await driver.stat({ paths: [...paths, name] })
+
+      if (existData) {
+        await driver.rm(existData.id)
+      }
 
       if (!data.id) {
         return { error: { code: 404 } }
       }
-      console.log('data.id', data.id, size)
       let ret = await driver.upload(data.id, { name, size, stream })
-      console.log(ret, name, size, '<<<')
       if (!ret) {
         return {
           error: { code: 500 }
@@ -169,7 +171,7 @@ const createDriver = (driver, { proxy, baseUrl } = {}) => {
 }
 
 const isWebDAVRequest = (ctx) => {
-  return /(Microsoft\-WebDAV|FileExplorer|WinSCP|WebDAVLib|WebDAVFS|rclone|Kodi|davfs2|sharelist\-webdav)/i.test(ctx.request.headers['user-agent'])
+  return /(Microsoft\-WebDAV|FileExplorer|WinSCP|WebDAVLib|WebDAVFS|rclone|Kodi|davfs2|sharelist\-webdav|RaiDrive)/i.test(ctx.request.headers['user-agent']) || (ctx.request.headers['translate']) || (ctx.request.headers['overwrite'])
 }
 
 module.exports = (app) => {

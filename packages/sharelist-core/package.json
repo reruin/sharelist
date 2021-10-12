@@ -1,6 +1,6 @@
 {
   "name": "@sharelist/core",
-  "version": "0.1.5",
+  "version": "0.1.6",
   "repository": "https://github.com/reruin/sharelist",
   "license": "MIT",
   "main": "index.js",
@@ -8,7 +8,7 @@
     "build": "echo \"Info: no specified\" && exit ",
     "test": "node test/index.js",
     "changelog": "conventional-changelog -p angular -i CHANGELOG.md -s --commit-path .",
-    "release": "node ../../scripts/release.js"
+    "release": "node ../../scripts/release.js --commit-path ."
   },
   "dependencies": {
     "mime": "^2.5.2",

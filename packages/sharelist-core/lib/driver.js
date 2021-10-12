@@ -140,7 +140,6 @@ module.exports = (app) => {
 
   const getParentId = async (id) => {
     let data = await getById(id)
-    console.log(data)
     return data?.extra.parent_id
   }
 
@@ -178,7 +177,8 @@ module.exports = (app) => {
       return {
         id: parent.id,
         type: 'folder',
-        name: 'sharelist root'
+        name: 'sharelist root',
+        size: parent.size || Number.MAX_SAFE_INTEGER
       }
     } else {
       return parent?.files.find(i => i.name == filename)
@@ -424,7 +424,7 @@ module.exports = (app) => {
       if (driver?.mv) {
         let { fid, meta } = decode(id)
         let { fid: target_fid } = decode(target_id)
-        console.log('move', id, target_id, target_fid)
+
         let cache = driver.cache !== false
         let parent_id
         //需要预先获得parent_id
@@ -443,7 +443,7 @@ module.exports = (app) => {
           if (!data.parent_id) {
             data.parent_id = parent_id
           }
-          console.log('rm', data.parent_id, target_id, id)
+
           if (data.parent_id) app.cache.remove(`${encode(data.parent_id, meta)}#list`)
 
           app.cache.remove(`${target_id}#list`)

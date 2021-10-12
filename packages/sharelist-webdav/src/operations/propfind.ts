@@ -18,8 +18,10 @@ const DEFAULT_PROPS = [
  * @return {object|boolean}
  */
 const propParse = (data: any) => {
-  if (!data) return false
-
+  if (!data) return {
+    ns: { prefix: '', uri: '' },
+    prop: [...DEFAULT_PROPS]
+  }
   let prop = [...DEFAULT_PROPS]
   const prefix = Object.keys(data.propfind.$).find(i => i.startsWith('xmlns:'))?.split(':')[1] || ''
   const uri = data.propfind.$?.[`xmlns${prefix ? `:${prefix}` : ''}`] || ''

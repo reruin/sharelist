@@ -12,7 +12,7 @@
     "dev": "tsc -w -p .",
     "build": "rm -rf dist && tsc -p .",
     "changelog": "conventional-changelog -p angular -i CHANGELOG.md -s --commit-path .",
-    "release": "node ../../scripts/release.js"
+    "release": "node ../../scripts/release.js --commit-path ."
   },
   "devDependencies": {
     "@types/koa": "^2.13.4",

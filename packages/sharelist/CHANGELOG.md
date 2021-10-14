@@ -1,3 +1,12 @@
+## [0.3.7](https://github.com/reruin/sharelist/compare/v0.3.6...v0.3.7) (2021-10-14)
+
+
+### Features
+
+* **webdav:** support option configuration of webdav ([d667a83](https://github.com/reruin/sharelist/commit/d667a830f8008a857d6ae827213d76992edbe306))
+
+
+
 ## [0.3.6](https://github.com/reruin/sharelist/compare/v0.3.5...v0.3.6) (2021-10-12)
 
 

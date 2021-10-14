@@ -151,6 +151,17 @@ class Manager {
     return await this.app.ocr(imgBase64)
   }
 
+  async getSessionKey(cookie) {
+    let { data: baseData } = await this.app.request(`https://cloud.189.cn/v2/getUserBriefInfo.action?noCache=${Math.random()}`, {
+      headers: {
+        cookie,
+        // accept: 'application/json;charset=UTF-8'
+      },
+      responseType: 'json'
+    })
+    return baseData.sessionKey
+  }
+
   /**
    * refreshCookie
    *
@@ -158,8 +169,24 @@ class Manager {
    * @return {object} { credentials | error }
    * @api private
    */
-  async refreshCookie({ account, password, ...rest }) {
+  async refreshCookie({ account, password, cookie_login_user, ...rest }) {
+
     const { request } = this.app
+
+    if (cookie_login_user) {
+      const cookie = `COOKIE_LOGIN_USER=${cookie_login_user};`
+      const sessionKey = await this.getSessionKey(cookie)
+
+      return {
+        ...rest,
+        account,
+        password,
+        sessionKey,
+        cookie,
+        updated_at: Date.now(),
+      }
+    }
+
     //0 准备工作： 获取必要数据
     let defaultHeaders = {
       'User-Agent':
@@ -268,16 +295,7 @@ class Manager {
       if (!loginUser) return this.app.error({ message: 'login failed. Can not get cookies!' })
 
       const cookie = `COOKIE_LOGIN_USER=${loginUser};`
-
-      let { data: baseData } = await request(`https://cloud.189.cn/v2/getUserBriefInfo.action?noCache=${Math.random()}`, {
-        headers: {
-          cookie,
-          // accept: 'application/json;charset=UTF-8'
-        },
-        responseType: 'json'
-      })
-      console.log(baseData)
-      const sessionKey = baseData.sessionKey
+      const sessionKey = await this.getSessionKey(cookie)
 
       return {
         ...rest,
@@ -357,6 +375,7 @@ module.exports = class Driver {
       },
       { key: 'account', label: '手机号 / Account', type: 'string', required: true },
       { key: 'password', label: '密码 / Password', type: 'string', required: true },
+      { key: 'cookie_login_user', label: 'COOKIE_LOGIN_USER', type: 'string', required: false, help: 'Cookies 中的COOKIE_LOGIN_USER字段，若提供此项则优先使用Cookies登录。' },
       {
         key: 'root_id',
         label: '初始文件夹ID / Root Id',

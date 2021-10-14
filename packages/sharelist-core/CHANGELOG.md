@@ -1,3 +1,12 @@
+## [0.1.7](https://github.com/reruin/sharelist/compare/v0.3.6...v0.1.7) (2021-10-14)
+
+
+### Bug Fixes
+
+* **core:** fix some bugs ([c8ee9e6](https://github.com/reruin/sharelist/commit/c8ee9e655687d49420c54c9331a91b19aae10beb))
+
+
+
 ## [0.1.6](https://github.com/reruin/sharelist/compare/v0.3.5...v0.1.6) (2021-10-12)
 
 

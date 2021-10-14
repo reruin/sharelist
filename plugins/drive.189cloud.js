@@ -469,7 +469,7 @@ module.exports = ({ request, cache, getConfig, querystring, base64, saveDrive, g
 
       data.body = safeJSONParse(data.body)
 
-      if (data.body.fileListAO?.folderList) {
+      if (data.body.fileListAO && data.body.fileListAO.folderList) {
         for (let i of data.body.fileListAO.folderList) {
 
           children.push({
@@ -484,7 +484,7 @@ module.exports = ({ request, cache, getConfig, querystring, base64, saveDrive, g
         }
       }
 
-      if (data.body.fileListAO?.fileList) {
+      if (data.body.fileListAO && data.body.fileListAO.fileList) {
         for (let i of data.body.fileListAO.fileList) {
           children.push({
             id: manager.stringify({username , path:''+i.id}),
@@ -545,7 +545,7 @@ module.exports = ({ request, cache, getConfig, querystring, base64, saveDrive, g
     // fileDownloadUrl
 
     let url = ''
-    if(data.body?.fileDownloadUrl){
+    if(data.body && data.body.fileDownloadUrl){
       let redir = await request({
         async:true,
         url:data.body.fileDownloadUrl,

@@ -95,15 +95,15 @@ module.exports = (app) => {
     if (driver?.get_download_url) {
       let { fid, meta } = decode(id)
 
-      let { url, max_age } = await driver.get_download_url(fid, meta.key)
+      let data = await driver.get_download_url(fid, meta.key)
 
-      if (url && max_age && driver.cache !== false) {
-        if (max_age) {
-          app.cache.set(`${id}#download`, data, max_age)
+      if (data.url && driver.cache !== false) {
+        if (data.max_age) {
+          app.cache.set(`${id}#download`, data, data.max_age)
         }
       }
 
-      return url
+      return data
     }
   }
 
@@ -196,7 +196,7 @@ module.exports = (app) => {
   const get = async ({ paths = [], id }) => {
     let data
 
-    if (!id && path) {
+    if (!id && paths) {
       data = await getByPath(paths)
       id = data.id
     }

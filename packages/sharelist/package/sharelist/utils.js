@@ -84,7 +84,7 @@ exports.getDownloadUrl = async (runtime) => {
   }
 
   try {
-    let url = await sharelist.get_download_url(runtime)
+    let { url } = await sharelist.get_download_url(runtime)
     return { url }
 
   } catch (error) {

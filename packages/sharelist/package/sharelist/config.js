@@ -35,6 +35,12 @@ const defaultConfig = {
 
   proxy_server: '',
 
+  webdav_proxy: true,
+
+  webdav_user: 'admin',
+
+  webdav_pass: 'sharelist',
+
   ocr_server: '',
 
   drives: [],

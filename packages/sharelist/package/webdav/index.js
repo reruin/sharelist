@@ -27,7 +27,6 @@ const createDriver = (driver, { proxy, baseUrl } = {}) => {
     },
     async stat(path) {
       //console.log('stat', parsePath(path),)
-
       try {
         return await driver.stat({ paths: parsePath(path) })
       } catch (error) {
@@ -36,18 +35,17 @@ const createDriver = (driver, { proxy, baseUrl } = {}) => {
       }
     },
     async get(path, options) {
-      let data = await driver.stat({ paths: parsePath(path) })
-      let download_url = `${baseUrl}/api/drive/get?download=true&id=${encodeURIComponent(data.id)}`
+      let data = await driver.get({ paths: parsePath(path) })
 
       if (!options.reqHeaders) options.reqHeaders = {}
       options.reqHeaders['user-agent'] = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/92.0.4515.159 Safari/537.36'
-
-      if (data.download_url && !proxy) {
+      if (data && data.download_url && !data.extra.proxy && !proxy()) {
         return {
           status: 302,
-          body: download_url
+          body: data.download_url
         }
       } else {
+        console.log('proxy webdav')
         let res = await driver.createReadStream(data.id, options)
         if (res.stream) res.body = res.stream
         return res
@@ -171,24 +169,22 @@ const createDriver = (driver, { proxy, baseUrl } = {}) => {
 }
 
 const isWebDAVRequest = (ctx) => {
-  return /(Microsoft\-WebDAV|FileExplorer|WinSCP|WebDAVLib|WebDAVFS|rclone|Kodi|davfs2|sharelist\-webdav|RaiDrive)/i.test(ctx.request.headers['user-agent']) || (ctx.request.headers['translate']) || (ctx.request.headers['overwrite'])
+  return /(Microsoft\-WebDAV|FileExplorer|WinSCP|WebDAVLib|WebDAVFS|rclone|Kodi|davfs2|sharelist\-webdav|RaiDrive|nPlayer)/i.test(ctx.request.headers['user-agent']) || ('translate' in ctx.request.headers) || ('overwrite' in ctx.request.headers) || ('depth' in ctx.request.headers)
 }
 
 module.exports = (app) => {
   app.addSingleton('webdav', async () => {
     const { config } = app.sharelist
     const webdavPath = config.webdav_path || '/'
-    const webdavProxy = config.webdav_proxy || true
-
     const webdavServer = new WebDAVServer({
       driver: createDriver(app.sharelist, {
         request: app.curl,
-        proxy: webdavProxy,
+        proxy: () => !!config.webdav_proxy,
         baseUrl: webdavPath
       }),
       base: webdavPath,
       auth: (user, pass) => {
-        return config.token === pass
+        return config.webdav_user === user && config.webdav_pass === pass
       }
     })
 

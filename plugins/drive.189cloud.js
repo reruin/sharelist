@@ -1,3 +1,7 @@
+const crypto = require('crypto')
+
+const NodeRSA = require('node-rsa')
+
 const name = '189CloudCookie'
 
 const version = '1.0'
@@ -13,6 +17,7 @@ const urlFormat = require('url').format
 const COOKIE_MAX_AGE = 5 * 24 * 60 * 60 * 1000 // 5 days
 
 const max_age_dir = 10 * 60 * 1000
+
 
 const install = async (msg) => {
   return `
@@ -30,6 +35,56 @@ const install = async (msg) => {
   `
 }
 
+const safeJSONParse = (data) =>
+  JSON.parse(
+    data.replace(/(?<=:\s*)(\d+)/g, ($0, $1) => {
+      if (!Number.isSafeInteger(+$1)) {
+        return `"${$1}"`
+      } else {
+        return $1
+      }
+    }),
+  )
+
+const hmac = (v, key) => {
+  return crypto.createHmac('sha1', key).update(v).digest('hex')
+}
+
+const md5 = (v) => crypto.createHash('md5').update(v).digest('hex')
+
+// const base64Hex = v => Buffer.from(v).toString('base64')
+
+const aesEncrypt = (data, key, iv = "") => {
+  let cipher = crypto.createCipheriv('aes-128-ecb', key, iv);
+  let encrypted = cipher.update(data, 'utf8', 'hex');
+  encrypted += cipher.final('hex');
+  return encrypted
+}
+
+const rsaEncrypt = (data, publicKey, charset = 'base64') => {
+  publicKey = '-----BEGIN PUBLIC KEY-----\n' + publicKey + '\n-----END PUBLIC KEY-----'
+
+  let key = new NodeRSA(publicKey, { encryptionScheme: 'pkcs1' })
+  return key.encrypt(data, charset)
+}
+
+const uuid = (v) => {
+  return v.replace(/[xy]/g, (e) => {
+    var t = 16 * Math.random() | 0
+      , i = "x" === e ? t : 3 & t | 8;
+    return i.toString(16)
+  })
+}
+
+const qs = d => Object.keys(d).map(i => `${i}=${encodeURI(d[i])}`).join('&')
+
+const parseHeaders = v => {
+  let ret = {}
+  for (let pair of decodeURIComponent(v).split('&').map(i => i.split('='))) {
+    ret[pair[0].toLowerCase()] = pair.slice(1).join('=')
+  }
+  return ret
+}
 
 class Manager {
   constructor(request, recognize, updateHandle) {
@@ -119,6 +174,7 @@ class Manager {
         Cookies:cookies,
         Referer:'https://open.e.189.cn/api/logbox/oauth2/loginSubmit.do'
       },
+      json: true
     })
     if(resp.body && resp.body == '1'){
       return true
@@ -126,11 +182,49 @@ class Manager {
       return false
     }
   }
+
+  async getCaptcha(captchaToken, reqId, cookie) {
+    let captchaUrl = `https://open.e.189.cn/api/logbox/oauth2/picCaptcha.do?token=${formdata.captchaToken}&REQID=${reqId}&rnd=${Date.now()}`
+
+    let resp = await this.request.get(captchaUrl,{
+      headers:{
+        Cookie:cookies,
+        Referer:'https://open.e.189.cn/api/logbox/oauth2/loginSubmit.do'
+      },
+      encoding: null
+    })
+
+    let imgBase64
+
+    if(resp.body){
+      imgBase64 = "data:" + resp.headers["content-type"] + ";base64," + Buffer.from(resp.body).toString('base64');
+    }
+    return await this.ocr(imgBase64)
+  }
+
+  async getSessionKey(cookie){
+    let { body } = await this.request.get(`https://cloud.189.cn/v2/getUserBriefInfo.action?noCache=${Math.random()}`, {
+      headers: {
+        cookie,
+        accept: 'application/json;charset=UTF-8'
+      },
+      json: true
+
+    })
+    return body.sessionKey
+  }
   //create cookies
   async create(username , password , path = '/'){
     //0 准备工作： 获取必要数据
     let headers = {'User-Agent':'Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/69.0.3497.100 Safari/537.36'}
     let { body , headers:headers2} = await this.request.get('https://cloud.189.cn/api/portal/loginUrl.action?redirectURL=https://cloud.189.cn/web/redirect.html',{headers})
+
+
+    let { body: data2 } = await this.request.post(`https://open.e.189.cn/api/logbox/config/encryptConf.do`, {
+      appId: 'cloud'
+    },{json:true})
+    console.log(data2 , typeof data2.data)
+    let { pubKey, pre, upSmsOn } = data2.data
 
     let captchaToken = (body.match(/name='captchaToken' value='(.*?)'>/) || ['',''])[1],
     returnUrl = (body.match(/returnUrl = '(.*?)'\,/) || ['',''])[1],
@@ -141,22 +235,24 @@ class Manager {
     let cookies = headers2['set-cookie'].join('; ')
 
     let formdata = {
-      'appKey': 'cloud',
-      'accountType':'01',
-      'userName':username,
-      'password':password,
-      'validateCode':'',
-      'captchaToken':captchaToken,
-      'returnUrl':returnUrl,
-      'mailSuffix': '@189.cn',
-      'dynamicCheck': 'FALSE',
-      'clientType': '10010',
-      'cb_SaveName': '1',
-      'isOauth2': 'false',
-      'state':'',
-      'paramId':paramId 
+      appKey: 'cloud',
+      accountType: '01',
+      userName: `${pre}${rsaEncrypt(username, pubKey)}`,
+      password: `${pre}${rsaEncrypt(password, pubKey)}`,
+      userName: username,
+      password: password,
+      validateCode: '',
+      captchaToken: captchaToken,
+      returnUrl: returnUrl,
+      mailSuffix: '@189.cn',
+      dynamicCheck: 'FALSE',
+      clientType: '1',
+      cb_SaveName: '1',
+      isOauth2: 'false',
+      state: '',
+      paramId: paramId,
     }
-    // console.log(headers2)
+
 
     let result = false
     let msg = ''
@@ -170,23 +266,9 @@ class Manager {
     while(true){
       // 0 验证码
       if(needcaptcha){
-        
-        let captchaUrl = `https://open.e.189.cn/api/logbox/oauth2/picCaptcha.do?token=${formdata.captchaToken}&REQID=${reqId}&rnd=${Date.now()}`
 
-        let resp = await this.request.get(captchaUrl,{
-          headers:{
-            Cookie:cookies,
-            Referer:'https://open.e.189.cn/api/logbox/oauth2/loginSubmit.do'
-          },
-          encoding: null
-        })
+        let { error, code } = await this.getCaptcha(captchaToken, reqId, cookie)
 
-        let imgBase64
-
-        if(resp.body){
-          imgBase64 = "data:" + resp.headers["content-type"] + ";base64," + Buffer.from(resp.body).toString('base64');
-        }
-        let { error , code } = await this.ocr(imgBase64)
         console.log('validateCode:['+code+']')
 
         //服务不可用
@@ -226,7 +308,11 @@ class Manager {
       if( resp.body && resp.body.toUrl ){
         resp = await this.request.get(resp.body.toUrl , { followRedirect:false, headers })
         let cookies = resp.headers['set-cookie'].join('; ')
-        let client = { username , password , cookies , updated_at: Date.now() , path }
+
+        
+        const sessionKey = await this.getSessionKey(cookies)
+
+        let client = { username , password , sessionKey, cookies , updated_at: Date.now() , path }
         if(this.clientMap[username]){
           client.path = this.clientMap[username].path
         }
@@ -368,41 +454,53 @@ module.exports = ({ request, cache, getConfig, querystring, base64, saveDrive, g
     let children = [] , pageNum = 1
     while(true){
       let { data , msg, error } = await fetchData(id,{
-        url:`https://cloud.189.cn/v2/listFiles.action?fileId=${path}&mediaType=&keyword=&inGroupSpace=false&orderBy=1&order=ASC&pageNum=${pageNum}&pageSize=9999&noCache=${Math.random()}`,
+        url:`https://cloud.189.cn/api/open/file/listFiles.action?folderId=${path}&mediaType=0&keyword=&inGroupSpace=false&orderBy=1&order=ASC&pageNum=${pageNum}&pageSize=9999&noCache=${Math.random()}`,
         method:'GET',
         headers:{
           'User-Agent':'Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/69.0.3497.100 Safari/537.36',
           'Cookie': cookies,
+          'accept': 'application/json;charset=UTF-8',
         },
-        json:true
       })
     
       if (error || !data || !data.body) {
         return { id, type: 'folder', protocol: defaultProtocol,body:msg || '解析错误' }
       }
 
-      for(let file of data.body.data){
-        let item = {
-          id: manager.stringify({username , path:file.fileId}),
-          name: file.fileName,
-          protocol: defaultProtocol,
-          created_at: file.createTime,
-          updated_at: file.lastOpTime,
-          type: file.isFolder ? 'folder' : 'file',
-          thumb:file.icon ? file.icon.smallUrl : ''
-        }
-        if( item.type != 'folder' ){
-          item.ext = file.fileType
-          item.size = parseInt(file.fileSize)
-          item.url = 'https:'+file.downloadUrl
+      data.body = safeJSONParse(data.body)
 
-          if(file.icon) item.icon = file.icon.smallUrl
+      if (data.body.fileListAO?.folderList) {
+        for (let i of data.body.fileListAO.folderList) {
+
+          children.push({
+            id: manager.stringify({username , path:''+i.id}),
+            name: i.name,
+            protocol: defaultProtocol,
+            type: 'folder',
+            size: i.size,
+            created_at: i.createDate,
+            updated_at: i.lastOpTime,
+          })
         }
-        children.push(item)
       }
-      
-      let count = data.body.recordCount
-      let currentCount = data.body.pageNum * data.body.pageSize
+
+      if (data.body.fileListAO?.fileList) {
+        for (let i of data.body.fileListAO.fileList) {
+          children.push({
+            id: manager.stringify({username , path:''+i.id}),
+            name: i.name,
+            protocol: defaultProtocol,
+            type: 'file',
+            size: i.size,
+            created_at: i.createDate,
+            updated_at: i.lastOpTime,
+            thumb:file.icon ? file.icon.smallUrl : ''
+          })
+        }
+      }
+
+      let count = data.body.fileListAO.count
+      let currentCount = data.body.pageNum * data.body.fileListAO.fileListSize
 
       if( currentCount < count ){
         //翻页
@@ -432,23 +530,25 @@ module.exports = ({ request, cache, getConfig, querystring, base64, saveDrive, g
 
     let filedata = options.data || {}
 
-    let url = filedata.url
-
     let { data , error , msg } = await fetchData(id,{
-      url,
+      url:`https://cloud.189.cn/api/open/file/getFileDownloadUrl.action?noCache=${Math.random()}&fileId=${path}`,
       method:'GET',
-      followRedirect:false ,
       headers:{
         'User-Agent':'Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/69.0.3497.100 Safari/537.36',
         'Cookie': cookies,
-      }
+        'accept': 'application/json;charset=UTF-8',
+      },
+      json:true
     })
 
     if(error || !data) return false
-    if(data.headers.location){
+    // fileDownloadUrl
+
+    let url = ''
+    if(data.body?.fileDownloadUrl){
       let redir = await request({
         async:true,
-        url:data.headers.location,
+        url:data.body.fileDownloadUrl,
         method:'GET',
         followRedirect:false ,
         headers:{
@@ -457,7 +557,6 @@ module.exports = ({ request, cache, getConfig, querystring, base64, saveDrive, g
       })
       url = redir.headers.location
     }
-    console.log(url)
     return {
       id,
       url,
@@ -512,5 +611,5 @@ module.exports = ({ request, cache, getConfig, querystring, base64, saveDrive, g
     return id
   }
 
-  return { name, label:'天翼云 账号登录版', version, drive: { protocols, folder, file , createReadStream  } }
+  return { name, label:'天翼云 账号登录版', version, drive: { protocols, cache:true, folder, file , createReadStream  } }
 }

@@ -7,6 +7,11 @@ import useDisk from '@/hooks/useDisk'
 const { Item: BreadcrumbItem } = Breadcrumb
 import './index.less'
 export default defineComponent({
+  props: {
+    paths: {
+      type: Array
+    }
+  },
   setup(props, ctx) {
     const { paths, setPath } = useDisk()
 

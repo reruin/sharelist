@@ -50,7 +50,7 @@ export default defineComponent({
             <Error value={error}>
               {files.value.map((i: IFile) => {
                 return (
-                  <div class="item" title={i.name} onClick={() => onClick(i)}>
+                  <a href={'/' + [...paths.value, i.name].join('/') + '?download'} class="item" title={i.name} onClick={(e) => { onClick(i); e.preventDefault() }}>
                     <Icon
                       class="item-icon"
                       style={{ fontSize: layout.value == 'grid' ? '42px' : '26px' }}
@@ -61,7 +61,7 @@ export default defineComponent({
                       <div class="item-ctime">{i.ctimeDisplay}</div>
                       <div class="item-size">{i.sizeDisplay}</div>
                     </div>
-                  </div>
+                  </a>
                 )
               })}
             </Error>

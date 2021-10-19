@@ -425,7 +425,7 @@ class Driver {
     if (error) return { error: error }
 
     if (data.error) return { error: data.error.message }
-    console.log(data.parentReference)
+
     let result = {
       id: data.id,
       name: data.name,
@@ -646,8 +646,6 @@ class Driver {
       data: stream,
       contentType: 'stream',
     })
-
-    console.log(uploadData)
 
     return {
       id: data.id,

@@ -225,11 +225,10 @@ class FileSystem {
       return files
     }
 
-    return app.error({ message: 'path is not exist' })
+    return this.app.error({ message: 'path is not exist' })
   }
 
   async get(id) {
-    console.log('GET', id)
     let stat = fileStat(ospath(id))
     if (!stat) return this.app.error({ code: 404 })
     return {
@@ -273,7 +272,6 @@ class FileSystem {
     let dir = dirname(filepath)
     let targetpath = join(dir, name)
     try {
-      console.log('rename', filepath, targetpath)
       fs.renameSync(filepath, targetpath)
     } catch (e) {
       console.log(e)
@@ -295,7 +293,6 @@ class FileSystem {
     let targetpath = ospath(this.parsePath(target))
 
     let dst = join(targetpath, basename(id))
-    console.log('move', filepath, targetpath)
 
     try {
       fs.renameSync(filepath, dst)

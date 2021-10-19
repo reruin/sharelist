@@ -34,18 +34,23 @@ const getFilePath = (file, app) => {
 module.exports = {
   async page(ctx, next) {
     let filepath = getFilePath(ctx.path == '/' ? 'index.html' : ctx.path.substring(1), this.app)
-    try {
-      if (!fs.existsSync(filepath)) {
+    if ('download' in ctx.query) {
+      await this.get(ctx, next)
+    } else {
+      try {
+        if (!fs.existsSync(filepath)) {
+          filepath = getFilePath('index.html', this.app)
+        }
+      } catch (e) {
         filepath = getFilePath('index.html', this.app)
       }
-    } catch (e) {
-      filepath = getFilePath('index.html', this.app)
+
+      let status = await sendfile(ctx, filepath)
+      if (!status) {
+        return await this.list(ctx, next)
+      }
     }
 
-    let status = await sendfile(ctx, filepath)
-    if (!status) {
-      return await this.list(ctx, next)
-    }
   },
   async config(ctx, next) {
     let config = getConfig(this.app)

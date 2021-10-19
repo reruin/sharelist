@@ -6,6 +6,37 @@ const safeCall = fn => new Promise((resolve, reject) => {
   Promise.resolve(fn).then(resolve).catch(() => resolve())
 })
 
+const createHeaders = (data, { maxage, immutable, range } = { maxage: 0, immutable: false }) => {
+  let fileSize = data.size
+  let fileName = data.name
+
+  let headers = {}
+
+  headers['Last-Modified'] = new Date(data.mtime).toUTCString()
+
+  if (range) {
+    let { start, end } = range
+    headers['Content-Range'] = `bytes ${start}-${end}/${fileSize}`
+    headers['Content-Length'] = end - start + 1
+    headers['Accept-Ranges'] = 'bytes'
+  } else {
+    header['Content-Range'] = `bytes 0-${fileSize - 1}/${fileSize}`
+    headers['Content-Length'] = fileSize
+  }
+
+  headers['Content-Disposition'] = `attachment;filename=${encodeURIComponent(fileName)}`
+  return headers
+}
+
+const getRange = (r, total) => {
+  if (r) {
+    let [, start, end] = r.match(/(\d*)-(\d*)/);
+    start = start ? parseInt(start) : 0
+    end = end ? parseInt(end) : total - 1
+
+    return { start, end }
+  }
+}
 const createDriver = (driver, { proxy, baseUrl } = {}) => {
   const commands = {
     async ls(path) {
@@ -30,25 +61,32 @@ const createDriver = (driver, { proxy, baseUrl } = {}) => {
       try {
         return await driver.stat({ paths: parsePath(path) })
       } catch (error) {
-        console.log(error)
         return { error }
       }
     },
     async get(path, options) {
       let data = await driver.get({ paths: parsePath(path) })
-
       if (!options.reqHeaders) options.reqHeaders = {}
       options.reqHeaders['user-agent'] = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/92.0.4515.159 Safari/537.36'
+
       if (data && data.download_url && !data.extra.proxy && !proxy()) {
         return {
           status: 302,
           body: data.download_url
         }
       } else {
-        console.log('proxy webdav')
-        let res = await driver.createReadStream(data.id, options)
-        if (res.stream) res.body = res.stream
-        return res
+        let range = getRange(options.reqHeaders.range, data.size) || { start: 0, end: data.size - 1 }
+        let { stream, status, headers, acceptRanges = false } = await driver.createReadStream(data.id, range)
+        let isReqRange = !!options.reqHeaders.range
+        if (stream) {
+          let options = acceptRanges ? { range } : {}
+          let resHeaders = headers || createHeaders(data, options)
+          return {
+            body: stream,
+            status: status || (isReqRange && acceptRanges ? 206 : 200),
+            headers: resHeaders
+          }
+        }
       }
     },
     async upload(path, stream, { size }) {
@@ -169,7 +207,7 @@ const createDriver = (driver, { proxy, baseUrl } = {}) => {
 }
 
 const isWebDAVRequest = (ctx) => {
-  return /(Microsoft\-WebDAV|FileExplorer|WinSCP|WebDAVLib|WebDAVFS|rclone|Kodi|davfs2|sharelist\-webdav|RaiDrive|nPlayer)/i.test(ctx.request.headers['user-agent']) || ('translate' in ctx.request.headers) || ('overwrite' in ctx.request.headers) || ('depth' in ctx.request.headers)
+  return /(Microsoft\-WebDAV|FileExplorer|WinSCP|WebDAVLib|WebDAVFS|rclone|Kodi|davfs2|sharelist\-webdav|RaiDrive|nPlayer|LibVLC)/i.test(ctx.request.headers['user-agent']) || ('translate' in ctx.request.headers) || ('overwrite' in ctx.request.headers) || ('depth' in ctx.request.headers)
 }
 
 module.exports = (app) => {
@@ -184,7 +222,7 @@ module.exports = (app) => {
       }),
       base: webdavPath,
       auth: (user, pass) => {
-        return config.webdav_user === user && config.webdav_pass === pass
+        return !config.webdav_pass || (config.webdav_user === user && config.webdav_pass === pass)
       }
     })
 
@@ -198,14 +236,14 @@ module.exports = (app) => {
       console.log('[WebDAV]', ctx.method, ctx.url, '<-->', ctx.ip)
       const resp = await webdavServer.request(ctx.req)
       const { headers, status, body } = resp
-
-      if (headers) {
-        ctx.set(headers)
-      }
-
       if (status == 302) {
         ctx.redirect(body)
       } else {
+
+        if (headers) {
+          ctx.set(headers)
+        }
+
         if (status) {
           ctx.status = parseInt(status)
         }

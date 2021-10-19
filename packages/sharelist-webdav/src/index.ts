@@ -1,15 +1,15 @@
 
-import { WebDAVMethod, WebDAVRequest, Driver, DriverMethod, Context, Response } from "./types"
+import { WebDAVMethod, WebDAVRequest, Driver, DriverMethod, Context, Response, StatusCodes } from "./types"
 import Commands from './operations/commands'
 import { default as createContext } from './context'
 
 interface WebDAVAuth {
-  (user: string, pass: string): boolean
+  (user: string | undefined, pass: string | undefined): boolean,
 }
 export type WebDAVServerOptions = {
   driver?: Driver,
   base?: string,
-  auth?: WebDAVAuth,
+  auth: WebDAVAuth,
   redirect: boolean
 }
 
@@ -27,7 +27,7 @@ export class WebDAVServer {
 
   protected base: string
 
-  protected auth: WebDAVAuth | undefined
+  protected auth: WebDAVAuth
 
   protected config: Record<string, any>
 
@@ -50,14 +50,16 @@ export class WebDAVServer {
 
   async request(req: WebDAVRequest): Promise<Response> {
     const ctx: Context = createContext(req, this.base, this.allows)
-    if (this.auth) {
-      if (!ctx.auth || !this.auth(ctx.auth.user, ctx.auth.pass) === true) {
-        return {
-          headers: {
-            'WWW-Authenticate': `Basic realm="ShareList WebDAV"`
-          },
-          status: '401'
-        }
+    if (
+      !(ctx.method == 'options' && !ctx.path) &&
+      !this.auth(ctx.auth.user, ctx.auth.pass)
+    ) {
+      return {
+        headers: {
+          'X-WebDAV-Status': '401 ' + StatusCodes[401],
+          'WWW-Authenticate': `Basic realm="ShareList WebDAV"`
+        },
+        status: '401'
       }
     }
 
@@ -65,10 +67,10 @@ export class WebDAVServer {
     ctx.config = this.config
     const method = this.methods[ctx.method] || this.unknownMethod
 
-    const res = await method(ctx)
+    const res: Response = await method(ctx)
+    res.headers ||= {}
     if (res.status) {
-      res.headers ||= {}
-      // res.headers['X-WebDAV-Status'] = res.status
+      // res.headers['X-WebDAV-Status'] = res.status + ' ' + StatusCodes[res.status]
     }
     return res
   }

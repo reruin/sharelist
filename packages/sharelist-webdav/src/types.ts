@@ -18,8 +18,8 @@ export type Driver = {
 }
 
 export type WebDAVAuthRecord = {
-  user: string,
-  pass: string
+  user: string | undefined,
+  pass: string | undefined
 }
 export interface Context {
   req: http.IncomingMessage,
@@ -31,7 +31,7 @@ export interface Context {
   driver?: Driver,
   allows?: Array<string>,
   config: Record<string, any>,
-  auth?: WebDAVAuthRecord
+  auth: WebDAVAuthRecord
 }
 
 
@@ -45,7 +45,7 @@ export type Response = {
   body?: any
 }
 
-export const StatusCodes = {
+export const StatusCodes: Record<string | number, string> = {
   200: 'OK',
   201: 'Created',
   204: 'No Content',

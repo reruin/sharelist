@@ -2,9 +2,9 @@ import { parseXML } from './shared'
 import { Context, Response } from '../types'
 
 const filterHeaders = (headers: Record<string, any>): Record<string, any> => {
-  const exclude = ['range', 'accept-encoding']
+  const effectFields = ['range', 'accept-encoding']
   const ret: Record<string, any> = {}
-  Object.keys(headers).filter((i: string) => exclude.includes(i.toLocaleLowerCase())).forEach((key: string) => {
+  Object.keys(headers).filter((i: string) => effectFields.includes(i.toLocaleLowerCase())).forEach((key: string) => {
     ret[key] = headers[key]
   })
   return ret

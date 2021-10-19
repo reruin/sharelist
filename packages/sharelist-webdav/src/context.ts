@@ -4,7 +4,7 @@ import { parseXML } from './operations/shared'
 import { URL } from 'url'
 
 export default (req: http.IncomingMessage, base: string, allows: Array<string>): Context => {
-  const value = req.headers?.authorization?.split(' ')[1]
+  const authorization = req.headers?.authorization?.split(' ')[1]
 
   const path = new URL(req.url as string, `http://${req.headers.host}`).pathname
   const ctx: Context = {
@@ -14,6 +14,7 @@ export default (req: http.IncomingMessage, base: string, allows: Array<string>):
     path: path.replace(base, ''),
     base,
     config: {},
+    auth: { user: undefined, pass: undefined },
     allows,
     get(field: string): string | undefined {
       const req: http.IncomingMessage = this.req
@@ -26,8 +27,8 @@ export default (req: http.IncomingMessage, base: string, allows: Array<string>):
       }
     }
   }
-  if (value) {
-    const pairs = Buffer.from(value, "base64").toString("utf8").split(':')
+  if (authorization) {
+    const pairs = Buffer.from(authorization, "base64").toString("utf8").split(':')
     ctx.auth = { user: pairs[0], pass: pairs[1] }
   }
   return ctx

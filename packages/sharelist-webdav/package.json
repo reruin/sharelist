@@ -1,6 +1,6 @@
 {
   "name": "@sharelist/webdav",
-  "version": "0.1.7",
+  "version": "0.1.8",
   "repository": "https://github.com/reruin/sharelist",
   "license": "MIT",
   "main": "dist/index.js",

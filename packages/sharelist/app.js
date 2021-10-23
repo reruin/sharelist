@@ -52,7 +52,7 @@ if (!fs.existsSync('./cache')) {
   fs.mkdirSync('./cache')
 }
 
-const port = app?.sharelist?.config?.port || 33001
+const port = process.env.PORT || 33001
 
 const server = http.createServer(app.callback())
 server.on('error', onError).on('listening', onListening)

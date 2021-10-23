@@ -121,7 +121,6 @@ module.exports = {
     let sharelist = this.app.sharelist
     let runtime = await createRuntime(ctx)
     let { data, error } = await sharelist.getFiles(runtime)
-
     if (error) {
       ctx.body = { error }
     } else {
@@ -130,9 +129,9 @@ module.exports = {
           .sort((a, b) => (a.type == 'folder' ? -1 : 1))
           .forEach((i) => {
             if (i.type == 'file') {
-              i.download_url = ctx.origin + '/api/drive/get?download=true&id=' + encodeURIComponent(i.id)
+              i.download_url = '/api/drive/get?download=true&id=' + encodeURIComponent(i.id)
               if (i.extra?.preview_url) {
-                i.preview_url = ctx.origin + '/api/drive/get?download=true&preview=true&id=' + encodeURIComponent(i.id)
+                i.preview_url = '/api/drive/get?download=true&preview=true&id=' + encodeURIComponent(i.id)
               }
             }
           })

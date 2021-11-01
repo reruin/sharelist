@@ -70,3 +70,48 @@ export const isSupportType = (name: string): string | undefined => {
     return 'video'
   }
 }
+
+// eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types
+export const isType = (type: string) => (obj: any) => Object.prototype.toString.call(obj) === `[object ${type}]`
+
+export const isArray = isType('Array')
+
+export const isObject = isType('Object')
+
+export const isBlob = isType('Blob')
+
+export const isString = (v: string): boolean => typeof v == 'string'
+
+export const getBlob = (data: string, filename: string): Blob | undefined => {
+  let blob
+  try {
+    blob = new Blob([data], { type: 'application/octet-stream' })
+  } catch (e) {
+    /**/
+  }
+  return blob
+}
+
+export const saveFile = (data: Blob | string, filename: string): void => {
+  let blob: Blob | undefined
+  if (isString(data as string)) {
+    blob = getBlob(data as string, filename)
+  } else {
+    blob = data as Blob
+  }
+
+  if (isBlob(blob)) {
+    const URL = window.URL || window.webkitURL
+
+    const link = document.createElement('a')
+
+    link.href = URL.createObjectURL(blob)
+    link.download = filename
+
+    const evt = document.createEvent('MouseEvents')
+    evt.initEvent('click', false, false)
+    // link.click()
+    link.dispatchEvent(evt)
+    URL.revokeObjectURL(link.href)
+  }
+}

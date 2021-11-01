@@ -5,7 +5,7 @@ import { Layout, Button, Spin } from 'ant-design-vue'
 import request from '@/utils/request'
 import Icon from '@/components/icon'
 import './index.less'
-import { SettingOutlined, DatabaseOutlined, PoweroffOutlined, DeleteOutlined } from '@ant-design/icons-vue'
+import { SettingOutlined, DatabaseOutlined, PoweroffOutlined, DeleteOutlined, ReloadOutlined, SaveOutlined } from '@ant-design/icons-vue'
 import { Tabs } from 'ant-design-vue'
 const { TabPane } = Tabs
 import General from './partial/general'
@@ -16,12 +16,17 @@ import useConfirm from '@/hooks/useConfirm'
 
 export default defineComponent({
   setup() {
-    const { loginState, isLoading, signout, clearCache } = useSetting()
+    const { loginState, isLoading, signout, exportConfig, reload, clearCache } = useSetting()
 
     const confirmClearCache = useConfirm(clearCache, '确认', '确认清除缓存？')
 
     const confirmSignout = useConfirm(signout, '确认', '确认退出？')
 
+    const confirmReload = useConfirm(reload, '确认', '确认重启？')
+
+    const tabsSlots = {
+      tabBarExtraContent: () => <div style="cursor:pointer;" title="保存配置 / Save config" onClick={exportConfig} style="font-size:12px;color:#666;"><SaveOutlined style={{ fontSize: '15px', 'marginRight': '6px' }} />导出配置</div>
+    }
     return () => (
       <div class="setting">
         <div class="settiing-header">
@@ -30,13 +35,14 @@ export default defineComponent({
           {loginState.value == 1 ? (
             <div class="setting-header__actions">
               <DeleteOutlined onClick={confirmClearCache} style={{ fontSize: '18px', marginRight: '16px' }} />
+              <ReloadOutlined onClick={confirmReload} style={{ fontSize: '18px', marginRight: '16px' }} />
               <PoweroffOutlined onClick={confirmSignout} style={{ fontSize: '18px' }} />
             </div>
           ) : null}
         </div>
         <Spin spinning={isLoading.value}>
           {loginState.value == 1 ? (
-            <Tabs>
+            <Tabs v-slots={tabsSlots}>
               <TabPane key="general">
                 {{
                   default: () => <General />,

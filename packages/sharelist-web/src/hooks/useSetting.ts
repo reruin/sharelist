@@ -1,8 +1,9 @@
-import { ref, Ref, reactive, unref, readonly } from 'vue'
+import { ref, Ref, reactive, unref, readonly, toRaw } from 'vue'
 import request, { ReqResponse } from '@/utils/request'
 import storage from 'store2'
 import { message } from 'ant-design-vue'
 import { useBoolean } from './useHooks'
+import { saveFile } from '../utils/format'
 
 type IUseSetting = {
   (): any
@@ -67,6 +68,16 @@ export const useSetting: IUseSetting = (): any => {
     Object.keys(config).forEach((key) => Reflect.deleteProperty(config, key))
   }
 
+  const reload = () => {
+    request.reload().then((resp: any) => {
+      // hidden()
+      if (resp.status) {
+        message.error(resp.msg)
+      } else {
+        message.success('操作成功')
+      }
+    })
+  }
   // eslint-disable-next-line prettier/prettier
   const noop = () => { }
 
@@ -82,6 +93,17 @@ export const useSetting: IUseSetting = (): any => {
     })
   }
 
+  const exportConfig = () => {
+    request.exportSetting().then((resp: any) => {
+      // hidden()
+      if (resp.status) {
+        message.error(resp.msg)
+      } else {
+        saveFile(JSON.stringify(resp), 'config.json')
+      }
+    })
+  }
+
   if (!config.token && storage.get('ACCESS_TOKEN')) {
     getConfig(storage.get('ACCESS_TOKEN'))
   } else {
@@ -91,7 +113,7 @@ export const useSetting: IUseSetting = (): any => {
 
   return (useSetting.instance = {
     signout,
-
+    reload,
     loginState,
     isLoading,
     getValue,
@@ -99,6 +121,7 @@ export const useSetting: IUseSetting = (): any => {
     config,
     setConfig,
     getConfig,
+    exportConfig,
     clearCache,
   })
 }

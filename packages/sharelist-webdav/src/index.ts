@@ -48,8 +48,8 @@ export class WebDAVServer {
     this.allows = Object.keys(this.methods).map(i => i.toUpperCase())//.join(', ')
   }
 
-  async request(req: WebDAVRequest): Promise<Response> {
-    const ctx: Context = createContext(req, this.base, this.allows)
+  async request(req: WebDAVRequest, options?: WebDAVServerOptions): Promise<Response> {
+    const ctx: Context = createContext(req, options?.base || this.base, this.allows)
     if (
       !(ctx.method == 'options' && !ctx.path) &&
       !this.auth(ctx.auth.user, ctx.auth.pass)

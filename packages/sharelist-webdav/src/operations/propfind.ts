@@ -19,11 +19,11 @@ const DEFAULT_PROPS = [
  */
 const propParse = (data: any) => {
   if (!data) return {
-    ns: { prefix: '', uri: '' },
+    ns: { prefix: 'D', uri: 'DAV:' },
     prop: [...DEFAULT_PROPS]
   }
   let prop = [...DEFAULT_PROPS]
-  const prefix = Object.keys(data.propfind.$).find(i => i.startsWith('xmlns:'))?.split(':')[1] || ''
+  const prefix = Object.keys(data.propfind.$).find(i => i.startsWith('xmlns:'))?.split(':')[1] || 'D'
   const uri = data.propfind.$?.[`xmlns${prefix ? `:${prefix}` : ''}`] || ''
   if (data.propfind.hasOwnProperty('prop')) {
     prop = Object.keys(data.propfind.prop)
@@ -79,7 +79,7 @@ const fixNs = (data: any, prefix: string) => {
   if (!prefix) return data
   Object.keys(data).forEach((key: string) => {
     const val = data[key]
-    if (key != '$') {
+    if (key != '$' && prefix) {
       if (Array.isArray(val) || typeof val == 'object') {
         fixNs(val, prefix)
       }
@@ -98,12 +98,14 @@ const fixNs = (data: any, prefix: string) => {
 const createXML = (data: any, options: any) => {
   const { ns: { prefix, uri } } = options
 
-  const obj = {
+  const obj: any = {
     multistatus: {
-      $: {
-        "xmlns": uri
-      },
       response: convData(data || [], options)
+    }
+  }
+  if (uri) {
+    obj.multistatus.$ = {
+      "xmlns": uri
     }
   }
 
@@ -122,9 +124,7 @@ export default async (ctx: Context): Promise<Response | undefined> => {
     base: ctx.base,
     depth: ctx.depth,
   }, propParse(await parseXML(ctx.req)))
-
   const data: any = ctx.depth == '0' ? await ctx.driver?.('stat', ctx.path) : await ctx.driver?.('ls', ctx.path)
-
   if (!data) return { status: '404' }
 
   if (data.error) {

@@ -19,7 +19,7 @@ body:
       description: Sharelist Version
       options:
         - v0.1
-        - latest
+        - next
     validations:
       required: true
   - type: textarea

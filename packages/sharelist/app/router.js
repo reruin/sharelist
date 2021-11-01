@@ -5,8 +5,8 @@ module.exports = app => {
   router
     .get('/api/setting', auth, controller.api.setting)
     .post('/api/setting', auth, controller.api.updateSetting)
-    .get('/api/config', auth, controller.api.config)
     .put('/api/cache/clear', auth, controller.api.clearCache)
+    .put('/api/reload', auth, controller.api.reload)
 
     .post('/api/drive/list', controller.api.list)
     .post('/api/drive/get', controller.api.get)

@@ -35,7 +35,7 @@ exports.getFiles = async (sharelist, runtime) => {
   try {
     data = await sharelist.list(runtime)
   } catch (e) {
-    console.trace(e)
+    //console.trace(e)
     return { error: { code: e.code || 500, msg: e.message } }
   }
   if (data.files?.length > 0) {

@@ -25,7 +25,7 @@ export default defineComponent({
     const confirmReload = useConfirm(reload, '确认', '确认重启？')
 
     const tabsSlots = {
-      tabBarExtraContent: () => <div style="cursor:pointer;" title="保存配置 / Save config" onClick={exportConfig} style="font-size:12px;color:#666;"><SaveOutlined style={{ fontSize: '15px', 'marginRight': '6px' }} />导出配置</div>
+      tabBarExtraContent: () => <div style="cursor:pointer;font-size:12px;color:#666;" title="保存配置 / Save config" onClick={exportConfig} ><SaveOutlined style={{ fontSize: '15px', 'marginRight': '6px' }} />导出配置</div>
     }
     return () => (
       <div class="setting">

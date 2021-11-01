@@ -67,8 +67,8 @@ const createDriver = (driver, { proxy, baseUrl } = {}) => {
     async get(path, options) {
       let data = await driver.get({ paths: parsePath(path) })
       if (!options.reqHeaders) options.reqHeaders = {}
+      delete options.reqHeaders.connection
       options.reqHeaders['user-agent'] = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/92.0.4515.159 Safari/537.36'
-
       if (data && data.download_url && !data.extra.proxy && !proxy()) {
         return {
           status: 302,
@@ -206,14 +206,19 @@ const createDriver = (driver, { proxy, baseUrl } = {}) => {
   return (cmd, ...options) => commands[cmd]?.(...options)
 }
 
-const isWebDAVRequest = (ctx) => {
-  return /(Microsoft\-WebDAV|FileExplorer|WinSCP|WebDAVLib|WebDAVFS|rclone|Kodi|davfs2|sharelist\-webdav|RaiDrive|nPlayer|LibVLC)/i.test(ctx.request.headers['user-agent']) || ('translate' in ctx.request.headers) || ('overwrite' in ctx.request.headers) || ('depth' in ctx.request.headers)
+const isWebDAVRequest = (ctx, webdavPath) => {
+  if (webdavPath == '/') {
+    return /(Microsoft\-WebDAV|FileExplorer|WinSCP|WebDAVLib|WebDAVFS|rclone|Kodi|davfs2|sharelist\-webdav|RaiDrive|nPlayer|LibVLC|PotPlayer)/i.test(ctx.request.headers['user-agent']) || ('translate' in ctx.request.headers) || ('overwrite' in ctx.request.headers) || ('depth' in ctx.request.headers)
+  } else {
+    return ctx.params.path.startsWith(webdavPath)
+  }
 }
 
 module.exports = (app) => {
   app.addSingleton('webdav', async () => {
     const { config } = app.sharelist
     const webdavPath = config.webdav_path || '/'
+
     const webdavServer = new WebDAVServer({
       driver: createDriver(app.sharelist, {
         request: app.curl,
@@ -226,15 +231,14 @@ module.exports = (app) => {
       }
     })
 
-    app.router.all(webdavPath + ':path(.*)', async (ctx, next) => {
-      if (webdavPath == '/' || webdavPath == '') {
-        if (!isWebDAVRequest(ctx)) {
-          await next()
-          return
-        }
+    app.router.all(':path(.*)', async (ctx, next) => {
+      let webdavPath = config.webdav_path || '/'
+      if (!isWebDAVRequest(ctx, webdavPath)) {
+        await next()
+        return
       }
       console.log('[WebDAV]', ctx.method, ctx.url, '<-->', ctx.ip)
-      const resp = await webdavServer.request(ctx.req)
+      const resp = await webdavServer.request(ctx.req, { base: webdavPath })
       const { headers, status, body } = resp
       if (status == 302) {
         ctx.redirect(body)
@@ -247,6 +251,7 @@ module.exports = (app) => {
         if (status) {
           ctx.status = parseInt(status)
         }
+
         if (body) {
           // ctx.set('Content-Length', body.length)
           ctx.body = body

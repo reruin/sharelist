@@ -2,8 +2,9 @@ const { createRuntime, selectSource, send, sendfile } = require('./shared')
 const path = require('path')
 const fs = require('fs')
 
-const getConfig = (app) => {
+const getConfig = (app, raw = false) => {
   let { sharelist, controller } = app
+  if (raw) return sharelist.config
   let config = { ...sharelist.config }
   if (config.drives) {
     config.drives = sharelist.getDisk()
@@ -52,14 +53,14 @@ module.exports = {
     }
 
   },
-  async config(ctx, next) {
-    let config = getConfig(this.app)
-    ctx.body = { data: { title: config.title } }
-  },
-  async setting(ctx, next) {
-    ctx.body = { data: getConfig(this.app) }
-  },
 
+  async setting(ctx, next) {
+    ctx.body = { data: getConfig(this.app, !!ctx.query.raw) }
+  },
+  async reload(ctx, next) {
+    await this.app.sharelist.reload()
+    ctx.body = { status: 0 }
+  },
   async updateSetting(ctx, next) {
     let data = { ...ctx.request.body }
     for (let i in data) {
@@ -69,7 +70,6 @@ module.exports = {
       }
       this.app.sharelist.config[i] = val
     }
-    // this.app.sharelist.configUpdated()
 
     ctx.body = { data: getConfig(this.app) }
   },

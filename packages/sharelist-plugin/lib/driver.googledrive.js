@@ -81,7 +81,6 @@ class Manager {
       data: formdata,
       contentType: 'json'
     })
-
     if (data.error) {
       this.app.error({ message: data.error_description || data.error })
     }
@@ -118,7 +117,7 @@ class Manager {
       // refresh_token 永久有效 不需要更新
     }
 
-    return { credentials }
+    return credentials
   }
 }
 

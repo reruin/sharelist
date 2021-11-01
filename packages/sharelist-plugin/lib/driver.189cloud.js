@@ -282,7 +282,7 @@ class Manager {
       }
 
       if (!data.toUrl) return this.app.error({ message: data.msg })
-      console.log(data)
+
       let { headers } = await request.get(data.toUrl, {
         followRedirect: false,
         headers: defaultHeaders,
@@ -294,15 +294,15 @@ class Manager {
 
       if (!loginUser) return this.app.error({ message: 'login failed. Can not get cookies!' })
 
-      const cookie = `COOKIE_LOGIN_USER=${loginUser};`
-      const sessionKey = await this.getSessionKey(cookie)
+      const loginCookie = `COOKIE_LOGIN_USER=${loginUser};`
+      const sessionKey = await this.getSessionKey(loginCookie)
 
       return {
         ...rest,
         account,
         password,
         sessionKey,
-        cookie,
+        cookie: loginCookie,
         updated_at: Date.now(),
       }
     }

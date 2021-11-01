@@ -236,7 +236,7 @@ module.exports = class Driver {
     this.max_age_dir = 7 * 24 * 60 * 60 * 1000 // 7 days
 
     this.guide = [
-      { key: 'account', label: 'ORCHES-C-ACCOUNT', type: 'string', required: true },
+      { key: 'account', label: 'ORCHES-C-ACCOUNT', type: 'string', help: '登录官网从cookies中获取ORCHES系列参数', required: true },
       { key: 'token', label: 'ORCHES-C-TOKEN', type: 'string', required: true },
       { key: 'encrypt', label: 'ORCHES-I-ACCOUNT-ENCRYPT', type: 'string', required: true },
       { key: 'mobile', label: '手机号', type: 'string', required: true },

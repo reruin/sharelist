@@ -6,6 +6,8 @@ const protocol = 'googledrive'
 
 const DEFAULT_ROOT_ID = 'root'
 
+const UPLOAD_PART_SIZE = 5 * 1024 * 1024
+
 class Manager {
   static getInstance(app) {
     if (!this.instance) {
@@ -202,7 +204,7 @@ class Driver {
           id: i.id,
           name: i.name,
           type: i.mimeType.includes('.folder') ? 'folder' : 'file',
-          size: parseInt(i.size),
+          size: parseInt(i.size || 0),
           ctime: timestamp(i.createdTime),
           mtime: timestamp(i.modifiedTime),
           thumb: data.thumbnailLink,
@@ -277,16 +279,200 @@ class Driver {
     }
   }
 
+
+  /**
+   * create folder
+   *
+   * @param {string} [id] folder id
+   * @param {string} [name] folder name
+   * @param {object} [options] options
+   * @param {object} [options.check_name_mode] 
+   * @return {object}
+   *
+   * @api public
+   */
+  async mkdir(parent_file_id, name, { check_name_mode = 'refuse' }, key) {
+    let { access_token } = await this.getCredentials(key)
+
+    let { data } = await this.app.request.post(`https://www.googleapis.com/drive/v3/files`, {
+      headers: {
+        Authorization: `Bearer ${access_token}`,
+      },
+      data: {
+        'name': name,
+        'parents': [parent_file_id],
+        'mimeType': 'application/vnd.google-apps.folder',
+      },
+      contentType: 'json',
+    })
+
+    if (data.error) return this.app.error({ message: data.error.message })
+
+    return {
+      id: data.id,
+      name: data.name,
+      parent_id: parent_file_id
+    }
+  }
+
+  /**
+   * rename file/folder
+   *
+   * @param {string} [id] folder id
+   * @param {string} [name] new name
+   * @return {object}
+   *
+   * @api public
+   */
+  async rename(file_id, name, { check_name_mode = 'refuse' } = {}, key) {
+    let { access_token } = await this.getCredentials(key)
+
+    let { data } = await this.app.request(`https://www.googleapis.com/drive/v3/files/${file_id}`, {
+      method: 'PATCH',
+      headers: {
+        Authorization: `Bearer ${access_token}`,
+      },
+      data: {
+        name,
+      },
+      contentType: 'json',
+    })
+
+    if (data.error) return this.app.error({ message: data.error.message })
+
+    return {
+      id: data.id,
+      name: data.name,
+    }
+  }
+
+
+  /**
+   * mv file/folder
+   *
+   * @param {string} [file_id] folder id
+   * @param {string} [parent_id] folder id
+   * @return {string | error}
+   *
+   * @api public
+   */
+  async mv(file_id, parent_id, key) {
+    let { access_token } = await this.getCredentials(key)
+    let filedata = await this.get(file_id, key)
+
+    let { data } = await this.app.request(`https://www.googleapis.com/drive/v3/files/${file_id}?addParents=${parent_id}&removeParents=root`, {
+      method: 'PATCH',
+      headers: {
+        Authorization: `Bearer ${access_token}`,
+      },
+      contentType: 'json',
+    })
+
+    if (data.error) return this.app.error({ message: data.error.message })
+
+    return {
+      id: data.id,
+      name: data.name,
+      parent_id: filedata.extra.parent_id
+    }
+  }
+
+  /**
+   * remove file/folder
+   *
+   * @param {string} [id] folder id
+   * @return {string}
+   *
+   * @api public
+   */
+  async rm(file_id, key) {
+    let { access_token } = await this.getCredentials(key)
+    let filedata = await this.get(file_id, key)
+
+    let { status } = await this.app.request(`https://www.googleapis.com/drive/v3/files/${file_id}`, {
+      method: "DELETE",
+      headers: {
+        Authorization: `Bearer ${access_token}`,
+      },
+      responseType: 'text',
+    })
+
+    if (status != 204) {
+      return this.app.error({ message: 'An error occurred during delete files' })
+    }
+
+    return {
+      id: file_id,
+      parent_id: filedata.extra.parent_id
+    }
+  }
+
+  async beforeUpload(parent_id, { name }, key) {
+    let { access_token } = await this.getCredentials(key)
+
+    let { headers, status, data } = await this.app.request.post(`https://www.googleapis.com/upload/drive/v3/files?uploadType=resumable`, {
+      data: {
+        name,
+        parents: [parent_id]
+      },
+      headers: {
+        Authorization: `Bearer ${access_token}`,
+      },
+      contentType: 'json',
+      responseType: 'text'
+    })
+    return headers?.location
+  }
+
+  /**
+   * upload file
+   *
+   * @param {string} [id] folder id
+   * @param {object} [options] upload file meta
+   * @param {number} [options.size] upload file size
+   * @param {string} [options.name] upload file name
+   * @param {ReadableStream} [options.stream] upload file stream
+   * @param {object} [credentials] credentials
+   * @return {string | error}
+   *
+   * @api public
+   */
+  async upload(id, { size, name, stream, ...rest }, key) {
+    const { app } = this
+
+    let uploadUrl = await this.beforeUpload(id, { name, size, ...rest }, key)
+
+    if (!uploadUrl) {
+      return app.error('An error occurred during upload, miss upload url')
+    }
+
+    let { data } = await app.request(uploadUrl, {
+      method: 'put',
+      headers: {
+        'Content-Length': size,
+        'Content-Range': `bytes ${0}-${size - 1}/${size}`,
+      },
+      data: stream,
+      contentType: 'stream',
+    })
+
+    return {
+      id: data.id,
+      name: data.name,
+      parent_id: id
+    }
+  }
+
   async isAbusiveFile(url, access_token) {
     if (url in this.abusiveFilesMap) {
       return this.abusiveFilesMap[url]
     } else {
-      const resp = await this.app.request({
+      const resp = await this.app.request(url, {
         method: 'HEAD',
-        url,
         headers: {
           Authorization: `Bearer ${access_token}`,
         },
+        responseType: 'text'
       })
 
       this.abusiveFilesMap[url] = resp.status == 403
@@ -301,8 +487,6 @@ class Driver {
     } = this
 
     let { access_token } = await this.getCredentials(key)
-
-    if (error) return { error }
 
     let url = `https://www.googleapis.com/drive/v3/files/${id}?alt=media`
 
@@ -323,7 +507,6 @@ class Driver {
       responseType: 'stream',
       retry: 0,
     })
-
     return resp.data
   }
 

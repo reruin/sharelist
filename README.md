@@ -22,6 +22,7 @@ CaiYun   |  ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
 CTCloud   |  ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
 Baidu Netdisk   |  ✓ | x | ✓ | ✓ | ✓ | ✓ | ✓ |
 OneDrive   |  ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+GoogleDrive   |  ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
 
 - [ ] 中转器
 

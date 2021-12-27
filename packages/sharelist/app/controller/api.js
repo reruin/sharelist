@@ -57,6 +57,10 @@ module.exports = {
   async setting(ctx, next) {
     ctx.body = { data: getConfig(this.app, !!ctx.query.raw) }
   },
+  async config(ctx, next) {
+    const data = getConfig(this.app, !!ctx.query.raw)
+    ctx.body = { status: 0, data: { title: data.title } }
+  },
   async reload(ctx, next) {
     await this.app.sharelist.reload()
     ctx.body = { status: 0 }

@@ -99,7 +99,7 @@ export const useSetting: IUseSetting = (): any => {
       if (resp.status) {
         message.error(resp.msg)
       } else {
-        saveFile(JSON.stringify(resp), 'config.json')
+        saveFile(JSON.stringify(resp.data), 'config.json')
       }
     })
   }

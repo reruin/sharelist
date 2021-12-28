@@ -36,7 +36,7 @@ exports.getFiles = async (sharelist, runtime) => {
     data = await sharelist.list(runtime)
   } catch (e) {
     //console.trace(e)
-    return { error: { code: e.code || 500, msg: e.message } }
+    return { error: { code: e.code || 500, message: e.message } }
   }
   if (data.files?.length > 0) {
     let base_url = runtime.path == '/' ? '' : runtime.path

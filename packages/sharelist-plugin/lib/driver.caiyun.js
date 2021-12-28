@@ -240,7 +240,7 @@ module.exports = class Driver {
       { key: 'token', label: 'ORCHES-C-TOKEN', type: 'string', required: true },
       { key: 'encrypt', label: 'ORCHES-I-ACCOUNT-ENCRYPT', type: 'string', required: true },
       { key: 'mobile', label: '手机号', type: 'string', required: true },
-      //{ key: 'root_id', label: '初始目录ID', type: 'string', required: false },
+      { key: 'root_id', label: '初始目录ID', type: 'string', required: false },
     ]
   }
 

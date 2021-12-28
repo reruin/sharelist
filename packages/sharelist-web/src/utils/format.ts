@@ -9,6 +9,8 @@ export const getFileType = (v: string, type: string): string => {
       return 'audio'
     } else if (['doc', 'docx', 'wps'].includes(v)) {
       return 'word'
+    } else if (['ppt', 'pptx'].includes(v)) {
+      return 'ppt'
     } else if (['pdf'].includes(v)) {
       return 'pdf'
     } else if (['doc', 'docx', 'ppt', 'pptx', 'xls', 'xlsx', 'pdf', 'txt', 'yaml', 'ini', 'cfg'].includes(v)) {

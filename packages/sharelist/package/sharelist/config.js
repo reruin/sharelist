@@ -48,7 +48,10 @@ const defaultConfig = {
   proxy_url: 'https://reruin.github.io/sharelist/redirect.html',
 }
 
-module.exports = (path) => {
+
+exports.defaultConfigKey = Object.keys(defaultConfig)
+
+exports.createConfig = (path) => {
   return createDB(
     path,
     { raw: true },

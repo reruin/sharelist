@@ -8,11 +8,19 @@
     padding:12px;
     transition: all 0.3s;
     cursor: pointer;
+    position: relative;
     &:hover{
       background-color: rgba(132,133,141,0.08);
     }
 
-
+    .item-info{
+      padding:0 6px;
+      color:rgba(0,0,0,.5);
+      flex:0 0 auto;
+      position:absolute;
+      right:0;
+      top:0;
+    }
     .item-name{
       flex: 1;
       min-width: 0;
@@ -20,11 +28,27 @@
       overflow: hidden;
       text-overflow: ellipsis;
       white-space: nowrap;
+      // display: flex;
+      position: relative;
     }
     .item-icon{
       margin-right: 16px;
       flex:none;
     }
+    
+    .item-icon__ext{
+      position: absolute;
+      font-size: 12px;
+      left:20px;
+      bottom: 12px;
+      color:#fff;
+      text-transform: uppercase;
+      transform: scale(0.8);
+      width:42px;
+      // text-align: center;
+      transform-origin: left;
+    }
+   
     .item-meta{
       flex:auto;
       display: flex;
@@ -62,7 +86,12 @@
       width:100%;
       overflow: hidden;
     }
-  
+    .item-icon__ext--md{
+      transform: scale(0.55);
+    }
+    .item-icon__ext--sm{
+      display: none;
+    }
     .item-ctime{
       // display: none;
     }

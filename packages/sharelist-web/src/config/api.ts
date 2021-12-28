@@ -13,7 +13,7 @@ const api: IAPI[] = [
   ['setting', 'GET /api/setting', { token: true }],
   ['exportSetting', 'GET /api/setting?raw=true', { token: true }],
   ['saveSetting', 'POST /api/setting', { token: true }],
-  ['config', 'GET /api/config'],
+  ['config', 'GET /api/configs'],
   ['clearCache', 'PUT /api/cache/clear'],
   ['reload', 'PUT /api/reload'],
   //

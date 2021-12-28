@@ -4,7 +4,7 @@ const factory = require('@sharelist/core')
 
 const createCache = require('./cache')
 
-const createConfig = require('./config')
+const { createConfig, defaultConfigKey } = require('./config')
 
 const { watch } = require('./reactivity')
 
@@ -59,6 +59,7 @@ module.exports = (app) => {
 
     return {
       ...instance,
+      defaultConfigKey,
       getFiles,
       getFile,
       getDownloadUrl

@@ -23,6 +23,18 @@ const getConfig = (app, raw = false) => {
   return config
 }
 
+const getCustomConfig = (app) => {
+  const ret = {}
+  const defaultConfigKey = app.sharelist.defaultConfigKey
+  const config = { ...app.sharelist.config }
+  for (let i of Object.keys(config)) {
+    if (!defaultConfigKey.includes(i)) {
+      ret[i] = config[i]
+    }
+  }
+  return ret
+}
+
 const getFilePath = (file, app) => {
   return path.join(
     app.appInfo.baseDir,
@@ -58,8 +70,19 @@ module.exports = {
     ctx.body = { data: getConfig(this.app, !!ctx.query.raw) }
   },
   async config(ctx, next) {
-    const data = getConfig(this.app, !!ctx.query.raw)
-    ctx.body = { status: 0, data: { title: data.title } }
+    const data = getCustomConfig(this.app)
+    ctx.body = { status: 0, data }
+  },
+  async configField(ctx, next) {
+    const data = getCustomConfig(this.app)
+    const key = ctx.query.key || ctx.params.field
+    const ret = key && data[key] ? data[key] : ''
+    if (ctx.query['content-type']) {
+      ctx.set('content-type', ctx.query['content-type'])
+      ctx.body = ret
+    } else {
+      ctx.body = { status: 0, data: ret }
+    }
   },
   async reload(ctx, next) {
     await this.app.sharelist.reload()

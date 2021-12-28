@@ -55,7 +55,7 @@ const parseFields = (
           parseFields(i.fields, formState, defaultValues, formItemsNode, innerRule)
         }
       }
-    } else {
+    } else if (i.type != 'hidden') {
       formItemsNode.push(
         <FormItem label={i.label} name={i.key} help={i.help}>
           <Input v-model={[formState[i.key], 'value']} />
@@ -63,7 +63,7 @@ const parseFields = (
       )
     }
   }
-
+  console.log(formState)
   return [formItemsNode, innerRule]
 }
 export default defineComponent({
@@ -106,6 +106,8 @@ export default defineComponent({
         .validate()
         .then(() => {
           const { name, ...path } = toRaw(formState)
+          console.log('formState', formState, path)
+
           ctx.emit('update', { name, path })
         })
         .catch((err: any) => {

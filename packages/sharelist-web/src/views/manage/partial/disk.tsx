@@ -13,7 +13,7 @@ export default defineComponent({
     const createModifier = (data: IDrive, idx = -1) => {
       const updateData = (modifyData: IDrive) => {
         const saveData = [...config.drives]
-        console.log(saveData, idx)
+        // console.log(saveData, idx)
         if (idx == -1) {
           saveData.push(modifyData)
         } else {

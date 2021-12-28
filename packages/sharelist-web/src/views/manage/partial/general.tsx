@@ -36,6 +36,8 @@ export default defineComponent({
       { code: 'webdav_proxy', label: 'WebDAV 代理', type: 'boolean' },
       { code: 'webdav_user', label: 'WebDAV 用户名', type: 'string' },
       { code: 'webdav_pass', label: 'WebDAV 密码', type: 'string' },
+      { code: 'script', label: '自定义脚本', type: 'string' },
+      { code: 'style', label: '自定义样式', type: 'string' },
     ]
     const { config, setConfig } = useSetting()
 

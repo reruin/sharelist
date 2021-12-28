@@ -167,6 +167,8 @@ module.exports = class Driver {
       { key: 'redirect_uri', label: '回调地址 / Redirect URI', required: true },
       { key: 'refresh_token', label: '刷新令牌 / Refresh Token', type: 'string', required: true },
       { key: 'root_id', label: '初始文件夹ID', help: '', type: 'string', required: false },
+      { key: 'access_token', label: '令牌', help: '', type: 'hidden', required: false },
+      { key: 'expires_at', label: '有效期', help: '', type: 'hidden', required: false },
     ]
 
     this.abusiveFilesMap = {}

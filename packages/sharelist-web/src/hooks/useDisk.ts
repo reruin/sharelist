@@ -13,7 +13,7 @@ export type IFile = {
   ctime: number
   mtime: number
   path: string
-  extra?: any
+  extra?: Record<string, any>
   [key: string]: any
 }
 

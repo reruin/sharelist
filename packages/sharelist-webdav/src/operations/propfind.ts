@@ -23,7 +23,7 @@ const propParse = (data: any) => {
     prop: [...DEFAULT_PROPS]
   }
   let prop = [...DEFAULT_PROPS]
-  const prefix = Object.keys(data.propfind.$).find(i => i.startsWith('xmlns:'))?.split(':')[1] || 'D'
+  const prefix = Object.keys(data.propfind.$).find(i => i.startsWith('xmlns:'))?.split(':')[1] || ''
   const uri = data.propfind.$?.[`xmlns${prefix ? `:${prefix}` : ''}`] || ''
   if (data.propfind.hasOwnProperty('prop')) {
     prop = Object.keys(data.propfind.prop)

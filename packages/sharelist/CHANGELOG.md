@@ -1,3 +1,17 @@
+## [0.3.12](https://github.com/reruin/sharelist/compare/v0.3.11...v0.3.12) (2021-12-29)
+
+
+### Bug Fixes
+
+* **web:** fix bugs([#723](https://github.com/reruin/sharelist/issues/723),[#747](https://github.com/reruin/sharelist/issues/747)) ([10d2550](https://github.com/reruin/sharelist/commit/10d25502248811a2d313d442f40592c66a5cd443))
+
+
+### Features
+
+* support custom script/css ([8af3902](https://github.com/reruin/sharelist/commit/8af390226a63373477d597a6f6b231e1c34f6cfa))
+
+
+
 ## [0.3.11](https://github.com/reruin/sharelist/compare/v0.3.10...v0.3.11) (2021-11-05)
 
 

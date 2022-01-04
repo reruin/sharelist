@@ -42,6 +42,7 @@ jobs:
           tar --transform='flags=r;s|sharelist-macos-x64|sharelist|' -zcvf sharelist_macos_amd64.tar.gz sharelist-macos-x64
           tar --transform='flags=r;s|sharelist-linux-x64|sharelist|' -zcvf sharelist_linux_amd64.tar.gz sharelist-linux-x64
           tar --transform='flags=r;s|sharelist-linux-arm64|sharelist|' -zcvf sharelist_linux_arm64.tar.gz sharelist-linux-arm64
+          tar --transform='flags=r;s|sharelist-linuxstatic-armv7|sharelist|' -zcvf sharelist_linux_armv7.tar.gz sharelist-linuxstatic-armv7
           gh release create ${{ env.VERSION }} -n "${{ env.NOTE }}" -t "${{ env.VERSION }}" ${{ env.FILES }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -11,8 +11,9 @@ const { TabPane } = Tabs
 import General from './partial/general'
 import Drive from './partial/disk'
 import Signin from './partial/signin'
-import { useSetting } from '@/hooks/useSetting'
+import { useSetting, useConfig } from '@/hooks/useSetting'
 import useConfirm from '@/hooks/useConfirm'
+import { useTitle } from '@/hooks/useHooks'
 
 export default defineComponent({
   setup() {
@@ -27,6 +28,12 @@ export default defineComponent({
     const tabsSlots = {
       tabBarExtraContent: () => <div style="cursor:pointer;font-size:12px;color:#666;" title="保存配置 / Save config" onClick={exportConfig} ><SaveOutlined style={{ fontSize: '15px', 'marginRight': '6px' }} />导出配置</div>
     }
+    const { config } = useConfig()
+
+    watch(() => config.title, (nv) => {
+      useTitle(nv)
+    })
+
     return () => (
       <div class="setting">
         <div class="settiing-header">

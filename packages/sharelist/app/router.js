@@ -4,7 +4,7 @@ module.exports = app => {
 
   router
     .get('/api/setting', auth, controller.api.setting)
-    .get('/api/configs', auth, controller.api.config)
+    .get('/api/configs', controller.api.config)
     .post('/api/setting', auth, controller.api.updateSetting)
     .put('/api/cache/clear', auth, controller.api.clearCache)
     .put('/api/reload', auth, controller.api.reload)

@@ -1,5 +1,14 @@
-import { ref, reactive, Ref, UnwrapRef } from 'vue'
-import { onBeforeRouteLeave, useRouter, RouteLocationRaw } from 'vue-router'
+import { ref, reactive, Ref, UnwrapRef, onMounted, onUnmounted, getCurrentInstance } from 'vue'
+
+export function safeOnMounted(hook: () => any): void {
+  const instance = getCurrentInstance()
+  console.log(instance)
+  if (instance?.isMounted || (instance as any)?._isMounted) {
+    hook()
+  } else {
+    onMounted(hook)
+  }
+}
 
 type ToggleValue = number | string | boolean | undefined
 
@@ -109,3 +118,26 @@ const useBoot = (cb: () => any): any => { }
 //     onMessage,
 //   }
 // }
+
+type useTitleOptions = {
+  restoreOnUnmount: boolean
+}
+export const useTitle = (title: string, options?: useTitleOptions): void => {
+  const lastTitle = ref('')
+
+  const run = () => {
+    lastTitle.value = document.title
+    document.title = title
+  }
+  safeOnMounted(() => {
+    run()
+  })
+
+  if (options?.restoreOnUnmount === true) {
+    onUnmounted(() => {
+      document.title = lastTitle.value
+    })
+  }
+
+  run()
+}

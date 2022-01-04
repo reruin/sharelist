@@ -2,7 +2,7 @@ import { ref, defineComponent, watch, onMounted } from 'vue'
 import './index.less'
 import Icon from '@/components/icon'
 import { useStore } from 'vuex'
-import { useToggle } from '@/hooks/useHooks'
+import { useToggle, useTitle } from '@/hooks/useHooks'
 // import Search from '../search'
 import { Modal, InputSearch } from 'ant-design-vue'
 import { RouterView, useRoute, useRouter } from 'vue-router'
@@ -16,6 +16,11 @@ export default defineComponent({
     const { setQuery, setPath } = useUrlState()
 
     const { config } = useConfig()
+
+    watch(() => config.title, (nv) => {
+      useTitle(nv)
+    })
+
 
     const onChangeLayout = () => {
       commit('SET_LAYOUT', state.setting.layout == 'list' ? 'grid' : 'list')

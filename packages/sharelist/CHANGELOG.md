@@ -1,3 +1,12 @@
+## [0.3.13](https://github.com/reruin/sharelist/compare/v0.3.12...v0.3.13) (2022-01-04)
+
+
+### Bug Fixes
+
+* fix some bugs ([23cd7f9](https://github.com/reruin/sharelist/commit/23cd7f99d5af27b08cba08109c2107a3a6d04089))
+
+
+
 ## [0.3.12](https://github.com/reruin/sharelist/compare/v0.3.11...v0.3.12) (2021-12-29)
 
 

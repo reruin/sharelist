@@ -43,14 +43,14 @@ const propParse = (data: any) => {
  */
 
 const convData = (files: Array<any>, options: any) => {
-  const { path, base = '', prop, ns: { prefix, uri } } = options
+  const { path, base = '', depth, prop, ns: { prefix, uri } } = options
 
   return files.map((file: any) => {
     const item: Record<string, any> = {}
     for (const key of prop) {
-      if (key == 'displayname') {
-        item[key] = file.name.replace(/&/g, '&amp;').replace(/\</g, '&lt;')
-      } else if (key == 'getcontentlength') {
+      item[key] = file.name.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&apos;");
+
+      if (key == 'getcontentlength') {
         item[key] = parseInt(file.size || 0)
       } else if (key == 'resourcetype') {
         item[key] = file.type == 'folder' ? { collection: '' } : ''
@@ -63,7 +63,7 @@ const convData = (files: Array<any>, options: any) => {
       }
     }
 
-    const href = ((base + path + '/' + encodeURIComponent(file.name))).replace(/\/{2,}/g, '/')
+    const href = (base + path + (depth == '0' ? '' : ('/' + encodeURIComponent(file.name)))).replace(/\/{2,}/g, '/')
     //if (file.type == 'file' && file.download_url) href = file.download_url
     return {
       href,

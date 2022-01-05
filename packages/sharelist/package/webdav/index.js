@@ -182,7 +182,7 @@ const createDriver = (driver, { proxy, baseUrl } = {}) => {
           //是否在相同磁盘
           let isSameDisk = await driver.isSameDisk(data.id, targetParent.id)
           if (isSameDisk) {
-            console.log(data, targetParent)
+            // console.log(data, targetParent)
             // 相同父级目录
             if (data.extra.parent_id && data.extra.parent_id == targetParent.extra?.fid) {
               await driver.rename(data.id, dstName)
@@ -208,7 +208,7 @@ const createDriver = (driver, { proxy, baseUrl } = {}) => {
 
 const isWebDAVRequest = (ctx, webdavPath) => {
   if (webdavPath == '/') {
-    return /(Microsoft\-WebDAV|FileExplorer|WinSCP|WebDAVLib|WebDAVFS|rclone|Kodi|davfs2|sharelist\-webdav|RaiDrive|nPlayer|LibVLC|PotPlayer)/i.test(ctx.request.headers['user-agent']) || ('translate' in ctx.request.headers) || ('overwrite' in ctx.request.headers) || ('depth' in ctx.request.headers)
+    return /(Microsoft\-WebDAV|FileExplorer|WinSCP|WebDAVLib|WebDAVFS|rclone|Kodi|davfs2|sharelist\-webdav|RaiDrive|nPlayer|LibVLC|PotPlayer|gvfs)/i.test(ctx.request.headers['user-agent']) || ('translate' in ctx.request.headers) || ('overwrite' in ctx.request.headers) || ('depth' in ctx.request.headers)
   } else {
     return ctx.params.path.startsWith(webdavPath)
   }

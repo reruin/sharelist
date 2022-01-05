@@ -11,7 +11,7 @@ docker run -d -v /etc/sharelist:/sharelist/cache -p 33001:33001 --name="sharelis
 
 
 ## Heroku
-请 Fork [sharelist-heroku](https://github.com/reruin/sharelist-heroku/tree/next)，然后在个人仓库下点 Deploy to HeroKu。CONFIG 配置文件处
+请 Fork [sharelist-heroku](https://github.com/reruin/sharelist-heroku/tree/next)，然后在个人仓库下点 Deploy to HeroKu。
 
 
 安装完成首次访问 `http://localhost:33001`地址，将进入默认界面。访问`http://localhost:33001/@manage` 进入后台管理，默认口令为 ```sharelist```。

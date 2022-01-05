@@ -10,6 +10,8 @@ const DEFAULT_ROOT_ID = 'root'
 
 const UPLOAD_PART_SIZE = 4 * 1024 * 1024
 
+const UPLOAD_PART_SIZE_LARGE = 16 * 1024 * 1024
+
 const support_zone = {
   GLOBAL: ['https://login.microsoftonline.com', 'https://graph.microsoft.com', '国际版'],
   CN: ['https://login.chinacloudapi.cn', 'https://microsoftgraph.chinacloudapi.cn', '世纪互联'],
@@ -206,7 +208,6 @@ class Manager {
     }
 
     let expires_at = data.expires_in * 1000 + Date.now()
-    console.log('expires_in', data.expires_in)
     return {
       ...rest,
       client_id,
@@ -617,9 +618,11 @@ class Driver {
     if (size <= UPLOAD_PART_SIZE) {
       return await this.singleUpload(id, { size, name, stream, ...rest }, key)
     }
+    const app = this.app
+
     let { graph, access_token } = await this.getCredentials(key)
 
-    let { data } = await this.app.request(graph + (id == DEFAULT_ROOT_ID ? '/root' : `/items/${id}`) + `:/${encodeURIComponent(name)}:/` + '/createUploadSession', {
+    let { data } = await app.request(graph + (id == DEFAULT_ROOT_ID ? '/root' : `/items/${id}`) + `:/${encodeURIComponent(name)}:/` + '/createUploadSession', {
       method: 'post',
       headers: {
         Authorization: `Bearer ${access_token}`,
@@ -632,20 +635,32 @@ class Driver {
       },
       contentType: 'json',
     })
-    if (data.error) this.app.error({ message: data.error.message })
+    if (data.error) app.error({ message: data.error.message })
 
     // expirationDateTime 5d
     let { uploadUrl, expirationDateTime } = data
 
-    let { data: uploadData } = await this.app.request(uploadUrl, {
-      method: 'put',
-      headers: {
-        'Content-Length': size,
-        'Content-Range': `bytes ${0}-${size - 1}/${size}`,
-      },
-      data: stream,
-      contentType: 'stream',
-    })
+    let passStream = app.createReadStream(stream, { highWaterMark: 2 * UPLOAD_PART_SIZE_LARGE })
+
+    let part = Math.ceil(size / UPLOAD_PART_SIZE_LARGE)
+    let point = 0
+    for (let i = 0; i < part; i++) {
+      let buffer = await passStream.read(UPLOAD_PART_SIZE_LARGE)
+      let res = await app.request(uploadUrl, {
+        method: 'put',
+        data: buffer,
+        contentType: 'buffer',
+        // responseType: 'text',
+        headers: {
+          'Content-Range': `bytes ${point}-${point + buffer.length - 1}/${size}`,
+          'Content-Length': buffer.length,
+        }
+      })
+      point += buffer.length
+      if (res.status != 201 && res.status != 202) {
+        return this.app.error({ message: 'An error occurred during upload: ' + name })
+      }
+    }
 
     return {
       id: data.id,

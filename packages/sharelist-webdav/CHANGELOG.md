@@ -1,3 +1,12 @@
+## [0.1.11](https://github.com/reruin/sharelist/compare/v0.3.13...v0.1.11) (2022-01-05)
+
+
+### Bug Fixes
+
+* adapt webdav client ([41b2706](https://github.com/reruin/sharelist/commit/41b27063315c80323002416955cded8364f59526))
+
+
+
 ## [0.1.10](https://github.com/reruin/sharelist/compare/v0.3.11...v0.1.10) (2021-12-29)
 
 

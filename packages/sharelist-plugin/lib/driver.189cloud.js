@@ -540,7 +540,9 @@ module.exports = class Driver {
 
   async get_download_url(id, key) {
     let { cookie } = await this.getCredentials(key)
-    let { data } = await this.manager.safeRequest('https://cloud.189.cn/api/open/file/getFileDownloadUrl.action', {
+    //
+    // let { data } = await this.manager.safeRequest('https://cloud.189.cn/api/open/file/getFileDownloadUrl.action', {
+    let { data } = await this.manager.safeRequest('https://cloud.189.cn/api/portal/getFileInfo.action', {
       headers: {
         cookie,
         accept: 'application/json;charset=UTF-8',
@@ -550,12 +552,25 @@ module.exports = class Driver {
         fileId: id,
       },
     })
-
     let download_url
-
     if (data.res_code != 0) return this.app.error({ message: data.res_message })
-    if (data?.fileDownloadUrl) {
-      let { headers } = await this.manager.safeRequest(data.fileDownloadUrl, {
+    if (data?.downloadUrl) {
+
+      let { headers, status } = await this.manager.safeRequest('https:' + data.downloadUrl, {
+        followRedirect: false,
+        responseType: 'text',
+        headers: {
+          cookie,
+          'User-Agent':
+            'Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/69.0.3497.100 Safari/537.36',
+        },
+      })
+
+      download_url = headers?.location
+    }
+
+    if (download_url) {
+      let { headers } = await this.app.request.get(download_url, {
         followRedirect: false,
         responseType: 'text',
         headers: {
@@ -563,9 +578,9 @@ module.exports = class Driver {
             'Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/69.0.3497.100 Safari/537.36',
         },
       })
+
       download_url = headers?.location
     }
-
     if (download_url) {
       let expired_at = download_url.match(/Expires=(?<expired_at>\d+)/i)?.groups.expired_at || 0
       let max_age = 0
@@ -885,7 +900,6 @@ module.exports = class Driver {
         responseType: 'text',
         headers: parseHeaders(uploadData.requestHeader)
       })
-      console.log(res)
       if (res.status != 200) app.error({ message: 'a error occurred during upload.' })
     }
 

@@ -77,7 +77,7 @@ const useDisk: IUseDisk = (): any => {
 
   const getDiskContent = (): any => {
     loading.value = true
-    const isSearch = Object.keys(routes.query).length > 0
+    const isSearch = Object.keys(routes.query).filter((i) => i !== 'auth').length > 0
     const params: Record<string, any> = { path: routes.params.path, ...routes.query }
     if (!params.auth && hasAuth(params.path)) params.auth = getAuth(params.path)
 

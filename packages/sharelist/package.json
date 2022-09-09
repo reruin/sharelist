@@ -44,14 +44,11 @@
     "write-file-atomic": "^3.0.3"
   },
   "pkg": {
-    "scripts": [
-      "./app/**/*",
-      "./plugin/*",
-      "./package/**/*"
-    ],
+    "scripts": [],
     "assets": [
       "./web/**/*",
-      "./manage/**/*"
+      "./manage/**/*",
+      "./plugins.json"
     ]
   }
 }

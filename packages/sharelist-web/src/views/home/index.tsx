@@ -118,7 +118,7 @@ export default defineComponent({
                           i.thumb ?
                             <div class="item-thumb" style={{ 'backgroundImage': `url(${i.thumb})` }}></div>
                             : [<Icon
-                              style={{ fontSize: state.layout == 'grid' ? '42px' : '36px' }}
+                              style={{ fontSize: state.layout == 'grid' ? '64px' : '36px' }}
                               type={'icon-' + i.mediaType}
                             />,
                             i.mediaType == 'file' ? <div class={["item-icon__ext", i.ext.length > 7 ? 'item-icon__ext--sm' : i.ext.length > 4 ? 'item-icon__ext--md' : '']}>{i.ext}</div> : null
@@ -127,10 +127,11 @@ export default defineComponent({
                       </div>
 
                       <div class="item-meta">
-                        <div class="item-name">{i.name} </div>
+                        <div class="item-name">{i.name}</div>
                         <div class="item-ctime">{i.ctimeDisplay}</div>
                         <div class="item-size">{i.sizeDisplay}</div>
                       </div>
+
                     </a>
                   )
                 })}

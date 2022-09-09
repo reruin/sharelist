@@ -11,3 +11,4 @@ dist/
 *.log
 *.exe
 package-lock.json
+.yarn/

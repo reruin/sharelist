@@ -44,9 +44,9 @@ export default defineConfig({
     legacy({
       targets: ['defaults', 'not IE 11'],
     }),
-    ViteComponents({
-      customComponentResolvers: [AntDesignVueResolver()],
-    }),
+    // ViteComponents({
+    //   customComponentResolvers: [AntDesignVueResolver()],
+    // }),
   ],
   optimizeDeps: {
     exclude: [],

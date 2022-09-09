@@ -1,6 +1,10 @@
+const crypto = require('crypto')
+
 const mimeParse = require('mime')
 
 const YAML = require('yaml')
+
+const htmlEntity = require('html-entities')
 
 const isType = (type) => (obj) => Object.prototype.toString.call(obj) === `[object ${type}]`
 
@@ -11,6 +15,8 @@ const isObject = isType('Object')
 const isString = isType('String')
 
 const isDate = isType('Date')
+
+exports.hash = content => crypto.createHash('md5').update(content).digest("hex")
 
 exports.isClass = (fn) => typeof fn == 'function' && /^\s*class/.test(fn.toString())
 
@@ -184,6 +190,8 @@ exports.transfromStreamToString = (stream, encoding = 'utf-8') =>
 
 exports.yaml = YAML
 
+exports.htmlEntity = htmlEntity
+
 exports.safeCall = async (fn, args = []) => {
   let res
   try {
@@ -196,7 +204,7 @@ exports.safeCall = async (fn, args = []) => {
 
 exports.createCache = () => {
   const data = {}
-  const get = (id) => {
+  const get = (id, creator) => {
     let ret = data[id]
     if (ret) {
       if (Date.now() > ret.expired_at) {
@@ -212,6 +220,18 @@ exports.createCache = () => {
     return value
   }
 
+  const has = (id) => {
+    let ret = data[id]
+    if (ret) {
+      if (Date.now() > ret.expired_at) {
+        delete data[id]
+      } else {
+        return true
+      }
+    }
+    return false
+  }
+
   const clear = () => {
     for (let key in data) {
       delete data[key]
@@ -223,7 +243,7 @@ exports.createCache = () => {
   }
 
   return {
-    get, set, clear
+    get, set, clear, has
   }
 }
 

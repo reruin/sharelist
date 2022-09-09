@@ -1,13 +1,14 @@
-import { UserConfig } from 'vite'
-import vue from '@vitejs/plugin-vue'
+import { defineConfig } from 'vite'
 import vueJsx from '@vitejs/plugin-vue-jsx'
 import legacy from '@vitejs/plugin-legacy'
 import path from 'path'
+import ViteComponents, { AntDesignVueResolver } from 'vite-plugin-components'
 
 const root = path.resolve(__dirname, './src')
 
-const config: UserConfig = {
+export default defineConfig({
   root,
+  base: '/',
   resolve: {
     alias: [{ find: '@', replacement: root }],
     extensions: ['.js', '.ts', '.jsx', '.tsx', '.vue', '.json', '.less', '.css'],
@@ -16,7 +17,7 @@ const config: UserConfig = {
     outDir: path.join(__dirname, 'dist'),
     sourcemap: false,
     emptyOutDir: true,
-    // assetsDir: './',
+    assetsDir: '',
   },
   css: {
     preprocessorOptions: {
@@ -29,7 +30,7 @@ const config: UserConfig = {
     },
   },
   server: {
-    port: +process.env.PORT,
+    port: +process.env.PORT || 3000,
     proxy: {
       '/api': {
         target: 'http://127.0.0.1:33001/',
@@ -39,15 +40,15 @@ const config: UserConfig = {
   },
 
   plugins: [
-    vue(),
     vueJsx(),
     legacy({
       targets: ['defaults', 'not IE 11'],
     }),
+    ViteComponents({
+      customComponentResolvers: [AntDesignVueResolver()],
+    }),
   ],
   optimizeDeps: {
-    exclude: ['electron-is-dev', 'electron-store'],
+    exclude: [],
   },
-}
-
-module.exports = config
+})

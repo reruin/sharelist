@@ -13,7 +13,7 @@ jobs:
         with:
           fetch-depth: 0
       - name: Use Node.js
-        uses: actions/setup-node@v2
+        uses: actions/setup-node@v3
         with:
           node-version: '16'
       - name: Get Env
@@ -29,11 +29,15 @@ jobs:
         run: |
           rm -rf ./packages/sharelist-webdav
           yarn install
+          yarn build-manage
           yarn build-web
-          mkdir -p ./packages/sharelist/theme/default
-          mkdir -p ./packages/sharelist/plugins
-          cp -r ./packages/sharelist-web/dist/* ./packages/sharelist/theme/default
-          cp -r ./packages/sharelist-plugin/lib/* ./packages/sharelist/plugins
+          mkdir -p ./packages/sharelist/web/default
+          mkdir -p ./packages/sharelist/manage
+          mkdir -p ./packages/sharelist/plugin
+          wget https://raw.githubusercontent.com/linkdrive/plugins/master/list_full.json -O ./packages/sharelist/plugins.json
+          cp -r ./packages/sharelist-web/dist/* ./packages/sharelist/web/default
+          cp -r ./packages/sharelist-manage/dist/* ./packages/sharelist/manage
+          cp -r ./packages/sharelist-plugin/lib/* ./packages/sharelist/plugin
           yarn build-server
       - name: Release
         run: |

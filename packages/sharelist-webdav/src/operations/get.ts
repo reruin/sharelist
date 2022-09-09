@@ -11,7 +11,7 @@ const filterHeaders = (headers: Record<string, any>): Record<string, any> => {
 }
 
 export default async (ctx: Context): Promise<Response | undefined> => {
-  const res = await ctx.driver?.('get', ctx.path, { reqHeaders: filterHeaders(ctx.req.headers) })
+  const res = await ctx.driver?.get?.(ctx.path, { reqHeaders: filterHeaders(ctx.req.headers) })
   if (res?.error) {
     return {
       status: res.error.code || '502'

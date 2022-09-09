@@ -1,7 +1,17 @@
 const { resolve4 } = require('dns')
-const { Readable, Writable } = require('stream')
+const { Readable, Writable, PassThrough } = require('stream')
+const request = require('./request')
 
-exports.createReadStream = function (readStream, { highWaterMark } = { highWaterMark: 10 * 1024 * 1024 }) {
+//限速
+const throttleStream = (stream) => {
+  stream.pause()
+
+  setTimeout(() => {
+    stream.resume()
+  }, 1000)
+}
+
+exports.streamReader = function (readStream, { highWaterMark } = { highWaterMark: 10 * 1024 * 1024 }) {
   const buffers = []// 缓冲区
 
   let total = 0
@@ -49,7 +59,9 @@ exports.createReadStream = function (readStream, { highWaterMark } = { highWater
 
     if (!ended) {
       if (tasks.length == 0 && total > highWaterMark) {
-        readStream.pause()
+        // 直接暂停 可能导致客户端 timeout
+        throttleStream(readStream)
+
       } else {
         if (readStream.isPaused()) {
           readStream.resume()
@@ -72,6 +84,7 @@ exports.createReadStream = function (readStream, { highWaterMark } = { highWater
     total += chunk.length
     buffers.push(chunk.slice(0))
     check()
+
   })
 
   readStream.on('end', () => {
@@ -166,5 +179,157 @@ exports.rectifier = function (size = 1 * 1024 * 1024, cb) {
 
 
   return writable
+
+}
+
+const createStream = options => {
+  const stream = new PassThrough({
+    highWaterMark: options?.highWaterMark || 1024 * 512,
+  });
+  stream._destroy = () => { stream.destroyed = true; };
+  return stream;
+};
+
+
+const retry = (run, retryTimes = 3, maxTime = 6000) => new Promise((resolve, reject) => {
+  let lastError, time = 1
+  let error = (time) => new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), time))
+
+  const process = () => Promise.race([error(maxTime), run]).then(resolve).catch(e => {
+    if (e?.message) lastError = e
+    if (time++ <= retryTimes) {
+      console.log('retry:', time)
+      try {
+        process()
+      } catch (e) {
+        reject(e)
+      }
+    } else {
+      reject(lastError)
+    }
+  })
+  process()
+})
+
+exports.createChunkStream = (url, chunkSize = 10 * 1024 * 1024, options = {}) => {
+
+  let downloaded = 0
+  let stream = createStream(options.highWaterMark)
+  let willEnd = false
+
+  let pos = options.start || 0
+  let end = options.end || options.total || 0
+
+  const next = async () => {
+    let rangeEnd = pos + chunkSize
+    if (!end || rangeEnd >= end) {
+      rangeEnd = end
+      willEnd = true
+    }
+
+    let headers = {
+      range: `bytes=${pos}-${rangeEnd || ''}`,
+      ...(options.headers || {})
+    }
+
+    let res = await retry(request.get(url, {
+      headers,
+      responseType: 'stream',
+      retry: 0,
+      timeout: 5000
+    }), 3, 6000)
+
+    const ondata = chunk => {
+      downloaded += chunk.length;
+      stream.emit('progress', downloaded);
+    };
+
+    res.data.on('data', ondata)
+    res.data.on('error', (e) => {
+      console.log(e)
+    })
+    res.data.on('end', () => {
+
+      if (!willEnd) {
+        pos = rangeEnd + 1
+        next()
+      }
+
+    })
+    // stream
+    res.data.pipe(stream, { end: willEnd })
+  }
+
+  next()
+
+  return stream
+}
+
+exports.createChunkWriteStream = function (url, chunkSize = 10 * 1024 * 1024, total, onChunk) {
+
+  const stream = new PassThrough({
+    highWaterMark: 512 * 1024,
+  });
+
+  let pos = 0
+
+  let uploaded = 0, chunkUploaded = 0
+
+  let exceed, uploadStream
+
+  stream.on('data', (chunk) => {
+    let willPause = false
+    chunkUploaded += chunk.length
+    if (chunkUploaded >= chunkSize) {
+      exceed = chunk.slice(chunkSize)
+      willPause = uploadStream.end(chunk.slice(0, chunkSize))
+    } else {
+      willPause = uploadStream.write(chunk.slice(0, chunkSize))
+    }
+    if (flag == false) {
+      stream.pause()
+    }
+  })
+
+  stream.on('end', () => {
+
+  })
+
+  const next = async () => {
+
+    let rangeEnd = pos + chunkSize
+    if (!end || rangeEnd >= end) {
+      rangeEnd = end
+      willEnd = true
+    }
+
+    uploadStream = new PassThrough()
+    uploadStream.on('end', next)
+    chunkUploaded = 0
+
+    if (exceed) {
+      uploadStream.write(exceed)
+      exceed = null
+    }
+
+    let reqOptions = {
+      url, headers: {}, method: 'put', contentType: "stream",
+      body: uploadStream,
+      responseType: 'text',
+    }
+
+    if (onChunk) {
+      let res = await onChunk(pos, rangeEnd)
+      reqOptions = { ...reqOptions, ...res }
+    }
+
+    request(reqOptions.url, reqOptions)
+
+    stream.resume()
+  }
+
+  next()
+
+  return stream
 
 }

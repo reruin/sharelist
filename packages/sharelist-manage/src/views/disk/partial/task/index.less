@@ -1,0 +1,118 @@
+.task{
+  width: 375px;
+  // background-color:var(--context-background);
+  
+  border-radius: 4px;
+  // box-shadow: 0 6px 16px -8px rgb(0 0 0 / 8%), 0 9px 28px 0 rgb(0 0 0 / 5%), 0 12px 48px 16px rgb(0 0 0 / 3%);
+
+  .task-list{
+    max-height: 500px;
+    overflow-y:auto;
+  }
+  .ant-tabs-nav{
+    margin-bottom:0;
+  }
+  .ant-popover-inner-content{
+    padding:0;
+  }
+
+  .ant-tabs-tab-active{
+    .anticon {
+      color:var(--primary-color);
+    }
+  }
+  .ant-list-items{
+    min-height: 320px;
+  }
+  .item{
+    padding:12px;
+    font-size:13px;
+    display: flex;
+    align-items: center;
+    width: 100%;
+    position: relative;
+    border-bottom: 1px solid var(--divider-3);
+    .item__body{ 
+      flex:auto;
+      overflow: hidden;
+     }
+    .item__head{ margin-right:8px;}
+    
+    .item__title{
+      width:100%;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      a{
+        color:var(--primary-text-color);
+      }
+
+      .item__title-link{
+        color:var(--context-3);
+      }
+    }
+    
+    .item__dot{
+      display: inline-block;
+      padding: 0 7px;
+      align-items: center;
+      &:before{
+        content: "";
+        display: block;
+        width: 2px;
+        height: 2px;
+        background: var(--primary-text-secondary-color);
+      }
+    }
+    .item__progress{
+      position: absolute;
+      left:0;
+      top:0;
+      height:100%;
+      transition: all 0.3s;
+      background-color: var(--primary-progress);
+      pointer-events:none;
+    }
+    .item-action{
+      margin-left: 16px;
+    }
+    .item-meta-description{
+      font-size:12px;
+      color:var(--context-3);
+      margin-top:5px;
+    }
+
+    .action{
+      display: flex;
+      visibility: hidden;
+    }
+    .action span{
+      display: flex;
+      cursor: pointer;
+      align-items: center;
+      font-size: 20px;
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      justify-content: center;
+      transition: background-color 0.3s;
+      span:hover{
+        background-color: #84858d14;
+      }
+    }
+
+    &:hover .action{
+      visibility: visible;
+    }
+
+    
+  }
+}
+
+.task-error{
+  height:260px;overflow-y:auto;
+  .error-item{
+    padding:8px;
+    font-size:12px;
+  }
+}

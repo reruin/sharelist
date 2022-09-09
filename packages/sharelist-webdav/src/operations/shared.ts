@@ -23,3 +23,33 @@ export const parseXML = async (req: http.IncomingMessage): Promise<any> => {
     tagNameProcessors: [processors.stripPrefix]
   })
 }
+
+
+export const DEFAULT_PROPS = [
+  'displayname',
+  'getcontentlength',
+  'resourcetype',
+  // 'getcontenttype',
+  'creationdate',
+  'getlastmodified'
+]
+
+/**
+ * Parse props from webdav request
+ * 
+ * @param {object} [data]
+ * @return {object|boolean}
+ */
+export const propParse = (data: any) => {
+  if (!data) return {
+    ns: { prefix: 'D', uri: 'DAV:' },
+    prop: [...DEFAULT_PROPS]
+  }
+  let prop = [...DEFAULT_PROPS]
+  const prefix = Object.keys(data.propfind.$).find(i => i.startsWith('xmlns:'))?.split(':')[1] || ''
+  const uri = data.propfind.$?.[`xmlns${prefix ? `:${prefix}` : ''}`] || ''
+  if (data.propfind.hasOwnProperty('prop')) {
+    prop = Object.keys(data.propfind.prop)
+  }
+  return { ns: { prefix, uri }, prop }
+}

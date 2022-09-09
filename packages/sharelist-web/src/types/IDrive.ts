@@ -19,6 +19,12 @@ declare type IDrive = {
   path: DrivePath
 }
 
+declare type IPlugin = {
+  name: string
+  id: string
+  [key: string]: string | number
+}
+
 declare type DriverGuide = {
   key?: string
   label?: string

@@ -1,35 +1,7 @@
-import { parseXML } from './shared'
+import { parseXML, DEFAULT_PROPS, propParse } from './shared'
 import { Context, Response } from '../types'
 import xml2js from 'xml2js'
 
-const DEFAULT_PROPS = [
-  'displayname',
-  'getcontentlength',
-  'resourcetype',
-  // 'getcontenttype',
-  'creationdate',
-  'getlastmodified'
-]
-
-/**
- * Parse props from webdav request
- * 
- * @param {object} [data]
- * @return {object|boolean}
- */
-const propParse = (data: any) => {
-  if (!data) return {
-    ns: { prefix: 'D', uri: 'DAV:' },
-    prop: [...DEFAULT_PROPS]
-  }
-  let prop = [...DEFAULT_PROPS]
-  const prefix = Object.keys(data.propfind.$).find(i => i.startsWith('xmlns:'))?.split(':')[1] || ''
-  const uri = data.propfind.$?.[`xmlns${prefix ? `:${prefix}` : ''}`] || ''
-  if (data.propfind.hasOwnProperty('prop')) {
-    prop = Object.keys(data.propfind.prop)
-  }
-  return { ns: { prefix, uri }, prop }
-}
 
 /**
  * Create webdav responese xml by data and props options
@@ -53,7 +25,7 @@ const convData = (files: Array<any>, options: any) => {
       if (key == 'getcontentlength') {
         item[key] = parseInt(file.size || 0)
       } else if (key == 'resourcetype') {
-        item[key] = file.type == 'folder' ? { collection: '' } : ''
+        item[key] = (file.type == 'folder' || file.type == 'drive') ? { collection: '' } : ''
         // } else if (key == 'getcontenttype') {
         //   item[key] = file.mime
       } else if (key == 'creationdate' && file.ctime) {
@@ -124,7 +96,7 @@ export default async (ctx: Context): Promise<Response | undefined> => {
     base: ctx.base,
     depth: ctx.depth,
   }, propParse(await parseXML(ctx.req)))
-  const data: any = ctx.depth == '0' ? await ctx.driver?.('stat', ctx.path) : await ctx.driver?.('ls', ctx.path)
+  const data: any = ctx.depth == '0' ? await ctx.driver?.stat(ctx.path) : await ctx.driver?.ls(ctx.path)
   if (!data) return { status: '404' }
 
   if (data.error) {
@@ -157,13 +129,13 @@ export default async (ctx: Context): Promise<Response | undefined> => {
     }
   }
   else if (ctx.depth == '1') {
-    if (data.files) {
+    if (data) {
       return {
         status: '207',
         headers: {
           'content-type': 'text/xml; charset="utf-8"'
         },
-        body: createXML(data.files, options)
+        body: createXML(data, options)
       }
     }
   }

@@ -2,7 +2,7 @@ import { ref, reactive, Ref, UnwrapRef, onMounted, onUnmounted, getCurrentInstan
 
 export function safeOnMounted(hook: () => any): void {
   const instance = getCurrentInstance()
-  console.log(instance)
+  console.trace()
   if (instance?.isMounted || (instance as any)?._isMounted) {
     hook()
   } else {
@@ -140,4 +140,30 @@ export const useTitle = (title: string, options?: useTitleOptions): void => {
   }
 
   run()
+}
+
+interface delayToggleActions {
+  true(immediate?: boolean): void
+  false(): void
+}
+export const delayToggle = (setLeft: () => any, setRight: () => any, timeout = 200): delayToggleActions => {
+  let handler: number | null
+  return {
+    true(immediate = false) {
+      if (timeout === 0 || immediate) {
+        setLeft()
+      } else {
+        handler = setTimeout(() => {
+          setLeft()
+        }, timeout)
+      }
+    },
+    false() {
+      if (handler) {
+        clearTimeout(handler)
+        handler = null
+      }
+      setRight()
+    },
+  }
 }

@@ -1,6 +1,6 @@
 import http from 'http'
 
-export type DriverMethod = 'stat' | 'get' | 'ls' | 'rm' | 'mkdir' | 'upload' | 'mv'
+export type DriverMethod = 'stat' | 'get' | 'ls' | 'rm' | 'mkdir' | 'upload' | 'mv' | 'copy'
 
 export type WebDAVDepth = "0" | "1" | "1,noroot" | "infinity"
 
@@ -13,8 +13,7 @@ export type DriverMethodResponse = {
 }
 
 export type Driver = {
-  // [key in DriverMethod]: (options: any) => any
-  (actions: DriverMethod, ...options: Array<any>): DriverMethodResponse
+  [key in DriverMethod]: (...options: Array<any>) => DriverMethodResponse
 }
 
 export type WebDAVAuthRecord = {

@@ -2,8 +2,6 @@ const utils = require('./utils')
 const request = require('./request')
 const { PassThrough } = require('stream')
 
-const cache = {}
-
 const clone = (obj) => {
   // console.log(obj)
   let type = typeof obj
@@ -26,167 +24,54 @@ const clone = (obj) => {
   return obj
 }
 
+const sortFiles = (files, orderBy) => {
+  let [key, isAsc] = orderBy
+  let aVal = isAsc ? 1 : -1
+  let bVal = isAsc ? -1 : 1
+  return files.sort((a, b) => a[key] > b[key] ? aVal : bVal).sort((a, b) => {
+    if (a.type == 'folder' && b.type != 'folder') {
+      return -1
+    } else if (a.type != 'folder' && b.type == 'folder') {
+      return 1
+    } else {
+      return 0
+    }
+  })
+
+}
+
+/**
+ * driver 采用 id 作为首选寻址方式
+ */
 module.exports = (app) => {
 
-  const encode = (id, { key, protocol }) => {
-    return app.encode({ key, protocol, path: id })
-  }
-
-  const decode = (id) => {
-    let { path: fid, key, protocol } = app.decode(id)
-    return { fid, meta: { key, protocol } }
-  }
-
-  const getDriver = (id) => app.getDriver(id.split('://')[0])
-
-  const getByPath = async (paths) => {
-    if (paths.length == 0) {
-      return {
-        id: 'root://sharelist', name: 'Sharelist', type: 'folder', size: 0, ctime: Date.now(), mtime: Date.now()
-      }
-    }
-
-    let parentPath = paths.slice(0, paths.length - 1)
-    let filename = paths[paths.length - 1]
-    let parent = await forwardTrack(parentPath)
-
-    if (parent.error) return undefined
-
-    let data = parent?.files.find(i => i.name == filename)
-    /*
-    if (data?.id) {
-      let driver = getDriver(data.id)
-
-      if (driver.cache !== false) {
-        let cacheId = `${data.id}#get`
-        let r = app.cache.get(cacheId)
-        if (r) {
-          console.log(`[CACHE] ${new Date().toISOString()}  ${cacheId}`)
-          return r
-        }
-
-        let max_age = data.max_age || 0
-
-        if (max_age) {
-          app.cache.set(`${data.id}#get`, data, max_age)
-        }
-      }
-
-    }
-
-    if (data && data.type == 'file') {
-      //data.download_url = await get_download_url(data.id)
-    }
-    */
-    return data
-  }
-
-  const get_download_url = async (id) => {
-    // 所有driver 均支持 get_download_url
-    let cacheId = `${id}#download`
-    let r = app.cache.get(cacheId)
-    if (r) {
-      console.log(`[CACHE] ${new Date().toISOString()} ${cacheId}`)
-      return r
-    }
-
-    let driver = getDriver(id)
-
-    if (driver?.get_download_url) {
-      let { fid, meta } = decode(id)
-
-      let data = await driver.get_download_url(fid, meta.key)
-
-      if (data.url && driver.cache !== false) {
-        if (data.max_age) {
-          app.cache.set(`${id}#download`, data, data.max_age)
-        }
-      }
-
-      return data
-    }
-  }
-
-  // 如何保持 ById 和 ByPath 结果的一致性？
-  const getById = async (id) => {
-    let cacheId = `${id}#get`
-    let r = app.cache.get(cacheId)
-    if (r) {
-      console.log(`[CACHE] ${new Date().toISOString()} ${cacheId}`)
-      return r
-    }
-
-    let driver = getDriver(id)
-
-    // 可能get接口
-    if (!driver?.get) return { error: { message: '' } }
-
-    let { fid, meta } = decode(id)
-
-    let data = await driver.get(fid, meta.key)
-
-    data.id = encode(data.id, meta)
-
-    if (driver.cache !== false) {
-      let max_age = data.max_age || 0
-
-      if (max_age) {
-        app.cache.set(`${id}#get`, data, max_age)
-      }
-    }
-
-    return data
-  }
-
-  const getParentId = async (id) => {
-    let data = await getById(id)
-    return data?.extra.parent_id
-  }
+  const getDrive = (id) => app.getDrive(id)
 
   /**
    * list
    * @param {object} options 
    * @param {string} options.id
    * @param {array} options.paths
-   * @param {object} options.query
+   * @param {object} options.params
    * @param {boolean} options.ignoreInterceptor
    * 
    * @returns {array<file>}
    */
-  const list = async ({ paths = [], id, query, ignoreInterceptor = false } = {}) => {
-    const interceptor = ignoreInterceptor ? null : app.hookLifetime('onListed')
+  const list = async ({ paths = [], id, params, ignoreInterceptor = false } = {}) => {
+    await app.emit('beforeList', { paths, id, params })
+    let data = id ? await listById(id, params) : await listFromPathAddressing([...paths], params)
 
-    let data = id ? await fastTrack(id, query, interceptor) : await forwardTrack([...paths], query, interceptor)
-
-    let ret = clone(data)
-
-    if (ret.files) {
-      ret.files.forEach((i) => {
-        i.path = [...paths, i.name].join('/')
-      })
+    /*
+    if (params.orderBy && data.files) {
+      data.files = sortFiles([...data.files], params.orderBy)
     }
-    return ret
-  }
+    */
+    await app.emit('afterList', { paths, id, data, params })
 
-  const stat = async ({ paths }) => {
-    let parentPath = paths.slice(0, paths.length - 1)
-    let filename = paths[paths.length - 1]
-    let parent = await forwardTrack(parentPath)
-    if (parent.error) return undefined
-    if (paths.length == 0) {
-      return {
-        id: parent.id,
-        type: 'folder',
-        name: 'sharelist root',
-        size: parent.size || Number.MAX_SAFE_INTEGER
-      }
-    } else {
-      return parent?.files.find(i => i.name == filename)
-    }
+    return clone(data)
   }
 
   /**
-   * 由于部分driver没有完整的get 接口,因而此方法主要用于获取下载地址
    * @param {object} options 
    * @param {string} options.id
    * @param {array} options.paths
@@ -197,7 +82,7 @@ module.exports = (app) => {
     let data
 
     if (!id && paths) {
-      data = await getByPath(paths)
+      data = await stat(paths)
       id = data.id
     }
 
@@ -220,8 +105,123 @@ module.exports = (app) => {
 
 
   /**
+   * get file by paths
+   * @param array<string> paths
+   * @returns 
+   */
+  const stat = async (paths) => {
+    let parentPath = paths.slice(0, paths.length - 1)
+    let filename = paths[paths.length - 1]
+    let parent = await listFromPathAddressing(parentPath)
+    if (parent.error) return undefined
+
+    if (paths.length == 0) {
+      return {
+        id: parent.id,
+        type: 'folder',
+        name: '@sharelist_root',
+        size: parent.size || Number.MAX_SAFE_INTEGER
+      }
+    } else {
+      return parent?.files.find(i => i.name == filename)
+    }
+  }
+
+
+  /**
+   * 根据uri获取资源详情
+   * @param {*} uri 
+   * @returns 
+   */
+  const getById = async (uri) => {
+    let { drive, encode, config, id, name, isRoot } = getDrive(uri)
+    if (isRoot) {
+      return {
+        id: encode(id),
+        name,
+        type: 'folder'
+      }
+    }
+
+    let cacheId = `${encode(id)}#get`
+    if (config.cache !== false) {
+      let r = app.cache.get(cacheId)
+      if (r) {
+        console.log(`[CACHE] ${new Date().toISOString()} ${cacheId}`)
+        return r
+      }
+    }
+
+    if (!drive?.get) return { error: { message: '' } }
+
+    let data = await drive.get(id)
+
+    data.id = encode(data.id)
+
+    //鉴于某些driver get 无法获取name和size，此处需通过 parent files 进行补充
+    if (!data.name && data.extra?.parent_id) {
+      let parent = await listById(encode(data.extra.parent_id))
+      let last = parent.files.find(i => i.id == data.id)
+      if (last) {
+        data.name = last.name
+        data.size = last.size
+        if (last.type == 'file') {
+          if (last.extra.md5) data.extra.md5 = last.extra.md5
+          if (last.extra.sha1) data.extra.sha1 = last.extra.sha1
+        }
+      }
+    }
+
+    if (config.cache !== false) {
+      let max_age = data.max_age || 0
+
+      if (max_age) {
+        app.cache.set(cacheId, data, max_age)
+      }
+    }
+
+    return data
+  }
+
+
+  /**
+   * 获取可下载链接
+   * @param {*} uri 
+   * @returns 
+   */
+  const get_download_url = async (uri) => {
+    let cacheId = `${uri}#download`
+    let r = app.cache.get(cacheId)
+    if (r) {
+      console.log(`[CACHE] ${new Date().toISOString()} ${cacheId}`)
+      return r
+    }
+
+    let { drive, config, id } = getDrive(uri)
+
+    if (drive?.get_download_url) {
+
+      let data = await drive.get_download_url(id)
+
+      if (data.url && config.cache !== false) {
+        if (data.max_age) {
+          app.cache.set(`${id}#download`, data, data.max_age)
+        }
+      }
+
+      return data
+    }
+  }
+
+  const getParentId = async (id) => {
+    let data = await getById(id)
+    return data?.extra?.parent_id
+  }
+
+
+  /**
    * 返回指定id的只读流
-   * @param {string} id file id
+   * @param {string} uri
    * @param {object} options 
    * @param {object | undefined} options.reqHeaders
    * @param {number} options.start offset start
@@ -229,76 +229,71 @@ module.exports = (app) => {
    * 
    * @returns { stream , acceptRanges , headers? , status?  }
    */
-  const createReadStream = async (id, options = {}) => {
+  const createReadStream = async (uri, options = {}) => {
+    let { drive, id } = getDrive(uri)
 
-    let data = await get({ id })
-
-    if (data.error) return data
-
-    if (data.download_url) {
-      let reqHeaders = options.reqHeaders || {}
-
-      if (data.extra.proxy?.headers) {
-        Object.assign(reqHeaders, data.extra.proxy.headers)
-      }
-
-      if (options.start) {
-        reqHeaders['range'] = `bytes=${options.start}-${options.end || ''}`
-      }
-
-      let { data: stream, headers, status, error } = await request(data.download_url, { headers: reqHeaders, responseType: 'stream' })
-
-      if (!error) {
-        return { stream, headers, status, acceptRanges: headers?.['accept-ranges'] == 'bytes' }
-      }
+    if (drive?.createReadStream) {
+      let stream = await drive.createReadStream(id, options)
+      stream.once('error', () => { })
+      return { stream, acceptRanges: true }
     } else {
-      const driver = getDriver(id)
-      let { fid, meta } = decode(id)
+      let data = await get({ id: uri })
+      if (data.download_url) {
+        let reqHeaders = options.reqHeaders || {}
 
-      if (driver && driver.createReadStream) {
-        return { stream: await driver.createReadStream(fid, options, meta.key), acceptRanges: true }
+        if (data.extra.proxy?.headers) {
+          Object.assign(reqHeaders, data.extra.proxy.headers)
+        }
+
+        if (options.start) {
+          reqHeaders['range'] = `bytes=${options.start}-${options.end || ''}`
+        }
+
+        let { data: stream, headers, status, error } = await request(data.download_url, { headers: reqHeaders, responseType: 'stream' })
+
+        if (!error) {
+          return { stream, headers, status, acceptRanges: headers?.['accept-ranges'] == 'bytes' }
+        }
       }
     }
 
-    app.error({ code: 501, message: "Not implemented" })
-
+    throw { code: 501, message: "Not implemented" }
   }
 
   //获取文本内容
-  const getContent = async (id) => {
+  const getContent = async (id, charset = 'utf-8') => {
     try {
       let { stream } = await createReadStream(id)
       if (!stream) return null
-      return await app.utils.transfromStreamToString(stream)
+      return await utils.transfromStreamToString(stream, charset)
     } catch (e) {
       return null
     }
   }
 
   /**
-   * 返回指定一个可写流
-   * @param {string} id file id
+   * 返回指定可写流
+   * @param {string} uri
    * @param {object} options 
    * @param {number} options.size
    * @param {string} options.name
-   * @param {string} options.sha1
+   * @param {string} options.sha1?
+   * @param {string} options.md5?
    * 
    * @returns { stream:WritableStream , doneHandler:Function  }
    * @public
    */
-  const createWriteStream = async (id, options) => {
-    let driver = getDriver(id)
+  const createWriteStream = async (uri, options) => {
+    let { drive, id, encode, config } = getDrive(uri)
 
-    if (driver?.upload) {
+    if (drive?.upload) {
       let passStream = new PassThrough()
 
-      let { fid, meta } = decode(id)
-
-      let done = (doneCall) => {
-        done.handler = doneCall
+      let done = (cb) => {
+        done.cb = cb
       }
-      driver.upload(fid, { ...options, stream: passStream }, meta.key).then(res => {
-        done.handler?.(res)
+      drive.upload(id, passStream, { ...options }).then(res => {
+        done.cb?.(res)
       })
 
       return { stream: passStream, done }
@@ -309,24 +304,32 @@ module.exports = (app) => {
 
   /**
    * upload
-   * @param {string} id
+   * @param {string} uri
    * @param {object} options
    * @param {number} options.size
    * @param {string} options.name
-   * @param {string} options.sha1
+   * @param {string} options.hash
+   * @param {string} options.uploadId
+   * @param {string} options.conflictBehavior replace|rename|fail
+   * 
    * @returns {object}
    * 
    * @public
    */
-  const upload = async (id, options) => {
-    let driver = getDriver(id)
-    options?.stream?.pause?.()
-    if (driver?.upload) {
-      let { fid, meta } = decode(id)
-      let data = await driver.upload(fid, options, meta.key)
-      if (driver.cache !== false) {
-        app.cache.remove(`${id}#list`)
+  const upload = async (uri, stream, options) => {
+    let { drive, id, config, encode } = getDrive(uri)
+
+    stream?.pause?.()
+
+    if (drive?.upload) {
+      let data = await drive.upload(id, stream, options)
+      if (data.id) {
+        data.id = encode(data.id)
+        if (config.cache !== false) {
+          app.cache.remove(`${encode(id)}#list`)
+        }
       }
+
       return data
     }
 
@@ -335,49 +338,69 @@ module.exports = (app) => {
 
   /**
    * mkdir
-   * @param {string} id
-   * @param {string} name
+   * @param {string} uri
+   * @param {string|Array<string>} name
    * @param {object} options
+   * @param {boolean} strict 严格模式，此模式会事先判断是否存在目录
    * @returns {object}
    * 
    * @public
    */
-  const mkdir = async (id, name, options = {}) => {
-    let driver = getDriver(id)
-    if (driver?.mkdir) {
-      let { fid, meta } = decode(id)
-      let data = await driver.mkdir(fid, name, options, meta.key)
-      if (driver.cache !== false) {
-        app.cache.remove(`${id}#list`)
+  const mkdir = async (uri, name, options = {}, strict = false) => {
+    let { drive, id, encode, config } = getDrive(uri)
+
+    if (drive?.mkdir) {
+      if (typeof name == 'string') {
+        name = [name]
       }
-      return data
-    }
-
-    app.error({ code: 501, message: "Not implemented" })
-  }
-
-  /**
-   * remove
-   * @param {string} id
-   * @param {object} options
-   * @returns {object}
-   * 
-   * @public
-   */
-  const rm = async (id) => {
-    let driver = getDriver(id)
-
-    if (driver?.rm) {
-      let { fid, meta } = decode(id)
-      let data = await driver.rm(fid, meta.key)
-
-      if (driver.cache !== false) {
-        // clear cache
-        app.cache.remove(`${id}#get`)
-        if (!data.parent_id) {
-          data.parent_id = await getParentId(id)
+      let data
+      while (name.length && id) {
+        let curName = name.shift(), targetExist
+        if (strict) {
+          let dir = await drive.list(id)
+          targetExist = dir.files?.find(i => i.name == curName)
         }
-        if (data.parent_id) app.cache.remove(`${encode(data.parent_id, meta)}#list`)
+
+        if (targetExist) {
+          data = { id: targetExist.id, name: targetExist.name, parent_id: id }
+        } else {
+          data = await drive.mkdir(id, curName, options)
+          if (config.cache !== false) {
+            app.cache.remove(`${encode(id)}#list`)
+          }
+        }
+        if (data.id) id = data.id
+
+      }
+
+      if (data.id) data.id = encode(data.id)
+
+      return data
+    }
+
+    app.error({ code: 501, message: "Not implemented" })
+  }
+
+  /**
+   * remove
+   * @param {string} uri
+   * @param {object} options
+   * @returns {object}
+   * 
+   * @public
+   */
+  const rm = async (uri) => {
+    let { drive, id, encode, config } = getDrive(uri)
+    if (drive?.rm) {
+      let data = await drive.rm(id)
+
+      if (config.cache !== false) {
+        // clear cache
+        app.cache.remove(`${encode(id)}#get`)
+        if (!data.parent_id) {
+          data.parent_id = await getParentId(uri)
+        }
+        if (data.parent_id) app.cache.remove(`${encode(data.parent_id)}#list`)
       }
 
       return data
@@ -386,28 +409,27 @@ module.exports = (app) => {
   }
 
   /**
-   * remove
-   * @param {string} id
+   * rename
+   * @param {string} uri
    * @param {string} name new file name
    * @returns {object}
    * 
    * @public
    */
-  const rename = async (id, name, options = {}) => {
-    let driver = getDriver(id)
-    if (driver?.rename) {
-      let { fid, meta } = decode(id)
-      let data = await driver.rename(fid, name, options, meta.key)
+  const rename = async (uri, name, options = {}) => {
+    let { drive, id, encode, config } = getDrive(uri)
+    if (drive?.rename) {
+      let data = await drive.rename(id, name, options)
 
-      if (driver.cache !== false) {
+      if (config.cache !== false) {
         // clear cache
-        app.cache.remove(`${id}#get`)
+        app.cache.remove(`${uri}#get`)
 
         //clear parent cache
         if (!data.parent_id) {
-          data.parent_id = await getParentId(id)
+          data.parent_id = await getParentId(uri)
         }
-        if (data.parent_id) app.cache.remove(`${encode(data.parent_id, meta)}#list`)
+        if (data.parent_id) app.cache.remove(`${encode(data.parent_id)}#list`)
       }
 
       return data
@@ -416,101 +438,95 @@ module.exports = (app) => {
   }
 
   //only support same protocol  
-  const mv = async (id, target_id, options = {}) => {
-    if (app.isSameDisk(id, target_id)) {
+  const mv = async (uri, target_uri, options = {}) => {
+    if (app.isSameDrive(uri, target_uri)) {
 
-      let driver = getDriver(id)
+      let { drive, id, encode, config } = getDrive(uri)
 
-      if (driver?.mv) {
-        let { fid, meta } = decode(id)
-        let { fid: target_fid } = decode(target_id)
+      if (drive?.mv) {
+        let cache = config.cache !== false
 
-        let cache = driver.cache !== false
-        let parent_id
-        //需要预先获得parent_id
-        if (cache) {
-          parent_id = await getParentId(id)
+        let { id: target_id } = getDrive(target_uri)
+
+        // get origin parent id
+        let originParentId
+        if (!options.copy) {
+          originParentId = await getParentId(uri)
         }
 
-        let data = await driver.mv(fid, target_fid, meta.key)
+        let data = await drive.mv(id, target_id, { ...options })
 
-        if (options.name) {
-          await driver.rename(data.id, options.name, {}, meta.key)
-        }
-
+        // clear cache
         if (cache) {
           //在有缓存的情况下 取得的是原位置的父级id
           if (!data.parent_id) {
-            data.parent_id = parent_id
+            data.parent_id = target_id
           }
 
-          if (data.parent_id) app.cache.remove(`${encode(data.parent_id, meta)}#list`)
+          //clear new parent cache
+          app.cache.remove(`${encode(target_id)}#list`)
 
-          app.cache.remove(`${target_id}#list`)
-          app.cache.remove(`${id}#get`)
+          //clear target cache
+          app.cache.remove(`${uri}#get`)
+
+          //clear origin parent cache if request move
+          if (!options.copy) {
+            originParentId = data.origin_parent_id || originParentId
+            app.cache.remove(`${encode(originParentId)}#list`)
+          }
         }
 
         return data
       }
     }
+
     app.error({ code: 501, message: "Not implemented" })
   }
 
-  const root = () => {
-    let disk = app.config.drives.map((i) => ({
-      id: i.path.split('?')[0],
-      fid: i.name,
-      name: i.name,
-      size: 0,
-      mtime: '',
-      ctime: '',
-      type: 'folder',
-    }))
+  const listById = async (uri, params = {}) => {
+    let { drive, id, encode, config } = getDrive(uri)
 
-    return { id: 'root://', type: 'folder', driveName: '', files: disk }
-  }
+    let { pagination, ...options } = params
 
-  const listById = async (id, query) => {
-    let cacheId = `${id}#list`
-    let r = app.cache.get(cacheId)
-    if (r) {
-      console.log(`[CACHE] ${new Date().toISOString()} ${cacheId}`)
-      return r
+    if (app.config.per_page && pagination !== false) {
+      options.perPage = app.config.per_page
     }
 
-    let driver = getDriver(id)
+    const cacheable = !options.search && config.cache !== false
 
-    if (!driver) return app.error({ code: 501, message: "Not implemented" })
+    let cacheId = `${encode(id)}#list`
 
-    let { fid, meta } = decode(id)
+    if (cacheable) {
+      let r = app.cache.get(cacheId)
+      if (!!r) {
+        console.log(`[CACHE] ${new Date().toISOString()} ${cacheId}`)
 
-    let files = await driver.list(fid, { ...query }, meta.key)
-
-    for (let i of files) {
-      i.id = encode(i.id, meta)
-    }
-
-    let data = { id, files }
-
-    if (driver.cache !== false) {
-      let max_age_dir = app.config.max_age_dir || 0
-
-      if (max_age_dir) {
-        if (!query?.search) app.cache.set(`${id}#list`, data, max_age_dir)
+        //adjust sort
+        if (params.orderBy && r.files) {
+          r.files = sortFiles([...r.files], params.orderBy)
+        }
+        return { ...r, config }
       }
     }
 
-    return data
-  }
+    if (!drive) return app.error({ code: 501, message: `Not implemented. (Resource URI:${uri})` })
 
-  const fastTrack = async (id, query, interceptor) => {
+    let { id: realId, files, maxAge, nextPage } = await drive.list(id, options)
 
-    const data = await listById(id, query)
+    files.forEach(i => i.id = encode(i.id))
 
-    if (interceptor) {
-      return await interceptor(data, query)
+    let data = { id: encode(realId || id), files }
+
+    // Cache will be disabled if enable pagination
+    if (cacheable && files?.length > 0 && (!params.nextPage && !nextPage)) {
+      let maxAgeDir = maxAge || config.maxAgeDir || app.config.max_age_dir || 0
+
+      if (maxAgeDir) {
+        app.cache.set(cacheId, data, maxAgeDir)
+      }
     }
-    return data
+
+    return { ...data, config, nextPage }
   }
 
   /*
@@ -521,9 +537,8 @@ module.exports = (app) => {
    * @return {array|object}
    * @api private
    */
-  const forwardTrack = async (paths, query, interceptor) => {
-    let hit = root()
-
+  const listFromPathAddressing = async (paths, params) => {
+    let hit = app.getRoot(params)
     //扩展唯一的文件夹
     if (app.config.expand_single_disk && hit.files && hit.files.length == 1) {
       paths.unshift(hit.files[0].name)
@@ -543,20 +558,61 @@ module.exports = (app) => {
         }
       }
 
-      let driver = getDriver(hit.id)
+      //if (!drive) return app.error({ code: 501, message: "Not implemented" })
+      hit = await listById(hit.id, paths.length - 1 == i ? { ...params } : {})
 
-      if (!driver) return app.error({ code: 501, message: "Not implemented" })
+      await app.emit('afterList', { data: hit, params, paths: paths.slice(0, i + 1) })
 
-      hit = await listById(hit.id, paths.length - 1 == i ? { ...query } : {})
-
-      if (interceptor) {
-        hit = await interceptor(hit, { ...query, paths: paths.slice(0, i + 1) })
-      }
-      if (hit.error) return app.error(hit.error)
     }
     return hit
   }
 
+  /**
+   * id 获取路径层级
+   * @param {*} uri 
+   * @returns 
+   */
+  const pwd = async (uri) => {
+    let dirs = []
+    let { encode, protocol, name, drive, id } = getDrive(uri)
+    if (drive.pwd) {
+      dirs = await drive.pwd(id)
+    } else {
+      while (uri) {
+        let data = await getById(uri)
+
+        if (!data?.extra?.parent_id || data.id == '@drive_root') break
+        dirs.unshift(data)
+        // console.log(data, '<<')
+        uri = encode(data?.extra.parent_id)
+      }
+    }
+
+    return [{ id: 'root', name, type: 'folder' }, ...dirs.map(i => ({ id: i.id, name: i.name, type: i.type }))]
+    // if(parent?.extra)
+  }
+
+  const pwd_path = async (path) => {
+
+  }
+
+
+  const hashFile = async (uri, { hash, name }) => {
+    let { drive, id, config, encode } = getDrive(uri)
+
+    if (drive?.hashFile) {
+      let data = await drive.hashFile(id, { hash, name })
+      if (data.id) {
+        data.id = encode(data.id)
+        if (config.cache !== false) {
+          app.cache.remove(`${encode(id)}#list`)
+        }
+        return data
+      }
+    }
+    app.error({ code: 404, message: "file is non-exist" })
+
+  }
   return {
     list,
     get,
@@ -565,7 +621,9 @@ module.exports = (app) => {
     rm,
     rename,
     mv,
+    pwd,
     upload,
+    hashFile,
     createReadStream,
     createWriteStream,
     get_download_url,

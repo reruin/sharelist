@@ -1,9 +1,13 @@
 node_modules
 build/
 dist/
+/packages/sharelist/manage/
 /packages/sharelist/theme/
 /packages/sharelist/cache/
+/packages/sharelist/web/
+/packages/sharelist/plugin/
 .vscode/
 *.lock
 *.log
 *.exe
+package-lock.json

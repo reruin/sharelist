@@ -1,0 +1,48 @@
+// .sl-icon {
+//   display: inline-block;
+//   font-style: normal;
+//   vertical-align: -0.125em;
+//   text-align: center;
+//   text-transform: none;
+//   line-height: 0;
+//   text-rendering: optimizeLegibility;
+//   -webkit-font-smoothing: antialiased;
+// }
+
+/*
+--icon-folder-color:var(--primary-color);
+--icon-audio-color:rgb(132,140,239);
+--icon-video-color:rgb(219,68,55);
+--icon-word-color:rgb(47,151,254);
+--icon-pdf-color:rgb(252,134,132);
+--icon-ppt-color:rgb(254,159,93);
+--icon-file-color:rgb(212,214,218);
+--icon-word-color:rgb(88,178,252);
+--icon-doc-color:rgb(88,178,252);
+--icon-image-color:rgb(252,132,129);
+*/
+@type: {
+  icon-folder:#f8d673;
+  icon-file:rgb(188,190,194);//rgb(212,214,218);
+
+  icon-audio:rgb(223,94,83);
+  icon-video:rgb(223,94,83);
+  icon-image:rgb(223,94,83);
+
+  icon-word:rgb(96,181,252);
+  icon-doc:rgb(96,181,252);
+  icon-code:rgb(96,181,252);
+  icon-ppt:rgb(254,173,96);
+  icon-pdf:rgb(252,134,132);
+}
+// :root{
+//   each(@type, {
+//     --@{key}: @value;
+//   });
+// }
+
+each(@type, {
+  #@{key}{
+    color:~"var(--@{key}-color,@{value})";
+  }
+});

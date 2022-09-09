@@ -5,7 +5,7 @@ export default async (ctx: Context): Promise<Response | undefined> => {
   console.log('>>', ctx.req.isPaused(), ctx.req.headers)
   ctx.req.headers.connection = 'keep-alive'
   const size = parseInt(ctx.req.headers['content-length'] || '0')
-  const res = await ctx.driver?.('upload', ctx.path, ctx.req, { size })
+  const res = await ctx.driver?.upload?.(ctx.path, ctx.req, { size })
 
   if (res?.error) {
     return {

@@ -1,0 +1,78 @@
+
+
+:root{
+  // --theme:100,52,248;
+  --theme:24,144,255;
+  --primary-color:rgb(var(--theme)); //rgb(105,65,199);
+  --primary-color-bg:rgba(var(--theme),.1); //rgb(105,65,199);
+  --primary-text-color:rgb(37, 38, 43);
+  --primary-background:rgb(var(--theme));
+
+  // --icon-folder-color:var(--primary-color);
+  // --icon-other-color:var(--primary-color);
+  // --icon-audio-color:rgb(132,140,239);
+  // --icon-video-color:rgb(219,68,55);
+  // --icon-word-color:rgb(47,151,254);
+  // --icon-pdf-color:rgb(252,134,132);
+  // --icon-ppt-color:rgb(254,159,93);
+  // --icon-file-color:rgb(212,214,218);
+  // --icon-word-color:rgb(88,178,252);
+  // --icon-doc-color:rgb(88,178,252);
+  // --icon-image-color:rgb(252,132,129);
+
+  --primary-text-secondary-color:rgba(37, 38, 43,0.36);
+
+  --color-main:var(--primary-text-color);
+
+  --primary-hover-bg-color:rgba(132, 133, 141, 0.08);
+  --primary-hover-theme-color:rgba(var(--theme), 0.08);
+  --dark-background:rgb(49, 49, 54);
+  --color-white-1:rgb(255,255,255);
+  --color-white-2:rgba(255,255,255,0.72);
+  --color-white-3:rgba(255,255,255,0.36);
+  --color-white-4:rgba(255,255,255,0.18);
+
+  --color-red:rgb(243, 91, 81);
+
+  --background:#ffffff;
+  --background-dark:rgb(17,17,19);
+  --background-header:#e3e6e9;
+  --background-header-dark:rgb(9,9,10);
+
+  --primary-text-color-dark:rgb(253,253,253);
+  --primary-progress:rgba(var(--theme),0.1);
+  --context:37, 38, 43;//0,0,0;
+  --context-1:rgb(var(--context));
+  --context-2:rgba(var(--context),0.72);
+  --context-3:rgba(var(--context),0.36);
+  --context-4:rgba(var(--context),0.18);
+
+  --context-background:#fff;
+  --context-background--dark:rgb(49,49,54);
+  --context-mask:#f8f9fa;
+  --context-hover:#f5f5f5;
+  --context-hover--dark:rgba(132, 133, 141,0.12);;
+
+  --primary-text-color--dark:rgb(37, 38, 43);
+
+  --divider: 132, 133, 141;
+  --divider-1: rgba(var(--divider), 0.2);
+  --divider-2: rgba(var(--divider), 0.16);
+  --divider-3: rgba(var(--divider), 0.08);
+
+  --danger-color:#ff4d4f;
+
+}
+
+
+@media (prefers-color-scheme: dark){
+  :root{
+    --background:var(--background-dark);
+    --background-header:var(--background-header-dark);
+    --primary-text-color:var(--primary-text-color-dark);
+    --context:255,255,255;
+    --context-background:var(--context-background--dark);
+    --context-hover:var(--context-hover--dark);
+    --primary-progress:rgba(var(--theme),0.2);
+  }
+}

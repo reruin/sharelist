@@ -6,27 +6,32 @@ import { OrderedListOutlined, CloseOutlined, FullscreenOutlined, DownloadOutline
 import { useBoolean, useState } from '@/hooks/useHooks'
 
 const playerMap = new Map()
-export const usePlayer = (id?: number): any => {
+export const usePlayer = (id?: number | string): any => {
   if (id && playerMap.has(id)) {
-    return [
-      playerMap.get(id),
-      () => {
-        playerMap.delete(id)
-      },
-    ]
+    return playerMap.get(id)
   }
 
-  const newId = playerMap.size + 1
+  const newId = id || playerMap.size + 1
 
-  const [state, setState] = useState({
+  const removePlayer = () => playerMap.delete(id)
+
+  const [state, setPlayer] = useState({
     list: [],
     type: '',
     index: 0,
     cur: { name: '', ctimeDisplay: '' },
   })
 
-  playerMap.set(newId, state)
-  return [newId, setState]
+  const instance = {
+    id: newId,
+    data: state,
+    setPlayer,
+    removePlayer
+  }
+
+  playerMap.set(newId, instance)
+
+  return instance
 }
 
 export default defineComponent({
@@ -40,7 +45,7 @@ export default defineComponent({
   setup(props, ctx) {
     const el = ref()
 
-    const [data, destoryPlayer] = usePlayer(props.meidaId)
+    const { data, removePlayer } = usePlayer(props.meidaId)
 
     const [visible, { setFalse: hidePlayer, setTrue: showPlayer }] = useBoolean()
 
@@ -103,7 +108,7 @@ export default defineComponent({
     })
 
     onUnmounted(() => {
-      destoryPlayer()
+      removePlayer()
     })
 
     watchEffect(() => {

@@ -1,0 +1,41 @@
+.drive-breadcrumb{
+  a{
+    // color:var(--primary-color);
+    font-weight: 600;
+    max-width: 100%;
+    overflow: hidden;
+    white-space: nowrap;
+    -o-text-overflow: ellipsis;
+    text-overflow: ellipsis;
+    font-size:18px;
+  }
+  .ant-breadcrumb{
+    color:var(--context-3);
+    a,.ant-breadcrumb-separator{
+      color:var(--context-3);
+    }
+    a:hover{
+      color:var(--primary-color);
+    }
+  }
+  .ant-breadcrumb > span:last-child a {
+    color: var(--primary-text-color);
+  }
+
+  &.drive-breadcrumb--sm{
+    a{font-size: 12px;}
+  }
+}
+
+.drive-breadcrumb-pop-item{
+  padding:8px 16px;
+  &:hover{
+    background-color: var(--primary-hover-bg-color);
+    transition: all 0.3s;
+    cursor: pointer;
+  }
+}
+
+.drive-breadcrumb-wrap{
+  overflow-x: visible;
+}

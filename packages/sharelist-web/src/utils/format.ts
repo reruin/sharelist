@@ -1,6 +1,12 @@
-export const getFileType = (v: string, type: string): string => {
-  if (type == 'folder') {
-    return 'folder'
+const EXT_IMAGE = ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'tiff', 'wmf', 'tif', 'svg', 'webp']
+
+const EXT_AUDIO_SUPPORT = ['mp3', 'm4a', 'acc', 'wav', 'ogg', 'flac']
+
+const EXT_VIDEO_SUPPORT = ['mp4', 'mpeg', '3gp', 'mkv']
+
+export const getFileType = (v: string, type = 'file'): string => {
+  if (type == 'folder' || type == 'drive') {
+    return type
   } else {
     if (v) v = v.toLowerCase().split('.').pop() || ''
     if (['mp4', 'mpeg', 'wmv', 'webm', 'avi', 'rmvb', 'mov', 'mkv', 'f4v', 'flv'].includes(v)) {
@@ -13,19 +19,44 @@ export const getFileType = (v: string, type: string): string => {
       return 'ppt'
     } else if (['pdf'].includes(v)) {
       return 'pdf'
-    } else if (['doc', 'docx', 'ppt', 'pptx', 'xls', 'xlsx', 'pdf', 'txt', 'yaml', 'ini', 'cfg'].includes(v)) {
+    } else if (['xls', 'xlsx', 'pdf', 'txt', 'yaml', 'yml', 'ini', 'cfg', 'xml', 'md'].includes(v)) {
       return 'doc'
-    } else if (['jpg', 'jpeg', 'png', 'gif', 'bmp', 'tiff', 'wmf', 'tif'].includes(v)) {
+    } else if (EXT_IMAGE.includes(v)) {
       return 'image'
-    } else if (['zip', 'rar', '7z', 'tar', 'gz', 'gz2'].includes(v)) {
-      return 'archive'
-    } else {
-      return 'other'
+    } else if (
+      [
+        'js',
+        'ts',
+        'css',
+        'html',
+        'c',
+        'h',
+        'cpp',
+        'py',
+        'java',
+        'jsp',
+        'php',
+        'cs',
+        'go',
+        'swift',
+        'vue',
+        'rs',
+        'asp',
+        'sql',
+      ].includes(v)
+    ) {
+      return 'code'
+    }
+    // else if (['zip', 'rar', '7z', 'tar', 'gz', 'gz2'].includes(v)) {
+    //   return 'archive'
+    // }
+    else {
+      return 'file'
     }
   }
 }
 
-export const byte = (v: number): string => {
+export const byte = (v: number, fixed?: number): string => {
   if (v === undefined || v === null || isNaN(v)) {
     return '-'
   }
@@ -37,7 +68,9 @@ export const byte = (v: number): string => {
     lo++
   }
 
-  return Math.floor(v * 100) / 100 + ' ' + ['B', 'KB', 'MB', 'GB', 'TB', 'PB', 'EB'][lo]
+  const val = Math.floor(v * 100) / 100
+
+  return (fixed ? val.toFixed(fixed) : val) + ' ' + ['B', 'KB', 'MB', 'GB', 'TB', 'PB', 'EB'][lo]
 }
 
 const fix0 = (v: any) => (v > 9 ? v : '0' + v)
@@ -51,26 +84,20 @@ export const time = (v: number): string => {
   if (thisYear != date.getFullYear()) {
     ret = date.getFullYear() + '/' + ret
   }
+
   return ret
 }
 
-export const isAudioSupport = (name: string): boolean => {
+export const isMediaSupport = (name: string, type: 'audio' | 'video' | 'image'): boolean => {
   const ext: string = name.split('.').pop() || ''
-  return ['mp3', 'm4a', 'acc', 'wav', 'ogg'].includes(ext)
-}
-
-export const isVideoSupport = (name: string): boolean => {
-  const ext: string = name.split('.').pop() || ''
-  return ['mpeg', 'mp4', 'mkv'].includes(ext)
-}
-
-export const isSupportType = (name: string): string | undefined => {
-  const ext: string = name.split('.').pop() || ''
-  if (['mp3', 'm4a', 'acc', 'wav', 'ogg'].includes(ext)) {
-    return 'audio'
-  } else if (['mpeg', 'mp4', 'mkv'].includes(ext)) {
-    return 'video'
+  if (type == 'audio' && EXT_AUDIO_SUPPORT.includes(ext)) {
+    return true
+  } else if (type == 'video' && EXT_VIDEO_SUPPORT.includes(ext)) {
+    return true
+  } else if (type == 'image' && EXT_IMAGE.includes(ext)) {
+    return true
   }
+  return false
 }
 
 // eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types

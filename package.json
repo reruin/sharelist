@@ -5,12 +5,14 @@
     "packages/*"
   ],
   "engines": {
-    "node": ">=14.0.0"
+    "node": ">=16.0.0"
   },
   "scripts": {
     "dev": "cd packages/sharelist && yarn dev",
     "build-server": "cd packages/sharelist && yarn pkg",
     "dev-web": "cd packages/sharelist-web && yarn dev",
+    "dev-manage": "cd packages/sharelist-manage && yarn dev",
+    "build-manage": "cd packages/sharelist-manage && yarn build",
     "build-web": "cd packages/sharelist-web && yarn build",
     "build": "node scripts/build.js",
     "lint": "eslint --ext .ts packages/*/src/**.ts",
@@ -18,9 +20,12 @@
     "release": "node scripts/release.js",
     "ci": "cd packages/sharelist && yarn release",
     "changelog": "node scripts/changelog.js",
-    "pkg": "cd packages/sharelist && yarn pkg-demo"
+    "pkg": "cd packages/sharelist && yarn pkg-local"
   },
   "devDependencies": {
+    "@babel/cli": "^7.16.8",
+    "@babel/core": "^7.16.7",
+    "@babel/plugin-proposal-optional-chaining": "^7.16.7",
     "chalk": "^4.1.2",
     "conventional-changelog-cli": "^2.1.1",
     "cross-env": "^7.0.3",

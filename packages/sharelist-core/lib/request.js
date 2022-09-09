@@ -1,10 +1,130 @@
 const fetch = require('node-fetch')
 
-const https = require('https')
-
 const btoa = (v) => Buffer.from(v).toString('base64')
 
-const querystring = require('querystring')
+const https = require('https')
+
+const http = require('http')
+
+const { URL } = require('url')
+
+class LRUCache {
+  constructor(size = 10) {
+    this.size = size
+    this.store = new Map()
+    this.index = []
+  }
+  update(key) {
+    let index = this.index
+    let idx = index.indexOf(key)
+    let cur = index[idx]
+
+    //update index
+    index.splice(idx, 1)
+    index.unshift(cur)
+  }
+  get(key) {
+    const { store } = this
+    // update
+    if (store.has(key)) {
+      this.update(key)
+      return store.get(key)
+    }
+  }
+  set(key, val) {
+    const { store, index } = this
+    if (store.has(key)) {
+      this.update(key)
+    } else {
+      if (store.size >= this.size) {
+        let delKey = index.pop()
+        store.delete(delKey)
+      }
+      index.unshift(key)
+    }
+    store.set(key, val)
+  }
+}
+
+const lruCache = new LRUCache()
+
+const createAgent = (proxy, isHttpsAgent = true) => {
+  const proxyParsed = typeof proxy === 'string'
+    ? new URL(proxy)
+    : proxy
+
+  const agent = isHttpsAgent ? new https.Agent() : new http.Agent()
+
+  agent.proxy = proxyParsed
+  agent.superCreateConnection = agent.createConnection
+  agent.createConnection = function (options, callback) {
+    const proxyParsed = this.proxy
+    const isHttpsAgent = this instanceof https.Agent
+
+    const isHttpsTunnel = proxyParsed.protocol === 'https:'
+
+    const requestOptions = {
+      method: 'CONNECT',
+      host: proxyParsed.hostname,
+      port: proxyParsed.port,
+      path: `${options.host}:${options.port}`,
+      setHost: false,
+      headers: { connection: this.keepAlive ? 'keep-alive' : 'close', host: `${options.host}:${options.port}` },
+      agent: false,
+      timeout: options.timeout || 0
+    }
+
+    if (proxyParsed.username || proxyParsed.password) {
+      const base64 = Buffer.from(`${decodeURIComponent(proxyParsed.username || '')}:${decodeURIComponent(proxyParsed.password || '')}`).toString('base64')
+      requestOptions.headers['proxy-authorization'] = `Basic ${base64}`
+    }
+
+    // Necessary for the TLS check with the proxy to succeed.
+    if (isHttpsTunnel) {
+      requestOptions.servername = this.proxy.hostname
+    }
+    //console.log('request', requestOptions)
+    const request = (isHttpsTunnel ? https : http).request(requestOptions)
+
+    request.once('connect', (response, socket, head) => {
+      request.removeAllListeners()
+      socket.removeAllListeners()
+      if (response.statusCode === 200) {
+        callback(null, isHttpsAgent ? this.superCreateConnection({ ...options, socket }) : socket)
+      } else {
+        callback(new Error(`Bad response: ${response.statusCode}`), null)
+      }
+    })
+
+    request.once('timeout', () => {
+      request.destroy(new Error('Proxy timeout'))
+    })
+
+    request.once('error', err => {
+      request.removeAllListeners()
+      callback(err, null)
+    })
+
+    request.end()
+  }
+  return agent
+}
+
+const createProxyAgent = (proxy, isHttpsAgent = false) => {
+  let key = (isHttpsAgent ? 'https' : 'http') + '+' + proxy
+  let agent = lruCache.get(key)
+  if (!agent) {
+    try {
+      agent = createAgent(proxy, isHttpsAgent)
+      lruCache.set(key, agent)
+    } catch (e) {
+      console.log(e)
+      return
+    }
+
+  }
+  return agent
+}
 
 // {
 //   // These properties are part of the Fetch Standard
@@ -25,7 +145,7 @@ const querystring = require('querystring')
 const each = (src, fn) => {
   let ret = {}
   for (let i in src) {
-    ret[i] = fn(src[i], i)
+    ret[i.toLowerCase()] = fn(src[i], i)
   }
   return ret
 }
@@ -45,6 +165,7 @@ const qs = (data) => {
   })
   return new URLSearchParams(c)
 }
+
 const request = async (url, options = {}) => {
   let {
     data,
@@ -57,22 +178,16 @@ const request = async (url, options = {}) => {
     headers = {},
     agent,
     compress = false,
-    timeout = 3000,
+    timeout = 5000,
     retry = 2,
+    proxy,
+    ...rest
   } = options
+  let args = { method: method.toUpperCase(), size: 0, agent, compress, timeout, headers: convToLowerCase(headers), ...rest }
 
-  let args = { method: method.toUpperCase(), size: 0, agent, compress, timeout, headers: convToLowerCase(headers) }
-
-  // if (!args.agent) {
-  //   args.agent = function (_parsedURL) {
-  //     if (_parsedURL.protocol == 'https:') {
-  //       return new https.Agent({
-  //         rejectUnauthorized: false,
-  //       })
-  //     }
-  //   }
-  // }
-
+  if (proxy) {
+    args.agent = (urlParsed) => createProxyAgent(proxy, urlParsed.protocol === 'https:')
+  }
   if (auth) {
     args.headers['authorization'] = `Basic ${btoa(auth)}`
   }
@@ -90,7 +205,7 @@ const request = async (url, options = {}) => {
 
 
   if (data) {
-    if (Buffer.isBuffer(data)) {
+    if (Buffer.isBuffer(data) || !!data?.pipe) {
       retry = 0
     }
     if (['GET', 'HEAD', 'OPTIONS'].includes(args.method)) {
@@ -113,6 +228,8 @@ const request = async (url, options = {}) => {
     }
   }
   // console.log('[REQUEST]', url, args)
+  // url = 'https://api.reruin.net/proxy?url=' + (url)
+
   while (true) {
     try {
       let res = await fetch(url, args)
@@ -125,17 +242,17 @@ const request = async (url, options = {}) => {
           status,
           headers,
           data,
-          body: data,
         }
       } else {
         return { status, headers, data: res.body }
       }
     } catch (e) {
+      console.log('request retry', retry, e)
+
       if (retry-- <= 0) {
-        throw { message: '[' + e.code + '] The error occurred during the request.' }
+        throw { message: '[' + e.code + '] The error occurred during the request.', type: e.type }
         // return { error: { message: '[' + e.code + '] The error occurred during the request.' } }
       }
-      console.log('request retry', retry, e)
     }
   }
 

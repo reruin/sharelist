@@ -4,7 +4,7 @@
  * Module dependencies.
  */
 
-const app = require('./app/index')
+const bootstrap = require('./app/main')
 const http = require('http')
 const os = require('os')
 const fs = require('fs')
@@ -14,16 +14,14 @@ const onError = (error) => {
     throw error
   }
 
-  var bind = typeof port === 'string' ? 'Pipe ' + port : 'Port ' + port
-
   // handle specific listen errors with friendly messages
   switch (error.code) {
     case 'EACCES':
-      console.error(bind + ' requires elevated privileges')
+      console.error('Pipe requires elevated privileges')
       process.exit(1)
       break
     case 'EADDRINUSE':
-      console.error(bind + ' is already in use')
+      console.error('Port is already in use')
       process.exit(1)
       break
     default:
@@ -43,17 +41,33 @@ const getIpv4 = () => {
   }
 }
 
-const onListening = () => {
-  console.log(new Date().toISOString())
-  console.log('Sharelist Server is running at http://' + getIpv4() + ':' + port + '/')
+const extractDefaultPlugins = () => {
+  if (fs.existsSync('./cache/plugin') == false) {
+    fs.mkdirSync('./cache/plugin', { recursive: true })
+
+    try {
+      let plugins = JSON.parse(fs.readFile('./plugin.json', 'utf-8'))
+
+      for (let i of plugins) {
+        let filename = `./cache/plugin/${i.namespace}.js`
+        fs.writeFileSync(filename, i.script)
+      }
+    } catch (e) {
+
+    }
+
+    // default plugin
+    // cp from plugin
+  }
 }
 
-if (!fs.existsSync('./cache')) {
-  fs.mkdirSync('./cache')
-}
+fs.mkdirSync('./cache/theme', { recursive: true })
+extractDefaultPlugins()
 
-const port = process.env.PORT || 33001
-
-const server = http.createServer(app.callback())
-server.on('error', onError).on('listening', onListening)
-server.listen(port)
+bootstrap().then(({ app, port }) => {
+  const server = http.createServer(app.callback())
+  server.on('error', onError).on('listening', () => {
+    console.log(`[${new Date().toISOString()}] Sharelist Server is running at http://` + getIpv4() + ':' + server.address().port + '/')
+  })
+  server.listen(process.env.PORT || port || 33001)
+})

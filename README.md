@@ -11,21 +11,21 @@ ShareList 是一个易用的网盘工具，支持快速挂载 GoogleDrive、OneD
 ## 进度
 - [x] 核心库支持 
 - [x] 新主题 
-- [x] 插件：onedrive/aliyundrive/caiyun/ctcloud/baidu/localfile
+- [x] 自定义插件开发
 - [x] webdav
+- [x] 跨盘转移
+- [x] 秒传
 
-|       | 下载 | 上传 | 列目录 | 创建目录 | 删除 | 重命名 | 远程移动 |
-| ----        | ---- | ---- | ---- | ---- | ---- | ---- | ---- |
-Local File    |  ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
-AliyunDrive   |  ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
-CaiYun   |  ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
-CTCloud   |  ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
-Baidu Netdisk   |  ✓ | x | ✓ | ✓ | ✓ | ✓ | ✓ |
-OneDrive   |  ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
-GoogleDrive   |  ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
-
-- [ ] 中转器
-
+## 支持情况
+|       | 下载 | 上传 | 列目录 | 创建目录 | 删除 | 重命名 | 远程移动 | hash | 秒传
+| ----        | ---- | ---- | ---- | ---- | ---- | ---- | ---- | ---- | ---- |
+OneDrive   |  ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | sha1 | x |
+GoogleDrive   |  ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | md5 | x |
+Local File    |  ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | md5/sha1 | x |
+AliyunDrive   |  ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | sha1 | ✓ |
+CaiYun   |  ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | md5 | ✓ |
+CTCloud   |  ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | md5 | x |
+Baidu Netdisk   |  ✓ | x | ✓ | ✓ | ✓ | ✓ | ✓ | md5 | ✓ |
 
 ## 安装
 ```docker

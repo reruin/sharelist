@@ -22,6 +22,11 @@ const cp = async (src, dst) => {
   }
 }
 
+// download default plugins
+const preinstall = async () => {
+
+}
+
 const main = async () => {
   await run(`yarn build-web`)
   await cp('../packages/sharelist-plugin/lib', '../packages/sharelist/plugins')

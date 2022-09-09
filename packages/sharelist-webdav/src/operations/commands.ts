@@ -21,7 +21,7 @@ export default {
   Delete,
   // Unlock,
   Mkcol,
-  // Copy,
+  Copy,
   // Lock,
   Move,
   // Head,

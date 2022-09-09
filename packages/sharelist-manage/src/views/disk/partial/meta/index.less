@@ -1,0 +1,50 @@
+.file-meta{
+  display: flex;
+  align-items: center;
+
+  .item-thumb{
+    width:60px;height:40px;
+    border-radius: 6px;
+    background-size: cover;
+    background-position: center center;
+    background-repeat: no-repeat;
+  }
+
+  .item-icon{
+    position: relative;
+    width:60px;
+    margin-right:8px;
+    text-align: center;
+    flex:none;
+  }
+  .item-icon__ext{
+    position: absolute;
+    font-size: 12px;
+    bottom: 5px;
+    color:inherit;
+    text-transform: uppercase;
+    transform: scale(0.8);
+    transform-origin:center;
+    // width:42px;
+    text-align: center;
+    width:100%;
+    font-weight: bold;
+  }
+
+  .item-desc{
+    font-size:12px;
+    color:var(--context-2);
+  }
+  .item-dot{
+    display: inline-block;
+    padding: 0 7px;
+    align-items: center;
+    &:before{
+      content: "";
+      display: block;
+      width: 2px;
+      height: 2px;
+      background: var(--primary-text-secondary-color);
+    }
+  }
+}

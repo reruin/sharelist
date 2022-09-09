@@ -9,7 +9,7 @@ export default async (ctx: Context): Promise<Response | undefined> => {
     return { status: '403' }
   }
 
-  const res = await ctx.driver?.('mv', src, dst, true)
+  const res = await ctx.driver?.mv?.(src, dst, true)
   if (res?.error) {
     return {
       status: res.error.code || '502'

@@ -1,6 +1,6 @@
 {
   "name": "@sharelist/core",
-  "version": "0.1.7",
+  "version": "0.2.0",
   "repository": "https://github.com/reruin/sharelist",
   "license": "MIT",
   "main": "index.js",
@@ -11,9 +11,12 @@
     "release": "node ../../scripts/release.js --commit-path ."
   },
   "dependencies": {
+    "html-entities": "^2.3.3",
     "mime": "^2.5.2",
     "node-fetch": "^2.6.1",
+    "querystringify": "^2.2.0",
     "write-file-atomic": "^3.0.3",
     "yaml": "^1.10.2"
-  }
+  },
+  "devDependencies": {}
 }

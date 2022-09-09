@@ -1,57 +1,16 @@
+
 const path = require('path')
 
-const isPkg = process.pkg
-
-const isDev = process.env.NODE_ENV === 'dev'
-
-if (isPkg) {
-  require('@koa/cors')
-  require('koa-body')
-  require('koa-json')
+const appInfo = {
+  baseDir: path.join(__dirname, '../'),
+  pkg: !!process.pkg,
+  dev: process.env.NODE_ENV === 'dev'
 }
 
-const pluginPath = isDev
-  ? path.join(process.cwd(), '../sharelist-plugin/lib')
-  : isPkg
-    ? path.join(process.cwd(), './plugins')
-    : null
-
-module.exports = (appInfo) => ({
-  middleware: ['cors', 'koaBody', 'json'],
-
-  plugin: ['sharelist', 'webdav', 'guide'],
-
-  sharelist: {
-    path: path.join(appInfo.baseDir, './package/sharelist/index.js'),
-    client: {
-      pluginDir: [path.join(appInfo.baseDir, './plugins'), pluginPath],
-      cacheDir: path.join(isPkg ? process.cwd() : appInfo.baseDir, './cache'),
-    },
-  },
-
-  webdav: {
-    path: path.join(appInfo.baseDir, './package/webdav/index.js'),
-    client: {
-
-    },
-  },
-
-  guide: {
-    path: path.join(appInfo.baseDir, './package/guide/index.js'),
-    client: {},
-  },
-  theme: {
-    options: {
-      dir: path.join(appInfo.baseDir, './theme'),
-    },
-  },
-  cors: {
-    package: '@koa/cors',
-  },
-  koaBody: {
-    package: 'koa-body',
-  },
-  json: {
-    package: 'koa-json',
-  },
-})
+module.exports = {
+  env: appInfo,
+  cacheDir: path.join(appInfo.pkg ? process.cwd() : appInfo.baseDir, './cache'),
+  pluginDir: /*appInfo.dev ? path.join(process.cwd(), '../sharelist-plugin/lib') : */path.join(appInfo.baseDir, './plugin'),
+  themeDir: [path.join(appInfo.baseDir, './web'), path.join(appInfo.pkg ? process.cwd() : appInfo.baseDir, './cache/theme')],
+  manageDir: path.join(appInfo.baseDir, './manage'),
+}

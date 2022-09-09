@@ -33,11 +33,9 @@ jobs:
           yarn build-web
           mkdir -p ./packages/sharelist/web/default
           mkdir -p ./packages/sharelist/manage
-          mkdir -p ./packages/sharelist/plugin
           wget https://raw.githubusercontent.com/linkdrive/plugins/master/list_full.json -O ./packages/sharelist/plugins.json
           cp -r ./packages/sharelist-web/dist/* ./packages/sharelist/web/default
           cp -r ./packages/sharelist-manage/dist/* ./packages/sharelist/manage
-          cp -r ./packages/sharelist-plugin/lib/* ./packages/sharelist/plugin
           yarn build-server
       - name: Release
         run: |

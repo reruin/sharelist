@@ -1,4 +1,4 @@
-import { h, ref, Ref, defineComponent, watch, onMounted, onUnmounted, getCurrentInstance, toRef, computed, withModifiers, nextTick } from 'vue'
+import { h, ref, Ref, defineComponent, watch, onMounted, onUnmounted, nextTick, toRef, computed, withModifiers } from 'vue'
 import useStore from '@/store/index'
 import { storeToRefs } from 'pinia'
 import { Spin, Modal, Dropdown, Popover, Menu, Badge, Checkbox, Tooltip, InputSearch, RadioGroup, Input } from 'ant-design-vue'
@@ -36,7 +36,7 @@ export default defineComponent({
 
     const { loading, files, error, setPath, paths, loadMore, diskConfig, current: currentDisk, setAuth, setSort, sortConfig, onUpdate } = diskIntance
 
-    const { rename, move, remove, mkdir, flashDownload, uploadConfirm, addDisk, setDisk, remoteDownload } = useActions(diskIntance)
+    const { rename, move, remove, mkdir, flashDownload, uploadConfirm, addDisk, setDisk, remoteDownload, showInfo } = useActions(diskIntance)
 
     const { setPlayer } = usePlayer('player')
 
@@ -99,31 +99,11 @@ export default defineComponent({
       }
     }
 
-    const showInfo = (file: IFile) => {
-      Modal.info({
-        centered: true,
-        title: file.name,
-        content: <div>
-          <div class="item">
-            <div class="item__header">
-              <div class="item__meta">
-                <h4 class="item__meta-title">全局URI</h4>
-                <div class="item__meta-desc" style="font-size:10px;">{file.id}</div>
-              </div>
-              <div class="item__meta">
-                <h4 class="item__meta-title">目录ID</h4>
-                <div class="item__meta-desc" style="font-size:10px;">{file.extra?.fid}</div>
-              </div>
-            </div>
-          </div>
-        </div>
-      })
-
-    }
 
     let currentFocusFile: Ref<IFile | undefined> = ref()
 
     const onAction = ({ key }: { key: any }) => {
+      targetBind.value = false
       if (key == 'info') {
         showInfo(currentFocusFile.value as IFile)
       } else if (key == 'mount_drive') {
@@ -151,14 +131,52 @@ export default defineComponent({
       }
     }
 
-    const onHover = (i: IFile | null) => {
+    let isActionHide = true
+    let targetBind = ref(false)
+    const onContextChange = (visible: boolean) => {
+      console.log('action:', visible)
+      // isActionHide = true
+
+      if (visible) {
+        if (targetBind.value == false) {
+          currentFocusFile.value = undefined
+        }
+        //isActionHide = false
+        // onActionVisibleChange(visible)
+        // currentFocusFile.value = undefined
+        //
+
+      } else {
+        // currentFocusFile.value = undefined
+        // targetBind = false
+        targetBind.value = false
+      }
+    }
+
+    const onHover = (i: IFile | null, e?: MouseEvent) => {
+      //if (!actionVisible.value) {
+      //willShow = !!i
+      //if (willShow) {
+      console.log('on hover')
+      //已存在
+      if (currentFocusFile.value) {
+
+      }
+      currentFocusFile.value = i
+      if (i) {
+        targetBind.value = true
+      }
+      //}
+      // onActionVisibleChange()
+      //}
+      /*
       if (i === null) {
         currentFocusFile.value = undefined
       } else {
         if (!actionVisible.value) {
           currentFocusFile.value = i
         }
-      }
+      }*/
 
     }
 
@@ -180,40 +198,40 @@ export default defineComponent({
     const mainSlots = {
       overlay: () => {
         let isDriveLevel = diskConfig.value.isRoot
-        nextTick(() => {
-          onActionVisibleChange(true)
-        })
-
+        // setTimeout(() => {
+        //   currentFocusFile.value = undefined
+        // }, 0)
         // blank area
-        if (!currentFocusFile.value) {
+        if (currentFocusFile.value || targetBind.value) {
+          if (isDriveLevel) {
+            return <Menu onClick={onAction}>
+              <Menu.Item class="dropdown-item" key="config"><HddOutlined style={{ fontSize: '16px', marginRight: '8px' }} />修改配置</Menu.Item>
+              <Menu.Item class="dropdown-item" key="delete"><DeleteOutlined class="danger-aciton" style={{ fontSize: '18px', marginRight: '8px' }} /><span class="danger-aciton">删除</span></Menu.Item>
+            </Menu >
+          } else {
+            return <Menu onClick={onAction}>
+              <Menu.Item class="dropdown-item" key="info"><InfoCircleOutlined style={{ fontSize: '16px', marginRight: '8px' }} />信息</Menu.Item >
+              <Menu.Item class="dropdown-item" key="rename"><EditOutlined style={{ fontSize: '16px', marginRight: '8px' }} />重命名</Menu.Item >
+              <Menu.Item class="dropdown-item" key="move"><ScissorOutlined style={{ fontSize: '18px', marginRight: '8px' }} />移动</Menu.Item>
+              <Menu.Item class="dropdown-item" key="delete"><DeleteOutlined class="danger-aciton" style={{ fontSize: '18px', marginRight: '8px' }} /><span class="danger-aciton" >删除</span></Menu.Item>
+            </Menu>
+          }
+        } else {
           if (isDriveLevel) {
             return <Menu onClick={onAction}>
               <Menu.Item class="dropdown-item" key="mount_drive"><HddOutlined style={{ fontSize: '16px', marginRight: '8px' }} />挂载网盘</Menu.Item>
             </Menu>
           } else {
             return <Menu onClick={onAction}>
-              <Menu.Item disabled={diskConfig.value.isRoot} class="dropdown-item" key="mkdir" ><FolderAddOutlined style={{ fontSize: '18px', marginRight: '8px' }} />新建文件夹</Menu.Item>
-              <Upload disabled={diskConfig.value.isRoot}><Menu.Item disabled={diskConfig.value.isRoot} class="dropdown-item" key="upload"><Icon type='icon-upload-file-outline' style={{ fontSize: '18px', marginRight: '8px' }} />上传文件</Menu.Item></Upload>
-              <Upload disabled={diskConfig.value.isRoot} type="dir"><Menu.Item disabled={diskConfig.value.isRoot} class="dropdown-item" key="upload_folder"><Icon type='icon-upload-folder-outline' style={{ fontSize: '18px', marginRight: '8px' }} />上传文件夹</Menu.Item></Upload>
-              <Menu.Item disabled={diskConfig.value.isRoot} class="dropdown-item" key="flash_upload"><CloudDownloadOutlined style={{ fontSize: '18px', marginRight: '8px' }} />云端秒传</Menu.Item>
-              <Menu.Item disabled={diskConfig.value.isRoot} class="dropdown-item" key="remote_download"><DownloadOutlined style={{ fontSize: '18px', marginRight: '8px' }} />离线下载</Menu.Item>
+              <Menu.Item class="dropdown-item" key="mkdir" ><FolderAddOutlined style={{ fontSize: '18px', marginRight: '8px' }} />新建文件夹</Menu.Item>
+              <Upload><Menu.Item class="dropdown-item" key="upload"><Icon type='icon-upload-file-outline' style={{ fontSize: '18px', marginRight: '8px' }} />上传文件</Menu.Item></Upload>
+              <Upload type="dir"><Menu.Item class="dropdown-item" key="upload_folder"><Icon type='icon-upload-folder-outline' style={{ fontSize: '18px', marginRight: '8px' }} />上传文件夹</Menu.Item></Upload>
+              <Menu.Item class="dropdown-item" key="flash_upload"><CloudDownloadOutlined style={{ fontSize: '18px', marginRight: '8px' }} />云端秒传</Menu.Item>
+              <Menu.Item class="dropdown-item" key="remote_download"><DownloadOutlined style={{ fontSize: '18px', marginRight: '8px' }} />离线下载</Menu.Item>
             </Menu>
           }
+        }
 
-        }
-        if (isDriveLevel) {
-          return <Menu onClick={onAction}>
-            <Menu.Item class="dropdown-item" key="config"><HddOutlined style={{ fontSize: '16px', marginRight: '8px' }} />修改配置</Menu.Item>
-            <Menu.Item class="dropdown-item" key="delete"><DeleteOutlined class="danger-aciton" style={{ fontSize: '18px', marginRight: '8px' }} /><span class="danger-aciton">删除</span></Menu.Item>
-          </Menu >
-        } else {
-          return <Menu onClick={onAction}>
-            <Menu.Item class="dropdown-item" key="info"><InfoCircleOutlined style={{ fontSize: '16px', marginRight: '8px' }} />信息</Menu.Item >
-            <Menu.Item class="dropdown-item" key="rename"><EditOutlined style={{ fontSize: '16px', marginRight: '8px' }} />重命名</Menu.Item >
-            <Menu.Item class="dropdown-item" key="move"><ScissorOutlined style={{ fontSize: '18px', marginRight: '8px' }} />移动</Menu.Item>
-            <Menu.Item class="dropdown-item" key="delete"><DeleteOutlined class="danger-aciton" style={{ fontSize: '18px', color: '#ff4d4f', marginRight: '8px' }} /><span class="danger-aciton" >删除</span></Menu.Item>
-          </Menu>
-        }
       }
     }
 
@@ -320,7 +338,7 @@ export default defineComponent({
             {(diskConfig.value.globalSearch || diskConfig.value.localSearch) ? <Icon style={{ fontSize: '18px', marginRight: '16px' }} class="drive-action-search" type="icon-search" onClick={onToggleSearch} /> : null}
             <Popover overlayClassName='popover-padding-0' placement="topRight" destroyTooltipOnHide={true} arrowPointAtCenter={true} trigger={['click']}>
               {{
-                default: () => <Badge dot><CloudSyncOutlined style={{ fontSize: '18px' }} /></Badge>,
+                default: () => <Badge class="task-badge" dot><CloudSyncOutlined style={{ fontSize: '18px' }} /></Badge>,
                 content: () => <Task style="padding:0" />
               }}
             </Popover>
@@ -374,11 +392,11 @@ export default defineComponent({
             </div>
           </div> : null
         }
-        <Dropdown trigger={['contextmenu']} on-visibleChange={onActionVisibleChange} overlayClassName="dropdown--drive" v-slots={mainSlots}>
+        <Dropdown destroyPopupOnHide={true} trigger={['contextmenu']} onVisibleChange={onContextChange} overlayClassName="dropdown--drive" v-slots={mainSlots}>
           <div class="drive-body-wrap" ref={driveEl}>
-            <div class="drive-body-mask" onContextmenu={() => onHover(null)}>
+            {/* <div class="drive-body-mask" onContextmenu={() => onHover(null)}>
 
-            </div>
+            </div> */}
             <Spin delay={150} spinning={loading.value}>
               <Error value={error} onAuth={setAuth}>
 
@@ -426,18 +444,18 @@ export default defineComponent({
                 }}
               </Tooltip> : null
             }
-
             <Tooltip>
               {{
                 title: '删除',
                 default: () => <DeleteOutlined onClick={() => remove(files.value.filter((i: any) => (i.checked)))} class="drive-toolbar-item danger-aciton--hover" />
               }}
             </Tooltip>
+
             {
               selectState.value.count == 1 ? <Tooltip>
                 {{
-                  title: '信息',
-                  default: () => <InfoCircleOutlined class="drive-toolbar-item" onClick={() => showInfo(files.value.filter((i: any) => (i.checked))[0])} />
+                  title: '重命名',
+                  default: () => <EditOutlined class="drive-toolbar-item" onClick={() => rename(files.value.filter((i: any) => (i.checked))[0])} />
                 }}
               </Tooltip> : null
             }
@@ -447,6 +465,14 @@ export default defineComponent({
                 {{
                   title: '移动',
                   default: () => <ScissorOutlined onClick={() => move(files.value.filter((i: any) => (i.checked)))} class="drive-toolbar-item" />
+                }}
+              </Tooltip> : null
+            }
+            {
+              selectState.value.count == 1 ? <Tooltip>
+                {{
+                  title: '信息',
+                  default: () => <InfoCircleOutlined class="drive-toolbar-item" onClick={() => showInfo(files.value.filter((i: any) => (i.checked))[0])} />
                 }}
               </Tooltip> : null
             }

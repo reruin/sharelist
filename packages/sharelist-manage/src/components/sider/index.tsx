@@ -46,7 +46,6 @@ export default defineComponent({
           <div class={{ link: true, active: curRoute.value == 'drive' || curRoute.value == 'drive-map' }} onClick={navToDrive}>
             <DatabaseOutlined />
           </div>
-
           <RouterLink to="/plugin" class={{ link: true, active: curRoute.value == 'plugin' }}>
             <AppstoreAddOutlined />
           </RouterLink>
@@ -54,25 +53,7 @@ export default defineComponent({
             <SettingOutlined />
           </RouterLink>
 
-          {/*            <a-button on-click={()=>this.link('invoice')} class={{'no-drag':true , 'active':this.defActive == 'invoice'}}  type="link">
-          <a-icon type="pay-circle" />
-        </a-button>*/}
-
         </div>
-        {/*<a-menu theme="dark" mode="inline">
-        <a-menu-item key="1">
-          <a-icon style={{fontSize:'24px'}} type="user" />
-          <span>用户</span>
-        </a-menu-item>
-        <a-menu-item key="2">
-          <a-icon style={{fontSize:'24px'}} type="pay-circle" />
-          <span>订单</span>
-        </a-menu-item>
-        <a-menu-item key="3">
-          <a-icon style={{fontSize:'24px'}} type="setting" />
-          <span>设置</span>
-        </a-menu-item>
-      </a-menu>*/}
       </div>
       <div class="sider-footer" >
         {/* <ReloadOutlined onClick={confirmReload} style={{ fontSize: '16px', color: '#1b2539', marginBottom: '16px' }} /> */}
@@ -87,9 +68,6 @@ export default defineComponent({
             )
           }}
         </Dropdown>
-        {/*<a-button on-click={this.signout} class="no-drag" size="small" type="link">
-        <a-icon type="poweroff" />
-      </a-button>*/}
       </div>
     </div >
   }

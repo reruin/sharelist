@@ -1,7 +1,7 @@
 import { defineComponent, PropType, StyleValue, withModifiers } from "vue";
 import Icon from '@/components/icon'
 import useDisk from '../useDisk'
-import { Spin } from 'ant-design-vue'
+import { Spin, Badge } from 'ant-design-vue'
 import Error from '../error'
 import './index.less'
 import Breadcrumb from '../breadcrumb'
@@ -23,7 +23,7 @@ export const Meta = defineComponent({
           props.data?.thumb ?
             <div class="item-thumb" style={{ 'backgroundImage': `url(${props.data?.thumb})` }}></div>
             : [<Icon
-              style={{ fontSize: '42px', marginRight: '8px' }}
+              style={{ fontSize: '42px' }}
               type={'icon-' + props.data?.mediaType}
             />,
             props.data?.mediaType == 'file' && props.data?.ext.length <= 7 ? <div class="item-icon__ext">{props.data?.ext}</div> : null
@@ -51,7 +51,45 @@ export const Meta = defineComponent({
   }
 })
 
+export const MetaLite = defineComponent({
+  props: {
+    data: {
+      type: Object as PropType<IFile>
+    },
+  },
+  setup(props) {
+    return () => {
+      let status = props.data?.status
+      return <div class="file-meta">
+        <Badge status={status == 0 ? 'default' : status == 1 ? 'processing' : status == 2 ? 'success' : status == 3 ? 'error' : 'default'} />
+        <div class="item-icon item-icon--lite">
+          <Icon
+            style={{ fontSize: '36px' }}
+            type={'icon-' + props.data?.mediaType}
+          />
+          {props.data?.mediaType == 'file' && props.data?.ext.length <= 7 ? <div class="item-icon__ext">{props.data?.ext}</div> : null}
+        </div>
 
+        <div>
+          <div class>{props.data?.name}</div>
+          {
+            props.data?.error ?
+              <div class="flex item-desc">{props.data?.error}</div> :
+              <div class="flex item-desc">
+                {
+                  props.data?.ctimeDisplay ? [<span>{props.data?.ctimeDisplay}</span>, <span class="item-dot"></span>] : null
+                }
+                {
+                  props.data?.size ? <span>{props.data?.sizeDisplay}</span> : null
+                }
+              </div>
+          }
+
+        </div>
+      </div>
+    }
+  }
+})
 export const Tree = defineComponent({
   props: {
     'dirMode': {

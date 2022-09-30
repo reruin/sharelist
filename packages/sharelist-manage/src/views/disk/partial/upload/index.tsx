@@ -1,12 +1,12 @@
 
 import { defineComponent } from 'vue'
-import CryptoJS from 'crypto-js'
 import { useApi, ReqResponse } from '@/hooks/useApi'
 import { reactive, ref, Ref } from 'vue'
 import SparkMD5 from 'spark-md5'
 import useDisk from '../useDisk'
 import { STATUS } from '../task'
 import { message } from 'ant-design-vue'
+import SHA1 from 'js-sha1'
 
 function readChunked(file: File, chunkCallback: any, endCallback: any) {
   const fileSize = file.size
@@ -50,18 +50,34 @@ function readChunked(file: File, chunkCallback: any, endCallback: any) {
 }
 
 //3032ac4e71df951cccff8fdebad5266c
-export const getHash = (file: File, type: string, cb: (...rest: Array<any>) => any): Promise<string> =>
+
+export const getHash = (file: File, hashtype: string, cb?: (...rest: Array<any>) => any): Promise<string> =>
   new Promise((resolve, reject) => {
-    // const hash = type == 'md5' ? CryptoJS.algo.MD5.create() : type == 'sha1' ? CryptoJS.algo.SHA1.create() : null
-    const hash = new SparkMD5.ArrayBuffer()
+    let parts = hashtype.split('-')
+    let type = parts[0]
+    let headHashSize = parts[1] ? parseInt(parts[1]) : 0
+    const hash = type == 'md5' ? new SparkMD5.ArrayBuffer() : type == 'sha1' ? SHA1.create() : null
+    console.log(type, headHashSize)
+
+    let ret: Array<string> = []
 
     if (hash) {
       readChunked(
         file,
         (chunk: any, offset: number) => {
           // hash.update(chunk)
-          hash.append(chunk)
-          cb(offset)
+          if (type == 'md5') {
+            if (headHashSize) {
+              ret.push(SparkMD5.ArrayBuffer.hash(chunk.slice(0, headHashSize * 1024)))
+            }
+            hash.append(chunk)
+          } else {
+            if (headHashSize) {
+              ret.push(SHA1(chunk.slice(0, headHashSize * 1024)))
+            }
+            hash.update(chunk)
+          }
+          cb?.(offset)
           // task.readCompleted = offset
         },
         (err: Error) => {
@@ -72,8 +88,9 @@ export const getHash = (file: File, type: string, cb: (...rest: Array<any>) => a
             // const final = hash.finalize()
             // resolve(final.toString(CryptoJS.enc.Hex))
 
-            const final = hash.end()
-            resolve(final)
+            const final = type == 'md5' ? hash.end() : hash.hex()
+            ret.push(final)
+            resolve(ret.join('|'))
           }
         },
       )
@@ -89,45 +106,6 @@ interface IUseUploadResult {
   create(): Promise<void>
 }
 
-
-function upload(options: any) {
-  return new Promise((resolve, reject) => {
-
-    var xhr = new XMLHttpRequest();
-    xhr.open(options.method, options.url);
-    xhr.overrideMimeType("application/octet-stream");
-    xhr.timeout = 0;
-    xhr.upload.addEventListener('progress', function (e) {
-      console.log(e)
-      options?.onUploadProgress?.(e)
-    })
-
-    xhr.ontimeout = function () {
-      console.error('The request timed out.');
-    };
-
-    xhr.onreadystatechange = function (e) {
-      if (xhr.readyState === 4) {
-        if (xhr.status === 200) {
-          var result;
-          if (xhr.getResponseHeader('content-type')?.indexOf('application/json') >= 0) {
-            result = JSON.parse(xhr.responseText); // 必须从 responseText 读文本数据
-          } else {
-            result = (xhr.responseText);
-          }
-          resolve(result)
-        } else {
-          console.log(xhr.status)
-          reject({ code: xhr.status })
-        }
-      }
-    }
-
-    xhr.send(options.data.stream)
-  })
-
-}
-
 export const useUpload: IUseUpload = (): IUseUploadResult => {
   if (useUpload.instance) {
     return useUpload.instance
@@ -137,7 +115,6 @@ export const useUpload: IUseUpload = (): IUseUploadResult => {
 
   // 1 正在生成任务(解析文件/读取文件 .etc)，2 解析文件过程发生错误, 3 正在复制，4 操作完成 且未发生错误,5. 操作完成 但发生部分完成
   const create = (files: Array<File>, hashType: string, dest: string, id: string, dir: boolean = false) => {
-    console.log(files)
     const src = dir ? files[0].webkitRelativePath.split('/')[0] : files[0].name
 
     const size = files.reduce((t, c) => t + c.size, 0)
@@ -152,6 +129,7 @@ export const useUpload: IUseUpload = (): IUseUploadResult => {
       readCompleted: 0,
       size,
       src,
+      srcId: 'local:' + src,
       dest,
       destId: id,
       index: 0,
@@ -189,9 +167,8 @@ export const useUpload: IUseUpload = (): IUseUploadResult => {
       let { file, uploadId, hash, dest } = files[index]
 
       if (!hash && hashType) {
-        hash = await getHash(file, hashType, (offset) => {
-
-        })
+        hash = await getHash(file, hashType)
+        console.log('hash:', hash)
         files[index].hash = hash
       }
 
@@ -208,8 +185,6 @@ export const useUpload: IUseUpload = (): IUseUploadResult => {
 
       tasks.value[idx].cancel = () => controller.abort()
       tasks.value[idx].status = STATUS.PROGRESS
-
-      let occurError = false
       try {
 
         //创建/查询任务
@@ -227,7 +202,13 @@ export const useUpload: IUseUpload = (): IUseUploadResult => {
         //任务ID不存在，直接标记失败
         if (!taskData.uploadId) {
           tasks.value[idx].status = STATUS.INIT_ERROR
-          return
+          if (taskData.error) {
+            tasks.value[idx].message = taskData.error.message
+            files[index].message = taskData.error.message
+          }
+
+          console.log('here')
+          throw taskData.error
         }
 
         //任务ID可能发生变化（如过期 导致原始的上传实例失效，后端会尝试生成新的上传实例，此时uploadId也会随之变化）
@@ -283,7 +264,7 @@ export const useUpload: IUseUpload = (): IUseUploadResult => {
           tasks.value[idx].status = STATUS.SUCCESS
         }
       } catch (e) {
-        console.log(e)
+        console.log('error==>', e)
         // taskData[taskId].uploadId = ''
         if (!tasks.value[idx].error.includes(index)) {
           tasks.value[idx].error.push(index)
@@ -359,6 +340,7 @@ export const Upload = defineComponent({
     const { create } = useUpload()
 
     const onOpenFileDialog = () => {
+      console.log('is open', props.disabled, file.value)
       if (props.disabled) {
         return
       }
@@ -369,13 +351,11 @@ export const Upload = defineComponent({
       let { uploadHash, id } = diskConfig.value
       let files = [].slice.call(e.target.files)
       let dest = '/' + [...paths.value].join('/')
-
-      if (uploadHash == 'md5') {
+      console.log(uploadHash)
+      if (uploadHash) {
         // let path = '/' + [...paths.value, file.name].join('/')
         // console.log(file, paths)
-        await create(files, 'md5', dest, id, props.type == 'dir')
-      } else if (uploadHash == 'sha1') {
-
+        await create(files, uploadHash, dest, id, props.type == 'dir')
       } else {
         await create(files, null, dest, id, props.type == 'dir')
       }

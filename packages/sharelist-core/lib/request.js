@@ -126,6 +126,12 @@ const createProxyAgent = (proxy, isHttpsAgent = false) => {
   return agent
 }
 
+const retryTime = (times, maxBackOffTime = 6 * 1000) => {
+  return Math.min(Math.pow(2, times) * 1000 + Math.floor(Math.random() * 1000), maxBackOffTime)
+}
+
+const sleep = time => new Promise((resolve, reject) => setTimeout(resolve, time))
+
 // {
 //   // These properties are part of the Fetch Standard
 //   method: 'GET',
@@ -227,33 +233,42 @@ const request = async (url, options = {}) => {
       }
     }
   }
-  // console.log('[REQUEST]', url, args)
-  // url = 'https://api.reruin.net/proxy?url=' + (url)
 
+  let res, time = 0
   while (true) {
     try {
-      let res = await fetch(url, args)
-      let status = res.status
-      let headers = each(res.headers.raw(), (val) => val.join(','))
-      if (responseType == 'json' || responseType == 'text' || responseType == 'buffer') {
-        let data = await res[responseType]()
-
-        return {
-          status,
-          headers,
-          data,
-        }
-      } else {
-        return { status, headers, data: res.body }
-      }
+      res = await fetch(url, args)
+      break
     } catch (e) {
       console.log('request retry', retry, e)
 
-      if (retry-- <= 0) {
-        throw { message: '[' + e.code + '] The error occurred during the request.', type: e.type }
+      if (time++ < retry) {
+        await sleep(retryTime(time))
         // return { error: { message: '[' + e.code + '] The error occurred during the request.' } }
+      } else {
+        let type = e.code || e.type
+        throw { message: '[' + type + '] The error occurred during the request.', type }
       }
     }
+  }
+
+  let status = res.status
+  let resHeaders = each(res.headers.raw(), (val) => val.join(','))
+  if (responseType == 'json' || responseType == 'text' || responseType == 'buffer') {
+    let data
+    try {
+      data = await res[responseType]()
+    } catch (e) {
+      console.error(e)
+    }
+
+    return {
+      status,
+      headers: resHeaders,
+      data,
+    }
+  } else {
+    return { status, headers: resHeaders, data: res.body }
   }
 
 }

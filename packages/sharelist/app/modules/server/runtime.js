@@ -315,6 +315,15 @@ exports.uploadManage = createUploadManage()
 exports.createUpdateManage = createUpdateManage
 
 exports.emptyStream = () => {
-  let stream = new Readable()
-  return stream
+  const controller = new AbortController();
+  const stream = new Readable({
+    read(size) {
+      this.destroy()
+    },
+    signal: controller.signal
+  })
+
+  stream.pause()
+
+  return { stream, controller }
 }

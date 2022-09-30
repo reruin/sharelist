@@ -18,7 +18,7 @@ export interface IUseSettingResult {
   getValue(key: string): any
 
   config: any
-  setConfig(data: ISetting, msg?: string): void
+  setConfig(data: ISetting, msg?: string): Promise<any>
   getConfig(token: string): void
   exportConfig(): void
   clearCache(): void
@@ -36,6 +36,7 @@ export type ConfigFieldItem = {
   secret?: boolean
   type: 'string' | 'number' | 'boolean' | 'option' | 'array' | 'textarea'
   handler?: (...rest: any) => void
+  validator?: (...rest: any) => boolean
 }
 type fieldGroup = {
   title: string
@@ -51,12 +52,19 @@ const fields: Array<fieldGroup> = [
         code: 'manage_path',
         label: '后台地址',
         type: 'string',
+        help: '地址必须以 / 开头',
+        validator: (val) => /^\//.test(val),
         handler: (nv: string, ov: string) => (location.href = location.href.replace(ov, nv)),
       },
       { code: 'token', label: '后台密码', type: 'string', secret: true },
       { code: 'proxy_enable', label: '全局中转', type: 'boolean' },
       { code: 'index_enable', label: '目录浏览', type: 'boolean' },
-      { code: 'anonymous_download_enable', label: '允许下载', type: 'boolean' },
+      {
+        code: 'anonymous_download_enable',
+        label: '允许下载',
+        type: 'boolean',
+        help: '禁用此项后，预览也将不可用。',
+      },
       { code: 'expand_single_disk', label: '展开单一挂载盘', type: 'boolean' },
       {
         code: 'per_page',
@@ -78,7 +86,7 @@ const fields: Array<fieldGroup> = [
     title: '传输设置',
     children: [
       { code: 'proxy_url', label: '代理地址', help: '当前支持 HTTP/HTTPS 代理。', type: 'string' },
-      { code: 'plugin_source', label: '插件源', help: '当前支持 HTTP/HTTPS 代理。', type: 'option' },
+      { code: 'plugin_source', label: '插件源', type: 'option' },
     ],
   },
   {

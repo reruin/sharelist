@@ -247,6 +247,9 @@ exports.createCache = () => {
   }
 }
 
+exports.retryTime = (times, maxBackOffTime = 8 * 1000) => {
+  return Math.min(Math.pow(2, times) * 1000 + Math.floor(Math.random() * 1000), maxBackOffTime)
+}
 exports.waitStreamFinish = (src, dst) => new Promise((resolve) => {
   dst.on('finish', () => resolve(true)).on('error', () => resolve(false))
   src.pipe(dst)

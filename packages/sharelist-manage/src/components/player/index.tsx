@@ -37,7 +37,7 @@ export const usePlayer = (id?: number | string): any => {
 export default defineComponent({
   props: {
     meidaId: {
-      type: Number,
+      type: String,
       required: true,
     },
   },

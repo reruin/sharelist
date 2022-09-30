@@ -252,7 +252,7 @@ module.exports = (app) => {
         let { data: stream, headers, status, error } = await request(data.download_url, { headers: reqHeaders, responseType: 'stream' })
 
         if (!error) {
-          return { stream, headers, status, acceptRanges: headers?.['accept-ranges'] == 'bytes' }
+          return { stream, headers, status, acceptRanges: headers?.['accept-ranges'] == 'bytes' || status == 206 || headers?.['content-range'] }
         }
       }
     }
@@ -305,6 +305,7 @@ module.exports = (app) => {
   /**
    * upload
    * @param {string} uri
+   * @param {stream | () => stream} stream
    * @param {object} options
    * @param {number} options.size
    * @param {string} options.name
@@ -491,7 +492,7 @@ module.exports = (app) => {
     if (app.config.per_page && pagination !== false) {
       options.perPage = app.config.per_page
     }
-
+    console.log(uri, options, config)
     const cacheable = !options.search && config.cache !== false
 
     let cacheId = `${encode(id)}#list`

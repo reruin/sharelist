@@ -41,28 +41,6 @@ const getIpv4 = () => {
   }
 }
 
-const extractDefaultPlugins = () => {
-  if (fs.existsSync('./cache/plugin') == false) {
-    fs.mkdirSync('./cache/plugin', { recursive: true })
-
-    try {
-      let plugins = JSON.parse(fs.readFile('./plugin.json', 'utf-8'))
-
-      for (let i of plugins) {
-        let filename = `./cache/plugin/${i.namespace}.js`
-        fs.writeFileSync(filename, i.script)
-      }
-    } catch (e) {
-
-    }
-
-    // default plugin
-    // cp from plugin
-  }
-}
-
-fs.mkdirSync('./cache/theme', { recursive: true })
-extractDefaultPlugins()
 
 bootstrap().then(({ app, port }) => {
   const server = http.createServer(app.callback())

@@ -15,12 +15,12 @@ const createDb = require('./db')
 const { md5, isUrl } = require('./utils')
 
 const createAsyncCtrl = () => {
-  let run
+  let error
   let promise = new Promise((_, reject) => {
-    run = reject
+    error = reject
   })
   let safe = (p) => Promise.race([p, promise])
-  return { throw: run, run: safe }
+  return { error, run: safe }
 }
 
 const STATUS = {
@@ -33,14 +33,14 @@ const STATUS = {
   PAUSE: 7,//已暂停
 }
 
-const genKey = (input) => md5(input)
+const genKey = (input) => md5(input).substring(8, 24)
 
 const parsePaths = v => v.replace(/(^\/|\/$)/g, '').split('/').map(decodeURIComponent).filter(Boolean)
 
 const sleep = (t = 0) => new Promise((r) => { setTimeout(r, t) })
 
-const createStatsStream = (cb) => {
-  let stream = new PassThrough()
+const statsStream = (stream, cb) => {
+
   let completed = 0, lastTime = Date.now(), chunkCompleted = 0
   stream.on('data', (chunk) => {
     completed += chunk.length
@@ -53,7 +53,6 @@ const createStatsStream = (cb) => {
     }
   })
 
-  return stream
 }
 
 const ignoreStream = (readStream, length) => {
@@ -74,8 +73,6 @@ const ignoreStream = (readStream, length) => {
 
   return stream
 }
-
-
 exports.createTransfer = (cacheDir, driver, request) => {
   const TAG = 'transfer'
 
@@ -95,7 +92,6 @@ exports.createTransfer = (cacheDir, driver, request) => {
     while (true) {
       try {
         parent = await driver.stat(paths)
-        console.log('has', parent)
         if (parent) {
           break;
         } else {
@@ -107,7 +103,6 @@ exports.createTransfer = (cacheDir, driver, request) => {
       }
     }
 
-    console.log(nonExistDir, 'nonExistDir')
     for (let i = 0; i < nonExistDir.length; i++) {
       parent = await driver.mkdir(parent.id, nonExistDir[i])
     }
@@ -167,7 +162,8 @@ exports.createTransfer = (cacheDir, driver, request) => {
       index: 0,
       inited: false,
       currentDir: '',
-      conflictBehavior
+      conflictBehavior,
+      retry: 0
     }
 
     createParseTask(taskId)
@@ -183,7 +179,9 @@ exports.createTransfer = (cacheDir, driver, request) => {
     //任务错误日志
     let { data: error } = createDb(path.join(basePath, `${taskId}_error.json`), { autoSave: true }, [])
 
-    let subtasks = []
+    let { data: retriedTask } = createDb(path.join(basePath, `${taskId}_retry.json`), { autoSave: true }, [])
+
+    let tasks = []
 
     let abortSignal = false
 
@@ -194,8 +192,9 @@ exports.createTransfer = (cacheDir, driver, request) => {
     let destPaths = taskData[taskId].dest.split('/').filter(Boolean)
 
     worker[taskId] = {
-      tasks: [],
+      tasks,
       error,
+      retriedTask,
       cancel: function cancel() {
         abortSignal = true
       }
@@ -208,7 +207,7 @@ exports.createTransfer = (cacheDir, driver, request) => {
       if (abortSignal) return
 
       if (res.type == 'file') {
-        subtasks.push(
+        tasks.push(
           // { cd: destPaths.join('/') },
           pickup(res, destPaths.join('/'))
         )
@@ -222,7 +221,7 @@ exports.createTransfer = (cacheDir, driver, request) => {
           let subfiles = children.filter(i => i.type != 'folder').map((i) => pickup(i, destPath))
 
           if (subfiles) {
-            subtasks.push(
+            tasks.push(
               // { cd: destPath },
               ...subfiles
             )
@@ -238,16 +237,14 @@ exports.createTransfer = (cacheDir, driver, request) => {
 
       if (abortSignal) return
 
-      let fileTask = subtasks.filter(i => !!i.id)
+      let fileTask = tasks.filter(i => !!i.id)
       taskData[taskId].count = fileTask.length
       taskData[taskId].size = fileTask.reduce((t, c) => t + c.size, 0)
       taskData[taskId].inited = true
       //taskData[taskId].status = STATUS.PROGRESS
 
       //保存到文件
-      saveTasks(subtasks)
-
-      worker[taskId].tasks = subtasks
+      saveTasks(tasks)
 
       createTransferTask(taskId)
 
@@ -264,105 +261,101 @@ exports.createTransfer = (cacheDir, driver, request) => {
     let currentDirData
 
     const next = async () => {
+      if (abortSignal) return
 
-      const tasks = worker[taskId].tasks
+      const { tasks, error, retriedTask } = worker[taskId]
 
-      let { uploadId, index: taskIndex, conflictBehavior } = taskData[taskId]
+      let { uploadId, index: taskIndex, conflictBehavior, retry } = taskData[taskId]
+      console.log(taskData[taskId])
       //finish
       if (taskIndex >= tasks.length) {
         taskData[taskId].status = taskData[taskId].error > 0 ? (taskData[taskId].error == taskData[taskId].count ? STATUS.ERROR : STATUS.DONE_WITH_ERROR) : STATUS.SUCCESS
         return
       }
 
+      if (retry && error.length == 0) {
+
+      }
+      console.log('currentIndex', taskIndex)
       let controller = new AbortController()
       let { id, name, size, md5, sha1, dest } = tasks[taskIndex]
 
       //执行进入目录
       if ((dest && dest != taskData[taskId].currentDir) || !currentDirData) {
         currentDirData = await changeDir(dest)
-        console.log(currentDirData)
         taskData[taskId].currentDir = dest
       }
-
       //所有上传任务 都需要指明父目录
       if (!currentDirData?.id) return
 
       try {
+        const ctrl = createAsyncCtrl()
+
         //当前任务的文件
         taskData[taskId].current = name
 
-        const { done, uploadId: newUploadId, start, completed } = await driver.upload(currentDirData.id, null, {
-          manual: true,
-          name, size, md5, sha1, uploadId, conflictBehavior,
-          signal: controller.signal
-        })
+        const getStream = async (start, uploadId) => {
+          let { stream: readStream, status, acceptRanges } = await driver.createReadStream(id, { start })
 
-        // fast upload
-        if (completed) {
-          taskData[taskId].completed += size
-          taskData[taskId].currentCompleted = 0
-          taskData[taskId].index = taskIndex + 1
 
-          if (abortSignal) return
-          setTimeout(next, 0)
-          return
-        }
-
-        // console.log('newUploadId', newUploadId, start)
-
-        taskData[taskId].uploadId = newUploadId
-        taskData[taskId].currentCompleted = start
-
-        //失效, drive plugin 对于无效的uploadId 可自主生成新的upload 并返回
-        if (!newUploadId) {
-          throw { message: 'uploadId is expired.' }
-        }
-
-        let { stream: readStream } = await driver.createReadStream(id, { start })
-
-        readStream.pause()
-
-        //创建一个可计数状态流
-        const stream = createStatsStream((currentCompleted, speed) => {
-          if (taskData[taskId]) {
-            taskData[taskId].currentCompleted = start + currentCompleted
-            taskData[taskId].speed = speed
-          } else {
-            console.log('destroy')
+          if (!acceptRanges && start != 0) {
+            readStream = ignoreStream(readStream, start)
           }
-        })
 
-        const ctrl = createAsyncCtrl()
-
-        worker[taskId].cancel = function cancel() {
-          abortSignal = true
-          controller.abort()
-          ctrl.throw({
-            type: 'aborted'
+          //状态流
+          statsStream(readStream, (currentCompleted, speed) => {
+            if (taskData[taskId]) {
+              taskData[taskId].currentCompleted = start + currentCompleted
+              taskData[taskId].speed = speed
+            } else {
+              console.log('destroy')
+            }
           })
-          readStream.destroy()
-        }
 
-        readStream.once('error', (e) => {
-          controller.abort()
-          ctrl.throw(e)
-        })
+          worker[taskId].cancel = function cancel() {
+            abortSignal = true
+            controller.abort()
+            ctrl.error({
+              type: 'aborted'
+            })
+            readStream.destroy()
+          }
 
-        readStream.pipe(stream)
+          readStream.once('error', (e) => {
+            controller.abort()
+            ctrl.error(e)
+          })
 
-        await ctrl.run(done(stream, (uploadId) => {
           if (taskData[taskId]) {
             taskData[taskId].uploadId = uploadId
+            taskData[taskId].currentCompleted = start
           }
+
+          return readStream
+        }
+
+        const updateUploadState = (uploadId) => {
+          taskData[taskId].uploadId = uploadId
+        }
+
+        await ctrl.run(driver.upload(currentDirData.id, getStream, {
+          name, size, md5, sha1, uploadId, conflictBehavior,
+          signal: controller.signal,
+          updateUploadState
         }))
 
-        //成功计数
         taskData[taskId].success++
+
+
       } catch (e) {
-        console.log('transfer occur error', e, e.type)
 
         // 用户主动 abort 导致的异常 不计入异常文件
         if (e.type == 'aborted') return
+
+        //连接重置 可能是网络问题，而非 serverside 服务异常
+        //if (e.type != 'ECONNRESET') {
+        //taskData[taskId].uploadId = ''
+        //}
 
         if (!worker[taskId].error.includes(taskIndex)) {
           worker[taskId].error.push(taskIndex)
@@ -372,15 +365,30 @@ exports.createTransfer = (cacheDir, driver, request) => {
         taskData[taskId].message = e.message
       }
 
+      if (abortSignal) return
+
+      //计数
       taskData[taskId].completed += size
       taskData[taskId].currentCompleted = 0
-      taskData[taskId].index = taskIndex + 1
+
+      // 如果retry 模式，则跳转到下一个error 部分
+      if (taskData[taskId].retry) {
+        let errIdx = retriedTask.indexOf(taskIndex)
+        if (errIdx >= 0) {
+          taskData[taskId].index = retriedTask[errIdx + 1] || -1
+          retriedTask.splice(errIdx, 1)
+        } else {
+          taskData[taskId].index = tasks.length
+        }
+      } else {
+        taskData[taskId].index = taskIndex + 1
+      }
       //完成后需清空uploadId
       taskData[taskId].uploadId = ''
 
-      if (abortSignal) return
       setTimeout(next, 0)
     }
+
 
     taskData[taskId].status = STATUS.PROGRESS
 
@@ -425,14 +433,13 @@ exports.createTransfer = (cacheDir, driver, request) => {
     }
 
     try {
-      console.log(worker[taskId]?.cancel)
       // stopStream
       worker[taskId]?.cancel?.(true)
-      //源目录读取状态时，取消读取
 
     } catch (e) {
-
+      console.log(e)
     }
+
     taskData[taskId].status = STATUS.PAUSE
 
   }
@@ -450,7 +457,6 @@ exports.createTransfer = (cacheDir, driver, request) => {
     if (taskData[taskId].status == STATUS.PAUSE) {
       //未读取完成
       if (!taskData[taskId].inited) {
-        console.log('read')
         createReadTask(taskId)
       } else {
         createTransferTask(taskId)
@@ -471,9 +477,10 @@ exports.createTransfer = (cacheDir, driver, request) => {
 
       taskData[taskId].currentDir = ''
       //任务错误文件
-      let { data: taskErrorStore } = createDb(path.join(basePath, `${taskId}_error.json`), { autoSave: true }, [])
+      let { data: error } = createDb(path.join(basePath, `${taskId}_error.json`), { autoSave: true }, [])
+      let { data: retriedTask } = createDb(path.join(basePath, `${taskId}_retry.json`), { autoSave: true }, [])
       worker[taskId] = {
-        tasks, error: taskErrorStore
+        tasks, error, retriedTask
       }
     }
   }
@@ -484,27 +491,31 @@ exports.createTransfer = (cacheDir, driver, request) => {
     }
 
     //重置files
-    const { tasks, error } = worker[taskId]
-    const newTasks = []
+
+    const { tasks, error, retriedTask } = worker[taskId]
     let successTotalSize = 0, successCount = 0
     for (let i = 0; i < tasks.length; i++) {
       let task = tasks[i]
-      if (error.includes(i)) {
-        newTasks.push(task)
-      } else {
+      if (!error.includes(i)) {
         successCount++
         successTotalSize += task.size
       }
     }
+
     taskData[taskId].error = 0
     taskData[taskId].status = STATUS.PROGRESS
     taskData[taskId].currentDir = ''
     taskData[taskId].completed = successTotalSize
     taskData[taskId].success = successCount
     taskData[taskId].index = error[0]
+    taskData[taskId].retry = 1
 
-    worker[taskId].tasks.splice(0, tasks.length, ...newTasks)
-    worker[taskId].error.splice(0, error.length)
+    retriedTask.push(...error)
+    error.length = 0
+
+
+    //worker[taskId].tasks.splice(0, tasks.length, ...newTasks)
+    //worker[taskId].error.splice(0, error.length)
 
     createTransferTask(taskId)
 
@@ -518,9 +529,9 @@ exports.createTransfer = (cacheDir, driver, request) => {
       // stopStream
       let { ...ret } = taskData[taskId]
       let files = worker[taskId].tasks
-      if (ret.error > 0) {
-        ret.error = worker[taskId].error.map(i => files[i])
-      }
+      ret.error = worker[taskId].error
+
+      ret.files = files
       return ret
     } catch (e) {
       console.log(e)
@@ -609,8 +620,8 @@ exports.createDownloader = (cacheDir, driver, request) => {
       responseType: 'stream'
     })
     controller.abort()
-    console.log(headers)
-    let size = headers['content-length']
+
+    let size = +headers['content-length']
     let name = url.split('/').pop()
 
     taskData[taskId].size = size
@@ -629,84 +640,69 @@ exports.createDownloader = (cacheDir, driver, request) => {
     if (!destId) return
 
     try {
-      //当前任务的文件
-      const { done, uploadId: newUploadId, start, completed } = await driver.upload(destId, null, {
-        manual: true,
-        name: src, size, uploadId, conflictBehavior,
-        signal: controller.signal
-      })
-
-      // fast upload
-      if (completed) {
-        taskData[taskId].completed += size
-        taskData[taskId].status = STATUS.SUCCESS
-        return
-      }
-
-      console.log('newUploadId', newUploadId, start)
-
-      taskData[taskId].uploadId = newUploadId
-      taskData[taskId].currentCompleted = start
-
-      //失效, drive plugin 对于无效的uploadId 可自主生成新的upload 并返回
-      if (!newUploadId) {
-        throw { message: 'uploadId is expired.' }
-      }
-
-      let { data: readStream, headers } = await request(srcId, {
-        headers: {
-          range: `bytes=${start}-`
-
-        },
-        responseType: 'stream'
-      })
-
-      readStream.pause()
-
-      let willWait = start != 0 && headers?.['accept-ranges'] != 'bytes'
-
-      if (willWait) {
-        readStream = ignoreStream(readStream, start)
-      }
-
-      //创建一个可计数状态流
-      const stream = createStatsStream((currentCompleted, speed) => {
-        if (taskData[taskId]) {
-          taskData[taskId].currentCompleted = start + currentCompleted
-          taskData[taskId].speed = speed
-        } else {
-          console.log('destroy')
-        }
-      })
 
       const ctrl = createAsyncCtrl()
 
-      worker[taskId] = {
-        cancel() {
-          controller.abort()
-          ctrl.throw({
-            type: 'aborted'
-          })
-          readStream.destroy()
+      const getStream = async (start, uploadId) => {
+        let { data: readStream, headers, status } = await request(srcId, {
+          headers: {
+            range: `bytes=${start}-`
+          },
+          responseType: 'stream'
+        })
+
+
+        if (status != 206 && start != 0) {
+          readStream = ignoreStream(readStream, start)
         }
-      }
 
-      readStream.once('error', (e) => {
-        controller.abort()
-        ctrl.throw(e)
-      })
+        //创建一个可计数状态流
+        statsStream(readStream, (currentCompleted, speed) => {
+          if (taskData[taskId]) {
+            taskData[taskId].currentCompleted = start + currentCompleted
+            taskData[taskId].speed = speed
+          } else {
+            console.log('destroy')
+          }
+        })
 
-      readStream.pipe(stream)
+        worker[taskId] = {
+          cancel() {
+            controller.abort()
+            ctrl.error({
+              type: 'aborted'
+            })
+            readStream.destroy()
+          }
+        }
 
-      await ctrl.run(done(stream, (uploadId) => {
+        readStream.once('error', (e) => {
+          controller.abort()
+          ctrl.error(e)
+        })
+
         if (taskData[taskId]) {
           taskData[taskId].uploadId = uploadId
         }
+
+        return readStream
+      }
+
+      const updateUploadState = (uploadId) => {
+        taskData[taskId].uploadId = uploadId
+      }
+
+      await ctrl.run(driver.upload(destId, getStream, {
+        manual: true,
+        name: src, size, uploadId, conflictBehavior,
+        signal: controller.signal,
+        updateUploadState
       }))
 
-      //成功计数
       taskData[taskId].success++
       taskData[taskId].status = STATUS.SUCCESS
+      taskData[taskId].completed += size
+      taskData[taskId].currentCompleted = 0
 
     } catch (e) {
       console.log('transfer occur error', e, e.type)
@@ -714,14 +710,14 @@ exports.createDownloader = (cacheDir, driver, request) => {
       // 用户主动 abort 导致的异常 不计入异常文件
       if (e.type == 'aborted') return
 
-      taskData[taskId].uploadId = ''
+      //连接重置 可能是网络问题，而非 serverside 服务异常
+      if (e.type != 'ECONNRESET') {
+        taskData[taskId].uploadId = ''
+      }
       taskData[taskId].message = e.message
       taskData[taskId].status = STATUS.ERROR
-
     }
 
-    taskData[taskId].completed += size
-    taskData[taskId].currentCompleted = 0
   }
 
 
@@ -780,6 +776,8 @@ exports.createDownloader = (cacheDir, driver, request) => {
       } else {
         startTask(taskId)
       }
+    } else if (taskData[taskId].status == STATUS.ERROR) {
+      startTask(taskId)
     }
   }
 

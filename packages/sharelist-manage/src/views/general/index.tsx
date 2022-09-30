@@ -1,11 +1,11 @@
 import { ref, defineComponent, watch, onMounted, toRef, toRefs, reactive } from 'vue'
-import { RadioGroup, Radio, message } from 'ant-design-vue'
-import { SaveOutlined, ImportOutlined } from '@ant-design/icons-vue'
+import { RadioGroup, Radio, message, Tooltip, Textarea } from 'ant-design-vue'
+import { SaveOutlined, ImportOutlined, QuestionCircleOutlined, LoadingOutlined } from '@ant-design/icons-vue'
 import { useSetting, ConfigFieldItem } from '@/hooks/useSetting'
 import { Switch, Modal, Input, InputNumber, Alert, Tabs } from 'ant-design-vue'
 import './index.less'
 
-const { TextArea } = Input
+
 const valueDisplay = (value: any, type: string) => {
   if (type == 'boolean') {
     return Boolean(value) ? '启用' : '禁用'
@@ -25,10 +25,22 @@ const valueDisplay = (value: any, type: string) => {
   }
 }
 
+const StateLabel = defineComponent({
+  props: {
+    loading: {
+      type: Boolean
+    }
+  },
+  setup(props, { slots }) {
+    return () => props.loading ? <LoadingOutlined /> : slots.default?.()
+  }
+})
 export default defineComponent({
   setup() {
 
     const { config, setConfig, exportConfig, configFields } = useSetting()
+
+    const state: Record<string, boolean> = reactive({})
 
     const readFile = (e: any) => {
       var reader = new FileReader(); //这是核心,读取操作就是由它完成.
@@ -44,7 +56,13 @@ export default defineComponent({
       }
     }
 
-    const createInputModifier = ({ label, code, secret, type, help, handler }: ConfigFieldItem) => {
+    const saveConfig = (code: string, val: any) => {
+      state[code] = true
+      setConfig({ [code]: val }).then(() => {
+        delete state[code]
+      })
+    }
+    const createInputModifier = ({ label, code, secret, type, help, handler, validator }: ConfigFieldItem) => {
       const modifier = ref(secret ? '' : config[code])
       const handleChange = (e: any) => modifier.value = e.target.value
       const handleChangeValue = (e: unknown) => modifier.value = e as number
@@ -62,13 +80,19 @@ export default defineComponent({
             {
               type == 'number' ?
                 <InputNumber defaultValue={modifier.value} onChange={handleChangeValue} style="width:100%;" placeholder="请输入" /> :
-                <TextArea defaultValue={modifier.value} onChange={handleChange} placeholder="请输入" />
+                <Textarea defaultValue={modifier.value} onChange={handleChange} placeholder="请输入" />
             }
 
           </div>
         ),
         onOk: () => {
-          setConfig({ [code]: modifier.value })
+          if (validator) {
+            if (!validator(modifier.value, lastVal)) {
+              message.error('不符合要求')
+              return Promise.reject()
+            }
+          }
+          saveConfig(code, modifier.value)
           handler?.(modifier.value, lastVal)
         },
       })
@@ -83,11 +107,11 @@ export default defineComponent({
         class: 'pure-modal',
         content: (
           <div>
-            <TextArea defaultValue={modifier.value} onChange={handleChange} style={{ height: '150px' }} placeholder="请输入" />
+            <Textarea defaultValue={modifier.value} onChange={handleChange} style={{ height: '150px' }} placeholder="请输入" />
           </div>
         ),
         onOk: () => {
-          setConfig({ [code]: modifier.value.split('\n').filter(Boolean) })
+          saveConfig(code, modifier.value.split('\n').filter(Boolean))
         },
       })
     }
@@ -112,7 +136,7 @@ export default defineComponent({
           </div>
         ),
         onOk: () => {
-          setConfig({ [code]: modifier.value })
+          saveConfig(code, modifier.value)
         },
       })
     }
@@ -137,21 +161,21 @@ export default defineComponent({
                     <div class="item">
                       <div class="item__header">
                         <div class="item__meta">
-                          <h4 class="item__meta-title">{i.label}</h4>
+                          <h4 class="item__meta-title">{i.label}{i.help ? <Tooltip title={i.help}><QuestionCircleOutlined style={{ marginLeft: '8px', 'fontSize': '13px' }} /></Tooltip> : null} </h4>
                           <div class="item__meta-desc">{i.secret ? '' : valueDisplay(config[i.code], i.type)}</div>
                         </div>
                       </div>
                       <div class="item-action">
                         {i.type == 'boolean' ? (
-                          <Switch checked={config[i.code]} onChange={(e) => setConfig({ [i.code]: e })} />
+                          <Switch checked={config[i.code]} loading={state[i.code]} onChange={(e) => saveConfig(i.code, e)} />
                         ) : i.type == 'string' || i.type == 'textarea' ? (
-                          <a onClick={() => createInputModifier(i)}>修改</a>
+                          <StateLabel loading={state[i.code]}><a onClick={() => createInputModifier(i)}>修改</a></StateLabel>
                         ) : i.type == 'number' ? (
-                          <a onClick={() => createInputModifier(i)}>修改</a>
+                          <StateLabel loading={state[i.code]}><a onClick={() => createInputModifier(i)}>修改</a></StateLabel>
                         ) : i.type == 'array' ? (
-                          <a onClick={() => createListModifier(i.label, i.code)}>修改</a>
+                          <StateLabel loading={state[i.code]}><a onClick={() => createListModifier(i.label, i.code)}>修改</a></StateLabel>
                         ) : i.type == 'option' ? (
-                          <a onClick={() => createOptionModifier(i.label, i.code)}>修改</a>
+                          <StateLabel loading={state[i.code]}><a onClick={() => createOptionModifier(i.label, i.code)}>修改</a></StateLabel>
                         ) : null}
                       </div>
                     </div>

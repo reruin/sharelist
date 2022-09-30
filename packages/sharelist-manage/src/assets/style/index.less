@@ -5,6 +5,7 @@
 @import 'ant-design-vue/lib/radio/style/index-pure.less';
 @import 'ant-design-vue/lib/breadcrumb/style/index-pure.less';
 @import 'ant-design-vue/lib/input/style/index-pure.less';
+@import 'ant-design-vue/lib/input-number/style/index-pure.less';
 @import 'ant-design-vue/lib/checkbox/style/index-pure.less';
 @import 'ant-design-vue/lib/message/style/index-pure.less';
 @import 'ant-design-vue/lib/modal/style/index-pure.less';
@@ -103,9 +104,12 @@ ul,ol{
 }
 
 .pure-modal{
+  z-index:1001;
   .ant-modal-content{ border-radius: 5px;}
   .ant-modal-body{ padding:20px;}
-  .anticon-exclamation-circle{ display: none;}
+  .anticon-exclamation-circle,
+  .anticon-info-circle
+  { display: none;}
   .ant-modal-confirm-title{
     // border-bottom:1px solid #ddd;
     padding-bottom: 12px;
@@ -328,10 +332,13 @@ ul,ol{
   }
 }
 
+.ant-modal-mask,.ant-modal-wrap{
+  z-index: 1030;
+}
 
 .sl-input{
   border-radius: 6px;
-  box-shadow: 0 1px 5px rgb(0 0 0 / 12%);
+  // box-shadow: 0 1px 5px rgb(0 0 0 / 12%);
   border-color:transparent;
 }
 

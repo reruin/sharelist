@@ -7,7 +7,7 @@ import useDisk from '../useDisk'
 import { byte, formatFile } from '@/utils/format'
 import { useUpload } from '../upload'
 import './index.less'
-import { Meta } from '../meta'
+import { Meta, MetaLite } from '../meta'
 
 export enum STATUS {
   INIT = 1, //1 正在生成任务(解析文件)
@@ -47,7 +47,7 @@ export default defineComponent({
   setup(props, ctx) {
     let request = useApi()
     const { setPath } = useDisk()
-    const { tasks: uploadTasks, remove: removeUpload, pause: pauseUpload, resume: resumeUpload, get: queryUpload } = useUpload()
+    const { tasks: uploadTasks, remove: removeUpload, pause: pauseUpload, resume: resumeUpload } = useUpload()
 
     const { data, runAsync, loading, cancel } = useRequest<TaskSet>(async () => {
       let res = await request.tasks()
@@ -60,7 +60,14 @@ export default defineComponent({
     })
 
     const navSrc = (i: ITask) => {
-      if (!i.srcId.startsWith('http')) setPath({ path: '/' + i.src })
+      if (!i.srcId.startsWith('http')) {
+        // it's a file
+        if (i.count == 1) {
+          setPath({ path: '/' + i.src.split('/').slice(0, -1).join('/') })
+        } else {
+          setPath({ path: '/' + i.src })
+        }
+      }
     }
 
     const navDest = (i: ITask) => {
@@ -85,33 +92,61 @@ export default defineComponent({
       }
     }
 
+    const retry = async (taskId: string, modal: any) => {
+      let res = await request.retryTask(taskId)
+      if (res.error) {
+        message.error(res.error.message)
+      } else {
+        message.success('操作成功')
+        modal.destroy()
+      }
+    }
+
     const onQuery = async (i: ITask) => {
       let res = await request.task(i.id)
       if (res.error && !res.id) {
         message.error(res.error.message)
       } else {
-        useShowFiles(res.error || [], i.id)
+        let files = res.files || [], error = res.error || [], index = res.index
+        // 0 waiting 1 progress 2 success 3 fail
+        files.forEach((i: IFile, idx: number) => {
+          if (error.includes(idx)) {
+            i.status = 3
+          } else {
+            i.status = idx < index ? 2 : idx > index ? 0 : 1
+          }
+        })
+        useShowFiles(files, i.id, '以下文件移动失败', retry)
       }
     }
 
-    const useShowFiles = (data: Array<any>, taskId: string) => {
-      data.forEach(i => {
-        i.name = i.dest + '/' + i.name
+    const onDownloadResume = async (i: ITask) => {
+      let res = await request.resumeDownload(i.id)
+      if (res.error) {
+        message.error(res.error.message)
+      } else {
+        message.success('操作成功')
+      }
+    }
+
+    const onDownloadPause = async (i: ITask) => {
+      console.log('pause', i.id)
+      let res = await request.pauseDownload(i.id)
+      if (res.error) {
+        message.error(res.error.message)
+      } else {
+        message.success('操作成功')
+      }
+    }
+
+    const useShowFiles = (files: Array<any>, taskId: string, tips: string, retry?: any) => {
+      let data = files.map((i: IFile) => {
+        i.name = (i.dest ? `${i.dest}/` : '') + i.name
         i.type = 'file'
         i.ext = i.name.split('.').pop()
         formatFile(i)
-
+        return i
       })
-      const retry = async () => {
-        let res = await request.retryTask(taskId)
-        if (res.error) {
-          message.error(res.error.message)
-        } else {
-          message.success('操作成功')
-          modal.destroy()
-        }
-      }
-
       const modal = Modal.confirm({
         class: 'pure-modal pure-modal-hide-footer',
         width: '500px',
@@ -121,22 +156,27 @@ export default defineComponent({
           <div>
             <div class="modal">
               <div class="modal-body">
-                <Alert message="以下文件移动失败" type="info" />
                 <div class="task-error">
                   {
-                    data.map(i => <Meta class="error-item" data={i} />)
+                    data.map(i => <MetaLite class="error-item" data={i} />)
                   }
                 </div>
               </div>
-              <div class="modal-footer">
-                <Button type="primary" onClick={() => retry()}>重试</Button>
-              </div>
+              {
+                retry ? <div class="modal-footer">
+                  <Button type="primary" onClick={() => retry(taskId, modal)}>重试</Button>
+                </div> : null
+              }
+
             </div>
           </div>
         ),
       })
     }
 
+    const queryUpload = async (i: ITask) => {
+      useShowFiles(i.files.filter((i: IFile) => i.message), i.id, '以下文件上传失败')
+    }
 
     onUnmounted(() => {
       cancel()
@@ -164,9 +204,14 @@ export default defineComponent({
     const createTitle = (i: ITask, mid: string) => {
       let src = i.src.split('/').pop()
       let dest = i.dest.split('/').pop()
+      let attrs: Record<string, any> = {}
+      if (i.srcId.startsWith('http')) {
+        attrs.href = i.srcId
+        attrs.target = '_blank'
+      }
       return <div>
         <div class="item__title">
-          <a onClick={() => navSrc(i)} class="ellipsis" style="width:38%" title={src}>{src}</a>
+          <a onClick={() => navSrc(i)} class="ellipsis" style="width:38%" title={src} {...attrs}>{src}</a>
           <span class="item__title-link" style="margin:0 5px;">{mid}</span>
           <a onClick={() => navDest(i)} class="ellipsis" style="width:38%" title={dest}>{dest}</a>
         </div>
@@ -198,9 +243,11 @@ export default defineComponent({
         <div class="action">
           <span>{
             i.status == STATUS.PAUSE ? <ReloadOutlined onClick={() => onResume(i)} style={{ fontSize: '12px' }} /> :
-              i.status == STATUS.PROGRESS ? <PauseOutlined onClick={() => onPause(i)} style={{ fontSize: '12px' }} /> :
-                (i.status == STATUS.ERROR || i.status == STATUS.DONE_WITH_ERROR) ? <InfoCircleOutlined onClick={() => onQuery(i)} style={{ fontSize: '12px' }} /> : null}
+              i.status == STATUS.PROGRESS ? <PauseOutlined onClick={() => onPause(i)} style={{ fontSize: '12px' }} /> : null}
           </span>
+          {
+            i.status != STATUS.PROGRESS ? <span style="margin-left:5px;" onClick={() => onQuery(i)}><InfoCircleOutlined style={{ fontSize: '12px' }} /></span> : null
+          }
           <span style="margin-left:5px;" onClick={() => remove(i)}><CloseOutlined style={{ fontSize: '12px' }} /></span>
         </div>
       </div>
@@ -233,9 +280,9 @@ export default defineComponent({
       <div class="item__foot">
         <div class="action">
           <span>{
-            i.status == STATUS.PAUSE ? <ReloadOutlined onClick={() => onResume(i)} style={{ fontSize: '12px' }} /> :
-              i.status == STATUS.PROGRESS ? <PauseOutlined onClick={() => onPause(i)} style={{ fontSize: '12px' }} /> :
-                (i.status == STATUS.ERROR || i.status == STATUS.DONE_WITH_ERROR) ? <InfoCircleOutlined onClick={() => onQuery(i)} style={{ fontSize: '12px' }} /> : null}
+            i.status == STATUS.PAUSE ? <ReloadOutlined onClick={() => onDownloadResume(i)} style={{ fontSize: '12px' }} /> :
+              i.status == STATUS.PROGRESS ? <PauseOutlined onClick={() => onDownloadPause(i)} style={{ fontSize: '12px' }} /> :
+                (i.status == STATUS.ERROR || i.status == STATUS.DONE_WITH_ERROR) ? <ReloadOutlined onClick={() => onDownloadResume(i)} style={{ fontSize: '12px' }} /> : null}
           </span>
           <span style="margin-left:5px;" onClick={() => removeDownloadTask(i)}><CloseOutlined style={{ fontSize: '12px' }} /></span>
         </div>

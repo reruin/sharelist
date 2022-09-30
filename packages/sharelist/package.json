@@ -10,7 +10,7 @@
     "test": "echo \"Error: no test specified\" && exit 1",
     "changelog": "conventional-changelog -p angular -i CHANGELOG.md -s --commit-path .",
     "pkg": "pkg . --output build/sharelist --targets linux-x64,linux-arm64,linuxstatic-armv7,macos-x64,win-x64 --public-packages '*'",
-    "pkg-local": "pkg . --output build/sharelist --targets node16-win-x64",
+    "pkg-local": "pkg . --output build/sharelist --targets node16-win-x64 --compress",
     "pkg-linux": "pkg . --output build/sharelist --targets node16-linux-x64",
     "release": "node ../../scripts/release.js --skipBuild --skipNpmPublish"
   },

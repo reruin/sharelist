@@ -14,6 +14,8 @@ const { isFunction, isClass, createCache } = utils
 
 const plugins = []
 
+const DRIVE_KEY = Symbol('drive_key')
+
 const error = (error) => {
   console.trace(error)
   throw error
@@ -79,7 +81,9 @@ exports.createPluginLoader = async (options) => {
       console.log('  - mount: ' + id)
 
       //privacy
-      let getKey = () => utils.hash('sharelist_' + (config.key || (keyProp ? config[keyProp] : id) || protocol))
+      let getKey = () => {
+        return utils.hash('sharelist_' + (config[DRIVE_KEY] || (keyProp ? config[keyProp] : id) || protocol))
+      }
 
       let configer = {
         get() {
@@ -177,9 +181,10 @@ exports.createPluginLoader = async (options) => {
     let drives = plugin?.drives || []
 
     let hit = drives.find(i => i.getKey() == key)
-
+    if (!hit) {
+      console.log(key, drives.map(i => i.getKey()), drives)
+    }
     if (!hit) return {}
-
     return { name: hit.name, drive: hit.drive, config: plugin.options, id: path || plugin.options?.defaultRoot, encode: hit.encode, protocol, isRoot: !path || (path == plugin.options?.defaultRoot) }
   }
 
@@ -354,6 +359,7 @@ exports.createPluginLoader = async (options) => {
   }
 
   const inject = {
+    DRIVE_KEY,
     config,
     cache,
     createCache,

@@ -1,16 +1,18 @@
 
 const path = require('path')
 
-const appInfo = {
+const env = {
   baseDir: path.join(__dirname, '../'),
+  cacheDir: path.join(!process.pkg ? __dirname : process.execPath, '../cache'),
   pkg: !!process.pkg,
   dev: process.env.NODE_ENV === 'dev'
 }
 
 module.exports = {
-  env: appInfo,
-  cacheDir: path.join(appInfo.pkg ? process.cwd() : appInfo.baseDir, './cache'),
-  pluginDir: /*appInfo.dev ? path.join(process.cwd(), '../sharelist-plugin/lib') : */path.join(appInfo.baseDir, './plugin'),
-  themeDir: [path.join(appInfo.baseDir, './web'), path.join(appInfo.pkg ? process.cwd() : appInfo.baseDir, './cache/theme')],
-  manageDir: path.join(appInfo.baseDir, './manage'),
+  env,
+  cacheDir: env.cacheDir,
+  pluginDir: path.join(env.cacheDir, 'plugin'),
+  themeDir: [path.join(env.baseDir, 'web'), path.join(env.cacheDir, 'theme')],
+  manageDir: path.join(env.baseDir, 'manage'),
+  defaultPluginsFile: path.join(env.baseDir, 'plugins.json'),
 }

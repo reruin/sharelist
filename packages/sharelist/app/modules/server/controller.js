@@ -322,24 +322,22 @@ module.exports = (sharelist, appConfig) => {
 
     //查询/创建上传 ，即使后端服务重启后 查询依旧有效
     async createUpload(ctx) {
-      console.log('here')
       let { size, hash, hash_type, id, name, upload_id, dest } = ctx.request.body
       let options = { size, name, uploadId: upload_id }
 
       if (hash_type && hash) {
         options[hash_type] = hash
       }
-      options.manual = true
-
-      stream = emptyStream()
 
       if (dest) {
         let dests = dest.split('/')
+        console.log(dests, 'is')
         let parent = await sharelist.driver.mkdir(id, dests, {}, true)
         if (parent?.id) id = parent.id
       }
 
-      let res = await sharelist.driver.upload(id, stream, options)
+      let res = await sharelist.driver.upload(id, null, options)
+
       ctx.body = { uploadId: res.uploadId, start: res.start, completed: res.completed }
 
     },
@@ -389,26 +387,40 @@ module.exports = (sharelist, appConfig) => {
         transfer, download
       }
     },
-    async task(ctx) {
+    async transfer(ctx) {
       let id = ctx.params.id
       ctx.body = await sharelist.transfer.get(id)
     },
-    async removeTask(ctx) {
+    async removeTransfer(ctx) {
       let id = ctx.params.id
       ctx.body = await sharelist.transfer.remove(id)
     },
-    async resumeTask(ctx) {
+    async resumeTransfer(ctx) {
       let id = ctx.params.id
       ctx.body = await sharelist.transfer.resume(id)
     },
-    async pauseTask(ctx) {
+    async pauseTransfer(ctx) {
       let id = ctx.params.id
       ctx.body = await sharelist.transfer.pause(id)
     },
-    async retryTask(ctx) {
+    async retryTransfer(ctx) {
       let id = ctx.params.id
       ctx.body = await sharelist.transfer.retry(id)
     },
+
+    async remoteDownloadResume(ctx) {
+      let id = ctx.params.id
+      ctx.body = await sharelist.downloader.resume(id)
+    },
+    async remoteDownloadPause(ctx) {
+      let id = ctx.params.id
+      ctx.body = await sharelist.downloader.pause(id)
+    },
+    async remoteDownloadRemove(ctx) {
+      let id = ctx.params.id
+      ctx.body = await sharelist.downloader.remove(id)
+    },
+
     async remove(ctx) {
       let { id } = ctx.request.body
       if (id) {

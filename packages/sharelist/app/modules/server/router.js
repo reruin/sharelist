@@ -46,14 +46,16 @@ module.exports = (app, sharelist, api, mergeRoutes) => {
 
     .get('/api/drive/tasks', api.tasks)
 
-    .get('/api/drive/task/transfer/:id', api.task)
-    .delete('/api/drive/task/transfer/:id', api.removeTask)
-    .get('/api/drive/task/transfer/:id/resume', api.resumeTask)
-    .get('/api/drive/task/transfer/:id/pause', api.pauseTask)
-    .put('/api/drive/task/transfer/:id/retry', api.retryTask)
+    .get('/api/drive/task/transfer/:id', api.transfer)
+    .delete('/api/drive/task/transfer/:id', api.removeTransfer)
+    .put('/api/drive/task/transfer/:id/resume', api.resumeTransfer)
+    .put('/api/drive/task/transfer/:id/pause', api.pauseTransfer)
+    .put('/api/drive/task/transfer/:id/retry', api.retryTransfer)
 
     .post('/api/drive/task/remote_download', api.remoteDownload)
-    .delete('/api/drive/task/remote_download/:id', api.removeRemoteDownload)
+    .put('/api/drive/task/remote_download/:id/pause', api.remoteDownloadPause)
+    .put('/api/drive/task/remote_download/:id/resume', api.remoteDownloadResume)
+    .delete('/api/drive/task/remote_download/:id', api.remoteDownloadRemove)
 
 
     .get('/api/config/:field', api.configField)

@@ -1,7 +1,7 @@
 import { defineComponent, withDirectives, ref, getCurrentInstance, Ref } from "vue";
 import { Input, Modal, message, Alert, Checkbox, RadioGroup, Radio } from 'ant-design-vue'
 import useDisk from '../useDisk'
-import { EditOutlined, ScissorOutlined, CloudDownloadOutlined, CloudUploadOutlined, DownloadOutlined } from '@ant-design/icons-vue'
+import { EditOutlined, ScissorOutlined, CloudDownloadOutlined, CloudUploadOutlined, DownloadOutlined, InfoCircleOutlined } from '@ant-design/icons-vue'
 import { useApi } from "@/hooks/useApi";
 import { Meta, Tree } from '../meta'
 import { useApiConfirm } from '@/hooks/useConfirm'
@@ -542,8 +542,36 @@ export const useActions = (diskIntance: any) => {
     })
   }
 
+
+  const showInfo = (file: IFile) => {
+    const modal = Modal.info({
+      class: 'pure-modal',
+      width: '500px',
+      closable: true,
+      appContext,
+      autoFocusButton: null,
+      // title: <div><InfoCircleOutlined style={{ fontSize: '18px', marginRight: '8px' }} />文件</div>,
+      content: () => (
+        <div>
+          <Meta style="margin:16px 0;" data={file} />
+          <div class="file-detail">
+            <div class="file-detail__item">
+              <h4 class="file-detail__item-label">全局URI</h4>
+              <div class="file-detail__item-content" style="font-size:10px;">{file.id}</div>
+            </div>
+            <div class="file-detail__item">
+              <h4 class="file-detail__item-label">目录ID</h4>
+              <div class="file-detail__item-content" style="font-size:10px;">{file.extra?.fid}</div>
+            </div>
+          </div>
+        </div>
+      ),
+    })
+  }
+
+
   return {
     rename, move, remove, mkdir, flashDownload, uploadConfirm,
-    setDisk, addDisk, removeDisk, remoteDownload
+    setDisk, addDisk, removeDisk, remoteDownload, showInfo
   }
 }

@@ -28,11 +28,13 @@ const api: Array<unknown> = [
 
   ['tasks', 'GET /api/drive/tasks?t=:$R', { token: true }],
   ['task', 'GET /api/drive/task/transfer/:$1?t=:$R', { token: true }],
-  ['resumeTask', 'GET /api/drive/task/transfer/:$1/resume?t=:$R', { token: true }],
-  ['pauseTask', 'GET /api/drive/task/transfer/:$1/pause?t=:$R', { token: true }],
+  ['resumeTask', 'PUT /api/drive/task/transfer/:$1/resume?t=:$R', { token: true }],
+  ['pauseTask', 'PUT /api/drive/task/transfer/:$1/pause?t=:$R', { token: true }],
   ['removeTask', 'DELETE /api/drive/task/transfer/:$1', { token: true }],
   ['retryTask', 'PUT /api/drive/task/transfer/:$1/retry', { token: true }],
   ['remoteDownload', 'POST /api/drive/task/remote_download', { token: true }],
+  ['pauseDownload', 'PUT /api/drive/task/remote_download/:$1/pause', { token: true }],
+  ['resumeDownload', 'PUT /api/drive/task/remote_download/:$1/resume', { token: true }],
   ['removeDownloadTask', 'DELETE /api/drive/task/remote_download/:$1', { token: true }],
 
   ['fileMove', 'POST /api/drive/move', { token: true }],

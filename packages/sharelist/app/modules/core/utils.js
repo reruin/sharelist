@@ -4,8 +4,8 @@ const crypto = require('crypto')
 const { pluginConfigKey } = require('./plugin')
 
 //过滤config 项目
-const filterConfig = ({ config, id }) => {
-  let ret = { id }
+const filterConfig = (config) => {
+  let ret = {}
   for (let i of pluginConfigKey) {
     if (config[i]) ret[i] = config[i]
   }
@@ -66,13 +66,20 @@ exports.getFiles = async (driver, config, runtime) => {
         //路径，相对于drive的绝对路径
         // TODO 搜索结果 应在 web端忽略path 内容
         i.path = i.extra?.path ? [runtime.driveName, i.extra?.path].join('/').replace(/\/{2,}/g, '/') : i.path
+
+        if (i.config) {
+          i.config = filterConfig(i.config)
+        }
       })
     }
 
   }
 
+
   if (data.config) {
-    data.config = filterConfig(data)
+    console.log('SET data config', runtime.driveName)
+    data.config = filterConfig(data.config)
+    data.config.drive = runtime.driveName
   }
 
   return { data }

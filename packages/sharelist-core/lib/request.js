@@ -233,7 +233,6 @@ const request = async (url, options = {}) => {
       }
     }
   }
-
   let res, time = 0
   while (true) {
     try {

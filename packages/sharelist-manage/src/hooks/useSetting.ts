@@ -57,15 +57,26 @@ const fields: Array<fieldGroup> = [
         handler: (nv: string, ov: string) => (location.href = location.href.replace(ov, nv)),
       },
       { code: 'token', label: '后台密码', type: 'string', secret: true },
-      { code: 'proxy_enable', label: '全局中转', type: 'boolean' },
+      { code: 'proxy_enable', label: '全局代理', type: 'boolean' },
       { code: 'index_enable', label: '目录浏览', type: 'boolean' },
+      {
+        code: 'proxy_override_content_type',
+        label: '代理时重写Content-Type',
+        help: '此项是为了兼容某些挂载源，因返回内容的content type异常，导致无法在线播放的问题。',
+        type: 'boolean',
+      },
       {
         code: 'anonymous_download_enable',
         label: '允许下载',
         type: 'boolean',
         help: '禁用此项后，预览也将不可用。',
       },
-      { code: 'expand_single_disk', label: '展开单一挂载盘', type: 'boolean' },
+      {
+        code: 'expand_single_disk',
+        label: '展开单一挂载盘',
+        help: '只有一个挂载盘时，直接展示改挂载盘内容。',
+        type: 'boolean',
+      },
       {
         code: 'per_page',
         label: '列表分页大小',

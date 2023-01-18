@@ -45,6 +45,7 @@ const defaultConfig = {
 
   proxy_server: '',
 
+  proxy_override_content_type: 1,
   webdav_proxy: true,
 
   webdav_user: 'admin',
@@ -59,7 +60,9 @@ const defaultConfig = {
 
   proxy_url: '',
 
-  plugin_source: 'unpkg'
+  plugin_source: 'unpkg',
+
+  default_ua: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/106.0.0.0 Safari/537.36'
 }
 
 exports.openConfigKey = ['manage_path']

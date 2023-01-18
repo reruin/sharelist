@@ -46,6 +46,32 @@ const decode = (p) => {
   return result
 }
 
+const deduceConfig = (drive) => {
+  return {
+    readonly: !drive.upload
+  }
+}
+const createSingleton = (plugin, inject) => {
+  let { module, protocol } = plugin
+
+  return {
+    id: protocol,
+
+    name: protocol,
+
+    config: {},
+
+    configHash: '',
+
+    encode: path => path,
+
+    decode: path => path,
+
+    drive: new module(inject),
+
+    isRoot: () => true
+  }
+}
 
 exports.createPluginLoader = async (options) => {
 
@@ -62,6 +88,8 @@ exports.createPluginLoader = async (options) => {
     const drivesConfig = config.drives.filter(i => i.protocol === protocol)
 
     const keyProp = options.key
+
+    const defaultRoot = options.defaultRoot
 
     const activeDrives = []
 
@@ -96,15 +124,23 @@ exports.createPluginLoader = async (options) => {
         }
       }
 
+      const drive = new module(inject, config)
+      // inject
+      if (!drive.isRoot) {
+        drive.isRoot = function (path) {
+          return (config.root_id || defaultRoot) === path
+        }
+      }
+
       const driveMeta = {
         id,
 
-        // drive name (the disk name that user sets)
+        // drive name (the disk name set by user)
         name,
 
         // Each drive has its unique ID, but it's not suitable for use as cache ID.
-        // user may mount drives with the same config. 
-        // so driver plugin MUST provide a another key ary. 
+        // Because they may use the same configuration.
+        // so it MUST be provide a another key for driver plugin. 
         getKey,
 
         // drive config
@@ -121,7 +157,7 @@ exports.createPluginLoader = async (options) => {
         },
 
         // drive instance
-        drive: new module(inject, config)
+        drive
         // drive: classMode ? new module(sharelist, drive.config) : module.call(module, sharelist, drive.config)
       }
 
@@ -164,6 +200,7 @@ exports.createPluginLoader = async (options) => {
         name: i.name,
         protocol: i.protocol,
         guide: i.options.guide,
+        mountable: i.options.mountable !== false
       }))
     }
   }
@@ -171,40 +208,55 @@ exports.createPluginLoader = async (options) => {
   /**
    * 根据URI获取磁盘元信息
    */
-  const getDrive = (uri) => {
+  const getDrive = async (uri) => {
     let { protocol, key, path } = decode(uri)
 
     let plugin = getDriver(protocol)
 
     if (!plugin) return {}
 
-    let drives = plugin?.drives || []
+    let hit = plugin.singleton || plugin?.drives?.find(i => i.getKey() == key)
 
-    let hit = drives.find(i => i.getKey() == key)
-    if (!hit) {
-      console.log(key, drives.map(i => i.getKey()), drives)
-    }
     if (!hit) return {}
-    return { name: hit.name, drive: hit.drive, config: plugin.options, id: path || plugin.options?.defaultRoot, encode: hit.encode, protocol, isRoot: !path || (path == plugin.options?.defaultRoot) }
+
+    if (hit.decode) {
+      path = hit.decode(uri)
+    }
+
+    let config = Object.assign(deduceConfig(hit.drive), plugin.options || {}, await hit?.drive?.getOptions?.() || {})
+
+    return {
+      name: hit.name,
+      drive: hit.drive,
+      config,
+      id: path || plugin.options?.defaultRoot,
+      encode: hit.encode,
+      protocol,
+      isRoot: hit.isRoot
+    }
   }
 
-  const getRoot = ({ orderBy } = {}) => {
+  const getRoot = async ({ orderBy } = {}) => {
     const disk = []
     for (let i of config.drives) {
       let { id, protocol, name, config } = i
       let plugin = getDriver(protocol)
-      const drive = plugin?.drives?.find(i => i.id == id)
-      // sources 和 drive 未做区分，
-      if (drive) {
+      let hit = plugin?.drives?.find(i => i.id == id)
+      // sources 和 drive 未做区分
+
+      if (hit) {
+        let config = Object.assign({}, plugin.options || {}, await hit?.drive?.getOptions?.() || {})
+
         disk.push({
-          id: drive.encode(config.root_id || plugin.options?.defaultRoot),//protocol + '://' + drive.getKey(),
+          id: hit.encode(config.root_id || plugin.options?.defaultRoot),//protocol + '://' + drive.getKey(),
           name: name,
           size: 0,
           mtime: '',
           ctime: '',
           type: 'drive',
+          config,
           extra: {
-            config_id: id
+            config_id: id,
           }
         })
       }
@@ -217,7 +269,7 @@ exports.createPluginLoader = async (options) => {
       disk.sort((a, b) => a.name > b.name ? aVal : bVal)
     }
 
-    return { id: 'root://', type: 'folder', driveName: '', files: disk, config: { pagination: false, globalSearch: false, isRoot: true } }
+    return { id: 'root:', type: 'drive', name: '', files: disk, config: { pagination: false, search: false, isRoot: true } }
   }
 
   // load plugin
@@ -225,7 +277,6 @@ exports.createPluginLoader = async (options) => {
     if (!Array.isArray(newPlugins)) {
       newPlugins = [newPlugins]
     }
-
     // preprocessing: 
     // plugins with the same name will be overwrittenexcept for drivers which differentiated by protocol.
 
@@ -282,8 +333,13 @@ exports.createPluginLoader = async (options) => {
           console.log('load driver ' + protocol, plugins.length)
           driversMap.set(protocol, plugins.length)
         }
-
-        loadDrives(plugin, inject, isDriverUpdated)
+        //singleton
+        if (plugin.options.singleton) {
+          console.log('  - mount: singleton')
+          plugin.singleton = createSingleton(plugin, inject)
+        } else {
+          loadDrives(plugin, inject, isDriverUpdated)
+        }
       } else {
         let existIndex = plugins.findIndex(i => i.name === plugin.name && !i.isDriver)
         if (existIndex >= 0) {

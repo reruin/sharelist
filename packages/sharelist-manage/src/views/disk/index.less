@@ -85,6 +85,8 @@
       cursor: pointer;
       position: relative;
       color:var(--primary-text-color);
+
+
       &:hover{
         background-color: var(--context-hover);
         .item-check{
@@ -103,6 +105,12 @@
         .item-check{
           opacity: 1;
         }
+      }
+
+      &.item--disabled{
+        color: var(--context-3);
+        cursor:not-allowed;
+        pointer-events: none;
       }
      
       .item-icon__ext--md{
@@ -288,4 +296,47 @@
     }
 }
 
+.drive-search{
+ .tips{
+   font-size: 12px;
+   color:var(--context-2);
+   margin-top: 1em;
+ }
+ .search-history__header{
+   font-size: 12px;
+   color:var(--context);
+   margin:1em 0;
+ }
+
+ .drive-search-input{
+   padding:8px;
+   font-size:14px;
+ }
+
+ input{
+   border:none;
+   background-color: transparent;
+   flex:auto;
+  //  border-bottom: 1px solid var(--context-4);
+
+  outline:none;
+ }
+ .search-history__body{
+
+ }
+
+ .search-history__item{
+   display: flex;
+   align-items: center;
+   width:100%;
+   justify-content: space-between;
+   padding:0.8em 8px;
+   border-radius: 3px;
+   cursor: pointer;
+   &:hover{
+     background-color:var(--context-hover);
+   }
+   color:var(--context_primary);
+ }
+}
 // .badge

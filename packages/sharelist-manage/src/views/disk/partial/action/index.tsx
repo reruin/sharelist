@@ -1,19 +1,18 @@
-import { defineComponent, withDirectives, ref, getCurrentInstance, Ref } from "vue";
-import { Input, Modal, message, Alert, Checkbox, RadioGroup, Radio } from 'ant-design-vue'
+import { defineComponent, withDirectives, ref, getCurrentInstance, Ref, computed, reactive } from "vue";
+import { Input, Modal, message, Alert, Checkbox, InputNumber, Radio, Tooltip, Textarea } from 'ant-design-vue'
 import useDisk from '../useDisk'
-import { EditOutlined, ScissorOutlined, CloudDownloadOutlined, CloudUploadOutlined, DownloadOutlined, InfoCircleOutlined } from '@ant-design/icons-vue'
+import { EditOutlined, ScissorOutlined, CloudDownloadOutlined, CloudUploadOutlined, DownloadOutlined, QuestionCircleOutlined } from '@ant-design/icons-vue'
 import { useApi } from "@/hooks/useApi";
 import { Meta, Tree } from '../meta'
 import { useApiConfirm } from '@/hooks/useConfirm'
 import { byte, getFileType, time } from '@/utils/format'
 import { useUpload } from '../upload'
-import Modifier from '../drive-modifier'
+import Modifier from '../modifier'
 import { useSetting } from '@/hooks/useSetting'
 import './index.less'
 import { useFocus } from '@/hooks/useDirective'
 
 // import { IUseSettingResult } from '../useDisk'
-import { modal as T } from '@/components/modal'
 
 interface IFileError extends IFile {
   errorMessage?: string
@@ -69,7 +68,7 @@ const FileSelect = defineComponent({
 
 export const useActions = (diskIntance: any) => {
 
-  let { mutate, setAuth, current, setPath } = diskIntance
+  let { mutate, setAuth, current, setPath, reload } = diskIntance
 
   const appContext = getCurrentInstance()?.appContext;
 
@@ -115,40 +114,54 @@ export const useActions = (diskIntance: any) => {
     })
   }
 
-  const move = (files: IFile | Array<IFile>) => {
+  const move = (file: IFile | Array<IFile>) => {
     let dest: String
 
-    if (!Array.isArray(files)) {
-      files = [files]
-    }
+    let files: Array<IFile> = Array.isArray(file) ? file : [file]
 
-    // 排除 当前目录
-    // 排除 所有子目录
-    let excludePath = [
-      diskIntance.current.path,
-      ...files.filter((i: IFile) => i.type == 'folder').map(i => diskIntance.current.path + '/' + i.name)
-    ]
-
-    let diskRootPath = '/' + diskIntance.current.path.split('/')[1]
-
+    let srcPath = diskIntance.current.path
 
     let isTransfer = ref(false)
 
-    const onSelect = (e: IFile) => {
+    let threadNum = ref(1)
+
+    let buttonProps = reactive({ disabled: true })
+
+    let count = files.length
+    let isSingleTask = count == 1
+    let error: Array<any> = []
+    let current = ref(0)
+    let cancelFlag = ref(false)
+    let key = `${Math.random()}`
+
+    let targetMultiThreading = ref(false)
+    // 排除 当前目录 及 子目录
+    let excludePath = [
+      srcPath,
+      ...files.map(i => i.id)
+    ]
+
+    const onSelect = (e: IFile, targetDiskConfig: any) => {
+      let autoExpand = config.expand_single_disk
+
+      let diskCount = config.drives.length
+
+      let destPath = e.path
+
+      let destIsRoot = destPath == '/'
+
+      // 根目录是磁盘列表
+      let rootIsDiskList = (!autoExpand || diskCount > 1)
+
+      buttonProps.disabled = destPath == srcPath || (destIsRoot && rootIsDiskList)
+
+      isTransfer.value = rootIsDiskList && srcPath.split('/')[1] != destPath.split('/')[1] && !destIsRoot
+
       dest = e.id
-      if (!e.path.startsWith(diskRootPath)) {
-        isTransfer.value = true
-        console.log('WARNNING')
-      } else {
-        isTransfer.value = false
-      }
+
+      targetMultiThreading.value = targetDiskConfig.multiThreading
     }
-    const count = files.length
-    const isSingleTask = count == 1
-    const error: Array<any> = []
-    const current = ref(0)
-    const cancelFlag = ref(false)
-    const key = '' + Math.random()
+
     const execMove = async () => {
 
       message.loading({ content: `正在${isTransfer.value ? '创建迁移任务' : '移动'}`, key, duration: 0 });
@@ -157,7 +170,7 @@ export const useActions = (diskIntance: any) => {
         if (cancelFlag.value) return
         message.loading({ content: `[${current.value + 1}/${count}]` + '正在移动:' + i.name, key, duration: 0 });
 
-        let res = await request.fileUpdate({ id: i.id, dest })
+        let res = await request.fileUpdate({ id: i.id, dest, threadNum: threadNum.value })
         if (res.error) {
           i.error = res.error.message
           error.push(i.id)
@@ -221,26 +234,34 @@ export const useActions = (diskIntance: any) => {
             <div class="modal__body">
               {files.length == 1 ? <Meta style="margin:16px 0;" data={(files as Array<IFile>)[0]} /> : null}
 
-              <Tree onSelect={onSelect} treeStyle={{ height: '250px' }} />
+              <Tree onSelect={onSelect} excludes={excludePath} treeStyle={{ height: '250px' }} />
               {
                 isTransfer.value ? [
                   <Alert style="margin:16px 0" message='您选择的是跨盘移动，后台将自动创建迁移任务。迁移成功后原始位置的文件不会被删除。' type="info" />,
-                  // <div class="setting">
-                  //   <div class="setting__item">
-                  //     <div class="setting__item-label">同名文件</div>
-                  //     <RadioGroup>
-                  //       <Radio value="rename">重命名</Radio>
-                  //       <Radio value="replace">替换</Radio>
-                  //       <Radio value="skip">跳过</Radio>
-                  //     </RadioGroup>
-                  //   </div>
-                  // </div>
+                  <div class="setting small">
+                    {
+                      targetMultiThreading.value ? <div class="setting__item">
+                        <div class="setting__item-label">线程数<Tooltip title="在源挂载盘支持的情况下，设置下载线程数，可提高整体下载速度。建议不要超过10。"><QuestionCircleOutlined style={{ marginLeft: '8px', 'fontSize': '13px' }} /></Tooltip></div>
+                        <InputNumber value={threadNum.value} min={1} onChange={(e) => { threadNum.value = e as number }}></InputNumber>
+                      </div> : null
+                    }
+
+                    {/* <div class="setting__item">
+                      <div class="setting__item-label">同名文件</div>
+                      <RadioGroup>
+                        <Radio value="rename">重命名</Radio>
+                        <Radio value="replace">替换</Radio>
+                        <Radio value="skip">跳过</Radio>
+                      </RadioGroup>
+                    </div> */}
+                  </div>
                 ] : null
               }
             </div>
           </div>
         </div>
       ),
+      okButtonProps: buttonProps,
       onOk: () => {
         execMove()
       },
@@ -285,25 +306,31 @@ export const useActions = (diskIntance: any) => {
   }
 
   const flashDownload = (i: any) => {
-    let name = ref('')
-    let hash = ref('')
+    let options = typeof i.hashUpload == 'string' ? { type: i.hashUpload } : i.hashUpload
 
-    const onSave = async () => {
-      console.log('>>', hash, name)
-      if (hash.value && name.value) {
-        let res = await request.fileHashDownload({ id: i.id, hash: hash.value, name: name.value })
-        // console.log(res)
-        if (res.error) {
-          message.error(res.error.message)
-          throw new Error()
-        } else {
-          message.success('秒传成功')
-          mutate(res)
-          modal.destroy()
-        }
-      }
+    let params = {
+      name: '',
+      hash: '',
+      size: 0
     }
 
+
+    const onSave = async () => {
+      if (options.size && !params.size) return
+      if (!params.hash || !params.name) return
+
+      let res = await request.fileHashDownload({ id: i.id, ...params })
+      // console.log(res)
+      if (res.error) {
+        message.error(res.error.message)
+        throw new Error()
+      } else {
+        message.success('秒传成功')
+        // mutate(res)
+        modal.destroy()
+        reload()
+      }
+    }
 
     const modal = Modal.confirm({
       class: 'pure-modal',
@@ -316,10 +343,14 @@ export const useActions = (diskIntance: any) => {
           <div class="modal">
             <div class="modal__body">
               {
-                i.uploadHash ? <Alert message={'当前云盘支持通过文件 ' + i.uploadHash + ' 值秒传'} type="info" /> : <Alert message="当前云盘不支持此功能" banner type="error" />
+                options?.type ? <Alert message={'当前云盘支持通过文件 ' + options.type + ' 值秒传'} type="info" /> : <Alert message="当前云盘不支持此功能" banner type="error" />
               }
-              <Input class="sl-input" placeholder={`请输入${i.uploadHash || ''}`} style="padding:1em;margin-top:16px;" defaultValue={hash.value} onChange={e => (hash.value = e.target.value as string)} />
-              <Input class="sl-input" placeholder='文件名' style="padding:1em;margin-top:16px;" defaultValue={name.value} onChange={e => (name.value = e.target.value as string)} />
+              <Input class="sl-input" placeholder={`${options.type.toUpperCase() || ''}`} style="padding:1em;margin-top:16px;" onChange={e => (params.hash = e.target.value as string)} />
+              <Input class="sl-input" placeholder='文件名' style="padding:1em;margin-top:16px;" onChange={e => (params.name = e.target.value as string)} />
+              {
+                options?.size ? <InputNumber class="sl-input" placeholder='文件大小' style="padding:1em;width:100%;margin-top:16px;" onChange={value => (params.size = value as number)} /> : null
+              }
+
             </div>
           </div>
         </div>
@@ -503,10 +534,11 @@ export const useActions = (diskIntance: any) => {
 
   const remoteDownload = (i: any) => {
     let url = ref('')
+    let threadNum = ref(1)
 
     const onSave = async () => {
       if (url.value) {
-        let res = await request.remoteDownload({ dest: i.id, url: url.value })
+        let res = await request.fileUpdate({ dest: i.id, id: url.value, threadNum: threadNum.value })
         if (res.error) {
           message.error(res.error.message)
           throw new Error()
@@ -529,11 +561,21 @@ export const useActions = (diskIntance: any) => {
           <div class="modal">
             <div class="modal__body">
               {
-                i.remoteDownload != false ? <Alert message={'sharelist将在后台完成下载和上传过程。'} type="info" /> : <Alert message="当前挂载盘不支持此功能" banner type="error" />
+                i.remoteDownload != false ? <Alert message={'sharelist将在后台创建下载任务。注意：此离线下载并非挂载盘原生提供的功能。'} type="info" /> : <Alert message="当前挂载盘不支持此功能" banner type="error" />
+              }
+
+              {
+                useFocus(<Textarea class="sl-input" placeholder={`请输入URL`} style="margin-top:16px;" defaultValue={url.value} onChange={e => (url.value = e.target.value as string)} />)
               }
               {
-                useFocus(<Input class="sl-input" placeholder={`请输入URL`} style="padding:1em;margin-top:16px;" defaultValue={url.value} onChange={e => (url.value = e.target.value as string)} />)
+                i.multiThreading ? <div class="setting small">
+                  <div class="setting__item">
+                    <div class="setting__item-label">线程数<Tooltip title="设置下载线程数，可提高整体下载速度。建议不要超过10。"><QuestionCircleOutlined style={{ marginLeft: '8px', 'fontSize': '13px' }} /></Tooltip></div>
+                    <InputNumber class="sl-input" value={threadNum.value} min={1} onChange={(e) => { threadNum.value = e as number }}></InputNumber>
+                  </div>
+                </div> : null
               }
+
             </div>
           </div>
         </div>

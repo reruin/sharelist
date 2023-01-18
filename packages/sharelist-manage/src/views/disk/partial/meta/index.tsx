@@ -1,4 +1,4 @@
-import { defineComponent, PropType, StyleValue, withModifiers } from "vue";
+import { defineComponent, withModifiers, ref } from "vue";
 import Icon from '@/components/icon'
 import useDisk from '../useDisk'
 import { Spin, Badge } from 'ant-design-vue'
@@ -38,10 +38,10 @@ export const Meta = defineComponent({
             <div class="flex item-desc">{props.data?.error}</div> :
             <div class="flex item-desc">
               {
-                props.data?.ctimeDisplay ? [<span>{props.data?.ctimeDisplay}</span>, <span class="item-dot"></span>] : null
+                props.data?.ctimeDisplay ? <span>{props.data?.ctimeDisplay}</span> : null
               }
               {
-                props.data?.size ? <span>{props.data?.sizeDisplay}</span> : null
+                props.data?.size ? [<span class="item-dot"></span>, <span>{props.data?.sizeDisplay}</span>] : null
               }
             </div>
         }
@@ -92,47 +92,71 @@ export const MetaLite = defineComponent({
 })
 export const Tree = defineComponent({
   props: {
-    'dirMode': {
+    dirMode: {
       type: Boolean
     },
-    'treeStyle': {
+    treeStyle: {
       type: Object
+    },
+    excludes: {
+      type: Array
     }
   },
   emits: ['select'],
   setup(props, ctx) {
+    const routeStacks = ref<Array<any>>([])
 
-    const { loading, files, error, setPath, paths, loadMore, diskConfig, id, current } = useDisk({
+    const { loading, files, error, setPath, paths, loadMore, diskConfig, id, current, onUpdate } = useDisk({
       routeSlient: true,
       new: true,
       filter: (i: IFile) => {
-        return i.type == 'folder' || i.type == 'drive'
+        return (i.type == 'folder' || i.type == 'drive') && !props.excludes?.includes(i.id)
       }
     })
 
-    const onSelect = (data: IFile) => {
+    const onSelect = (data: Partial<IFile>, append = false) => {
 
-      if (!data.path) {
-        data.path = (current.path || '') + '/' + data.name
+      let route: Partial<IFile> = {}
+
+      if (append) {
+        let lastPath = (routeStacks.value[routeStacks.value.length - 1]?.path || '')
+        route.id = data.id
+        route.path = `${lastPath == '/' ? '' : lastPath}` + '/' + data.name
+        route.name = data.name
+        routeStacks.value.push(route)
+      } else {
+        let idx = routeStacks.value.findIndex((i: IFile) => i.path == data.path)
+        console.log(idx)
+        // remote routeStacks
+        if (idx < routeStacks.value.length - 1) {
+          route = routeStacks.value[idx]
+          routeStacks.value.splice(idx + 1)
+        }
       }
-      setPath(data)
 
-      ctx.emit('select', data)
+      setPath(route)
+
+      console.log(diskConfig.value)
+
+      ctx.emit('select', route, data.config || diskConfig.value)
     }
+
+    onUpdate(() => {
+      if (diskConfig.isRoot) {
+        console.log('disabled')
+      }
+    })
 
     const onTagClick = ({ path, index }: any = {}) => {
-      if (path == '/') {
-        setPath({ path: '/' })
-      } else if (index < paths.value.length) {
-        setPath({ path: '/' + paths.value.slice(0, index).join('/') })
-      }
+      console.log('tag', index)
+      onSelect(routeStacks.value[index])
     }
 
-    setPath({ path: '' })
+    onSelect({ path: '', name: '' }, true)
     return () => (
       <div class="drive drive--lite">
         <div class="drive-header">
-          <Breadcrumb onTagClick={onTagClick} size="sm" paths={paths.value} />
+          <Breadcrumb onTagClick={onTagClick} size="sm" paths={routeStacks.value.slice(1).map((i: any) => i.name)} />
         </div>
         <div class="drive-body-wrap">
 
@@ -141,7 +165,7 @@ export const Tree = defineComponent({
               <div style={{ 'overflow': 'auto', 'height': '350px', ...(props.treeStyle || {}) }} class={['drive-body', 'drive-body--list']} >
                 {files.value.map((i: IFile) => {
                   return (
-                    <a class="item" title={i.name} onClick={withModifiers(() => onSelect(i), ['prevent'])}>
+                    <a class={["item", i.config?.readonly ? 'item--disabled' : null]} title={i.name} onClick={withModifiers(() => onSelect(i, true), ['prevent'])}>
                       <div class="item-icon">
                         {
                           i.thumb ?

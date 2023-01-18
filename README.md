@@ -24,8 +24,8 @@ GoogleDrive   |  ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | md5 | x |
 Local File    |  ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | md5/sha1 | x |
 AliyunDrive   |  ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | sha1 | ✓ |
 CaiYun   |  ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | md5 | ✓ |
-CTCloud   |  ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | md5 | x |
-Baidu Netdisk   |  ✓ | x | ✓ | ✓ | ✓ | ✓ | ✓ | md5 | ✓ |
+CTCloud   |  ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | md5 | ✓ |
+Baidu Netdisk   |  ✓ | x | ✓ | ✓ | ✓ | ✓ | ✓ | encrypt(md5) | ✓ |
 
 ## 安装
 ```docker

@@ -35,7 +35,7 @@ module.exports = (sharelist) => {
           return
         }
         console.log('[WebDAV]', ctx.method, ctx.url, '<-->', ctx.ip)
-        console.log(ctx.headers)
+        // console.log(ctx.headers)
         // if (ctx.method == 'PROPPATCH') console.log(ctx.headers)
         let res
         try {

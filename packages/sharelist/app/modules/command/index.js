@@ -76,14 +76,14 @@ const createCommand = (driver, { useProxy, baseUrl } = {}) => ({
       }
     } else {
       let range = getRange(options.reqHeaders.range, data.size) || { start: 0, end: data.size ? (data.size - 1) : '' }
-      let { stream, status, headers, acceptRanges = false } = await driver.createReadStream(data.id, range)
+      let { stream, status, headers, enableRanges = false } = await driver.createReadStream(data.id, range)
       let isReqRange = !!options.reqHeaders.range
       if (stream) {
-        let options = acceptRanges ? { range } : {}
+        let options = enableRanges ? { range } : {}
         let resHeaders = headers || createHeaders(data, options)
         return {
           body: stream,
-          status: status || (isReqRange && acceptRanges ? 206 : 200),
+          status: status || (isReqRange && enableRanges ? 206 : 200),
           headers: resHeaders
         }
       }

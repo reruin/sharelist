@@ -3,6 +3,8 @@ import { useSetting } from '@/hooks/useSetting'
 import { Switch, Modal, Input, Form, Button, Select, Tooltip } from 'ant-design-vue'
 import { useObject } from '@/hooks/useHooks'
 import { QuestionCircleOutlined } from '@ant-design/icons-vue'
+import './index.less'
+
 const { Item: FormItem, useForm } = Form
 
 type FormState = {
@@ -54,7 +56,7 @@ const parseFields = (
       }
     } else if (i.type == 'boolean') {
       formItemsNode.push(
-        <FormItem label={i.label} name={i.key} help={i.help}>
+        <FormItem name={i.key} >
           {{
             label: () => <div class="flex">{i.label}{i.help ? <Tooltip title={i.help}><QuestionCircleOutlined style={{ marginLeft: '8px', 'fontSize': '13px' }} /></Tooltip> : null} </div>,
             default: () => <Switch v-model={[formState[i.key], 'checked']} />
@@ -166,7 +168,7 @@ export default defineComponent({
     })
 
     return () => (
-      <div>
+      <div class="modifier">
         <Form
           ref={(el: any) => (formRef.value = el)}
           class="fix-form--inline"
@@ -175,19 +177,17 @@ export default defineComponent({
           rules={rules.value}
         >
           {formItems.value}
-          <FormItem class="fix-form-item--foot">
-            <div class="flex flex--between">
-              <Button type="primary" onClick={onSave}>
-                确定
-              </Button>
-              {config.guide[formState.protocol] ? (
-                <a target="_blank" href={config.guide[formState.protocol]}>
-                  使用挂载向导
-                </a>
-              ) : null}
-            </div>
-          </FormItem>
         </Form>
+        <div class="modifier__footer">
+          {config.guide[formState.protocol] ? (
+            <a target="_blank" href={config.guide[formState.protocol]}>
+              挂载向导
+            </a>
+          ) : <div></div>}
+          <Button type="primary" onClick={onSave}>
+            确定
+          </Button>
+        </div>
       </div>
     )
   },

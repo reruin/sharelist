@@ -1,6 +1,47 @@
-import { delayToggle, cancelablePromise, useState } from './useHooks'
-import { documentVisibility, whenDocumentVisible } from './useDom'
-import { reactive, ref, Ref, UnwrapRef, toRefs, watch, onUnmounted } from 'vue'
+import { reactive, ref, Ref, toRefs, watch, onUnmounted } from 'vue'
+
+export const useState = <T extends Record<string, any>>(initialState: T = {} as T): [T, (state: T) => T, () => T] => {
+  const state = reactive(initialState)
+  const setState = (val: T, clear = false) => {
+    Object.keys(val).forEach((key) => {
+      Reflect.set(state, key, val[key])
+    })
+    return state as T
+  }
+
+  const clearState = () => {
+    Object.keys(state).forEach((key) => Reflect.deleteProperty(state, key))
+    return state as T
+  }
+
+  return [state as T, setState, clearState]
+}
+
+const docListeners: Array<() => any> = []
+
+export const documentVisibility = ref(!document?.hidden)
+window.addEventListener(
+  'visibilitychange',
+  () => {
+    documentVisibility.value = !document.hidden
+
+    if (documentVisibility.value) {
+      for (let i = 0; i < docListeners.length; i++) {
+        const listener = docListeners[i]
+        listener()
+      }
+    }
+  },
+  false,
+)
+
+export const whenDocumentVisible = (listener: () => any): (() => void) => {
+  docListeners.push(listener)
+  return function unsubscribe() {
+    const index = docListeners.indexOf(listener)
+    docListeners.splice(index, 1)
+  }
+}
 
 type Service<D, P extends any[]> = (...args: P) => Promise<D>
 
@@ -39,7 +80,7 @@ interface RequestActions<D, P extends Array<any>> {
 
 interface RequestCore<D, P extends any[]> extends RequestActions<D, P> {
   state: RequestState<D, P>
-  use: (plugins: Array<PluginResult<D, P>>) => void
+  use: (plugins: Array<Partial<PluginResult<D, P>>>) => void
 }
 
 type RequestResult<D, P extends any[]> = RequestActions<D, P> &
@@ -47,33 +88,30 @@ type RequestResult<D, P extends any[]> = RequestActions<D, P> &
     [prop in keyof RequestState<D, P>]: Ref<RequestState<D, P>[prop]>
   }
 
-interface PluginResult<D, P extends any[]> {
-  before?: (params: P) =>
+interface PluginResult<D = any, P extends any[] = any> {
+  before: (params: P) =>
     | ({
-      stopNow?: boolean
-      returnNow?: boolean
-    } & Partial<RequestState<D, P>>)
+        stopNow?: boolean
+        returnNow?: boolean
+      } & Partial<RequestState<D, P>>)
     | void
 
-  request?: (
-    service: Service<D, P>,
-    params: P,
-  ) => {
-    servicePromise?: Promise<D>
-  }
+  request: (service: Service<D, P>, params: P) => { service?: Promise<D> }
 
-  success?: (data: D, params: P) => void
-  error?: (e: Error, params: P) => void
-  finally?: (params: P, data?: D, e?: Error) => void
-  cancel?: () => void
-  mutate?: (data: D) => void
+  success: (data: D, params: P) => void
+  error: (e: Error, params: P) => void
+  finally: (params: P, data?: D, e?: Error) => void
+  cancel: () => void
+  mutate: (data: D) => void
 }
 
 interface Plugin<D, P extends Array<any>> {
-  (requestInstance: RequestCore<D, P>, options: RequestOptions<D, P>): PluginResult<D, P>
+  (requestInstance: RequestCore<D, P>, options: RequestOptions<D, P>): Partial<PluginResult<D, P>>
 }
 
-const requestCacheMap: Record<string, any> = {}
+type PickMethod<M, C> = {
+  [P in keyof C]: P extends M ? C[P] : never
+}[keyof C]
 
 const useRequestCore = <D, P extends Array<any>>(service: Service<D, P>, options: RequestOptions<D, P> = {}) => {
   const [state, setState] = useState<RequestState<D, P>>({
@@ -83,7 +121,7 @@ const useRequestCore = <D, P extends Array<any>>(service: Service<D, P>, options
     error: undefined,
   })
 
-  const plugins: Array<PluginResult<D, P>> = []
+  const plugins: Array<Partial<PluginResult<D, P>>> = []
 
   //const loading = ref(false)
   // data: Ref<D | undefined> = ref()
@@ -93,27 +131,26 @@ const useRequestCore = <D, P extends Array<any>>(service: Service<D, P>, options
 
   let canceled = false
 
-  const emit = (type: keyof PluginResult<D, P>, ...rest: Array<any>) => {
-    const r = plugins.map((i) => i[type]?.(...rest)).filter(Boolean)
-    return Object.assign({}, ...r)
+  const emit = <T extends keyof PluginResult>(
+    type: T,
+    ...rest: Parameters<PickMethod<T, PluginResult>>
+  ): ReturnType<PickMethod<T, PluginResult>> => {
+    // @ts-expect-error: Unreachable code error
+    return { ...plugins.map((i) => i[type]?.(...rest)).filter(Boolean) }
   }
 
   const runAsync = async (...params: P) => {
     //params.value = args
     canceled = false
-
-    const { returnNow, ...newState } = emit('before', params)
-
+    const { returnNow, ...newState } = emit('before', params) || {}
     setState({
       loading: true,
       params,
       ...newState,
     })
-
     if (returnNow) {
       return Promise.resolve(state.data)
     }
-
     options.onBefore?.(params)
 
     try {
@@ -121,10 +158,11 @@ const useRequestCore = <D, P extends Array<any>>(service: Service<D, P>, options
       if (!servicePromise) {
         servicePromise = service(...params)
       }
+
       const res = await servicePromise
 
       if (canceled) {
-        return new Promise(() => { })
+        return new Promise(() => {})
       }
 
       setState({
@@ -140,7 +178,7 @@ const useRequestCore = <D, P extends Array<any>>(service: Service<D, P>, options
       return res
     } catch (error: any) {
       if (canceled) {
-        return new Promise(() => { })
+        return new Promise(() => {})
       }
 
       setState({
@@ -177,7 +215,7 @@ const useRequestCore = <D, P extends Array<any>>(service: Service<D, P>, options
     emit('cancel')
   }
 
-  const use = (usePlugins: Array<PluginResult<D, P>>) => {
+  const use = (usePlugins: Array<Partial<PluginResult<D, P>>>) => {
     plugins.push(...usePlugins)
   }
 
@@ -221,8 +259,8 @@ export const useRequest = <D, P extends Array<any> = Array<any>>(
   return {
     loading,
     error,
-    data,
-    params,
+    data: data as Ref<D>,
+    params: params as Ref<P>,
     run: requestInstance.run,
     runAsync: requestInstance.runAsync,
     mutate: requestInstance.mutate,
@@ -318,108 +356,3 @@ const useAuto: Plugin<any, Array<any>> = (request, { ready = ref(true), immediat
     },
   }
 }
-
-/**
- * 
- * 
- * 
-type CacheData<T, P> = {
-  data: T
-  param: P
-  time: number
-}
-  const run = (...args: P) => {
-    //params.value = args
-    load.true()
-
-    let err: Error
-
-    runHandler = cancelablePromise(
-      Promise.resolve(service(...args))
-        .then((res: D) => {
-          load.false()
-          options.onSuccess?.(res, args)
-          data.value = res
-          if (options.cacheKey) {
-            requestCacheMap[options.cacheKey] = {
-              data: res,
-              params: args,
-              time: Date.now() + (options?.cacheTime || 300000),
-            }
-          }
-        })
-        .catch((e: Error) => {
-          load.false()
-
-          err = e
-          if (!options.onError) {
-            throw e
-          } else {
-            options.onError(e, args)
-          }
-        })
-        .finally(() => {
-          options.onFinally?.(args, data.value, err)
-          if (options.pollingWhenHidden !== false && !documentVisibility.value) {
-            docVisibleWatcher = whenDocumentVisible(refresh)
-            return
-          }
-
-          if (options?.pollingInterval) {
-            pollHandler = setTimeout(refresh, options.pollingInterval)
-          }
-        }),
-    )
-  }
-
-  const mutate = (val: D, disable = false) => {
-    data.value = val
-    if (!disable) {
-      runWrap(...([] as any))
-    }
-  }
-
-  const cancel = () => {
-    if (pollHandler) {
-      clearTimeout(pollHandler)
-    }
-    docVisibleWatcher?.()
-    runHandler?.()
-  }
-
-  const runWrap = (...args: P) => {
-    if (args.length == 0 && lastArgs) {
-      args = lastArgs
-    } else {
-      lastArgs = args
-    }
-
-    cancel()
-
-    if (options.ready?.value === false) return
-    if (options.cacheKey && requestCacheMap[options.cacheKey] && requestCacheMap[options.cacheKey].time < Date.now()) {
-      return Promise.resolve(requestCacheMap[options.cacheKey].data as T)
-    } else {
-      return run(...args)
-    }
-  }
-
-  const refresh = () => runWrap(...([] as any as P))
-
-  if (options.refreshDeps) {
-    watch(options.refreshDeps, () => {
-      refresh()
-    })
-  }
-
-  if (options?.immediate === true) {
-    if (options.ready) {
-      watch(options.ready, (nv) => {
-        if (nv) refresh()
-      })
-    }
-
-    refresh()
-  }
-
- */

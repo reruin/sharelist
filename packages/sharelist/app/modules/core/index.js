@@ -16,7 +16,7 @@ const { createPlugin } = require('./plugin')
 
 const createTheme = require('./theme')
 
-const { createTransfer, createDownloader } = require('./task')
+const { createTransfer } = require('./task')
 
 module.exports = async (options) => {
   const config = createConfig(path.join(options.cacheDir, 'config.json'))
@@ -42,8 +42,6 @@ module.exports = async (options) => {
   const theme = createTheme(options.themeDir)
 
   const transfer = createTransfer(options.cacheDir, driver, request)
-
-  const downloader = createDownloader(options.cacheDir, driver, request)
 
   const files = (...rest) => utils.getFiles(driver, config, ...rest)
   const file = (...rest) => utils.getFile(driver, config, ...rest)
@@ -94,7 +92,6 @@ module.exports = async (options) => {
     getDownloadUrl,
     getThemeFile,
     transfer,
-    downloader,
     checkAccess,
     request,
     reload,

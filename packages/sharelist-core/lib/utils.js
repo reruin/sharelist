@@ -1,5 +1,7 @@
 const crypto = require('crypto')
 
+const { Transform } = require('node:stream')
+
 const mimeParse = require('mime')
 
 const YAML = require('yaml')
@@ -255,3 +257,139 @@ exports.waitStreamFinish = (src, dst) => new Promise((resolve) => {
   src.pipe(dst)
   src.resume?.()
 })
+
+
+exports.LRUCache = class {
+  constructor(size = 10) {
+    this.size = size
+    this.store = new Map()
+    this.index = []
+  }
+  update(key) {
+    let index = this.index
+    let idx = index.indexOf(key)
+    let cur = index[idx]
+
+    //update index
+    index.splice(idx, 1)
+    index.unshift(cur)
+  }
+  get(key) {
+    const { store } = this
+    // update
+    if (store.has(key)) {
+      this.update(key)
+      return store.get(key)
+    }
+  }
+  set(key, val) {
+    const { store, index } = this
+    if (store.has(key)) {
+      this.update(key)
+    } else {
+      if (store.size >= this.size) {
+        let delKey = index.pop()
+        store.delete(delKey)
+      }
+      index.unshift(key)
+    }
+    store.set(key, val)
+  }
+}
+
+exports.createCache = (options = {}) => {
+  const data = {}
+  const defaultMaxAge = options.defaultMaxAge || 0
+  const get = (id) => {
+    if (id === undefined) return data
+    let ret = data[id]
+    if (ret) {
+      if (Date.now() > ret.$expiredAt) {
+        delete data[id]
+      } else {
+        return ret.data
+      }
+    }
+  }
+
+  const set = (id, value, maxAge) => {
+    data[id] = { data: value, $expiredAt: Date.now() + (maxAge || defaultMaxAge) }
+    return value
+  }
+
+  const clear = (key) => {
+    if (key) {
+      delete data[key]
+    } else {
+      for (let key in data) {
+        delete data[key]
+      }
+    }
+  }
+
+  const remove = (key) => {
+    delete data[key]
+  }
+
+  const walk = () => {
+    // remove expired data
+    for (let key of Object.keys(data)) {
+      get(key)
+    }
+
+    if (Object.keys(data).length > 0) {
+      setTimeout(walk, 60 * 1000)
+    }
+
+  }
+
+  walk()
+
+  return {
+    get, set, remove, clear
+  }
+}
+
+exports.streamMonitor = (initData = {}) => {
+
+  let lastTime = Date.now(), chunkLoaded = 0
+
+  let stats = {
+    loaded: initData.loaded || 0,
+    total: initData.total
+    // parts: initData.parts || {}
+  }
+
+  let counter = 0
+  let setCount = (len, id) => {
+    //分段计数
+    // stats.parts[id] += len
+
+    //整体计数
+    stats.loaded += len
+
+    chunkLoaded += len
+
+    let timePass = Date.now() - lastTime
+    if (timePass >= 1000) {
+      stats.speed = Math.floor(chunkLoaded * 1000 / timePass)
+      lastTime = Date.now()
+      chunkLoaded = 0
+      initData.update?.({ ...stats })
+    }
+  }
+  const probe = () => {
+    let id = counter++
+    // stats.parts[id] = 0
+    return new Transform({
+      transform(chunk, encoding, callback) {
+        // ...
+        setCount(chunk.length, id)
+        callback(null, chunk)
+      }
+    })
+  };
+
+  return { stats, probe }
+
+}

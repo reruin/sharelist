@@ -21,6 +21,7 @@ class Server {
       try {
         await next()
       } catch (error) {
+        console.log(error)
         if (error instanceof Error) {
           ctx.body = { error: { message: error.message } }
         } else {

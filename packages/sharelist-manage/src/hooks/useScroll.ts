@@ -13,6 +13,7 @@ interface actions<T> {
   setNode(el: Element): void
   scrollTo(pos: number): void
   cancel: () => void
+  checkScroll: () => void
   isScroll: Ref<boolean>
 }
 
@@ -41,7 +42,6 @@ export const useScroll = <T extends useScrollOption, P extends Array<any>>(
   const onDomScroll = throttle(() => {
     const { clientHeight, scrollTop, scrollHeight } = el
     isScroll.value = scrollTop > 0
-    console.log(clientHeight, scrollHeight)
     if (scrollHeight - scrollTop - clientHeight < (options?.threshold || 100)) {
       service()
     }

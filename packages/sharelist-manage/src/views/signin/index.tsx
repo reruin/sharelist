@@ -14,7 +14,9 @@ export default defineComponent({
 
     return () => (
       <div class="page-signin">
-        <div class="page-logo"><span>sharelist</span></div>
+        <div class="page-logo">
+          <span>sharelist</span>
+        </div>
         <div class="page-signin-wrap">
           <div class="page-header">登录 / Sign In</div>
 

@@ -15,11 +15,7 @@ const api: Array<unknown> = [
   ['fileDelete', 'POST /api/drive/file/delete', { token: true }],
 
   ['fileCreateUpload', 'POST /api/drive/file/create_upload', { token: true }],
-  [
-    'fileUpload',
-    'POST /api/drive/file/upload?id=:id&name=:name&size=:size&hash=:hash&hash_type=:hash_type&upload_id=:uploadId',
-    { token: true, contentType: 'stream' },
-  ],
+  ['fileUpload', 'POST /api/drive/file/upload?task_id=:taskId', { token: true, contentType: 'stream' }],
   ['fileUploadCancel', 'GET /api/drive/file/cancel_upload/:$1?t=:$R', { token: true }],
   ['fileHashDownload', 'POST /api/drive/file/hash_save', { token: true }],
   ['mkdir', 'POST /api/drive/file/mkdir', { token: true }],

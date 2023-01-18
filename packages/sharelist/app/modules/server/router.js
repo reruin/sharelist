@@ -52,14 +52,13 @@ module.exports = (app, sharelist, api, mergeRoutes) => {
     .put('/api/drive/task/transfer/:id/pause', api.pauseTransfer)
     .put('/api/drive/task/transfer/:id/retry', api.retryTransfer)
 
-    .post('/api/drive/task/remote_download', api.remoteDownload)
-    .put('/api/drive/task/remote_download/:id/pause', api.remoteDownloadPause)
-    .put('/api/drive/task/remote_download/:id/resume', api.remoteDownloadResume)
-    .delete('/api/drive/task/remote_download/:id', api.remoteDownloadRemove)
+    // .post('/api/drive/task/remote_download', api.remoteDownload)
+    // .put('/api/drive/task/remote_download/:id/pause', api.remoteDownloadPause)
+    // .put('/api/drive/task/remote_download/:id/resume', api.remoteDownloadResume)
+    // .delete('/api/drive/task/remote_download/:id', api.remoteDownloadRemove)
 
 
     .get('/api/config/:field', api.configField)
-    // .get('/api/drive/download', api.download)
 
     .post('/api/plugin_store', auth, api.pluginStore)
     .post('/api/plugin_store/install', auth, api.installPlugin)

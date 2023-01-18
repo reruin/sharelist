@@ -1,4 +1,5 @@
 const fs = require('fs')
+const { nanoid } = require('nanoid')
 const path = require('path')
 const { createRuntime, selectSource, send, sendfile, uploadManage, emptyStream, createUpdateManage } = require('./runtime')
 
@@ -10,7 +11,7 @@ module.exports = (sharelist, appConfig) => {
     // if (config.drives) {
     //   config.drives = sharelist.getDisk()
     // }
-    config.drivers = sharelist.driver.getDriver()
+    config.drivers = sharelist.driver.getDriver().filter(i => i.mountable !== false)
 
     config.theme_options = sharelist.theme.get()
 
@@ -65,6 +66,7 @@ module.exports = (sharelist, appConfig) => {
             let download_url = selectSource(data.extra.sources, runtime.params.preview) || data.download_url
             return await send(sharelist, { ...data, download_url, reqHeaders: runtime.headers })
           } else {
+            console.log('here')
             return await send(sharelist, { ...data, reqHeaders: runtime.headers })
           }
         } else {
@@ -117,8 +119,6 @@ module.exports = (sharelist, appConfig) => {
     }
 
   }
-
-  const updateManage = createUpdateManage(sharelist)
 
   const manageReplacer = (data) => {
     const basePath = sharelist.config.manage_path
@@ -300,62 +300,75 @@ module.exports = (sharelist, appConfig) => {
       ctx.body = await list(runtime)
     },
 
-    async transfer(ctx) {
-      ctx.body = await sharelist.transfer.create('/aliyun/sync', '/onedrive/sync')
-    },
     //upload request 有滞后性，需要接口手动停止
     async cancelUpload(ctx) {
       uploadManage.remove(ctx.params.id)
       ctx.body = {}
     },
 
-    async remoteDownload(ctx) {
-      let { url, dest } = ctx.request.body
-      await sharelist.downloader.create(url, dest, true)
-      ctx.body = {}
-    },
-
-    async removeRemoteDownload(ctx) {
-      let id = ctx.params.id
-      ctx.body = await sharelist.downloader.remove(id)
-    },
-
     //查询/创建上传 ，即使后端服务重启后 查询依旧有效
     async createUpload(ctx) {
-      let { size, hash, hash_type, id, name, upload_id, dest } = ctx.request.body
-      let options = { size, name, uploadId: upload_id }
+      let { task_id, ...rest } = ctx.request.body
+
+      if (task_id && uploadManage.getTask(task_id)) {
+        rest = uploadManage.getTask(task_id)
+      }
+
+      let { size, hash, hash_type, id, name, state, dest } = rest
+
+      let options = { size, name, state }
 
       if (hash_type && hash) {
-        options[hash_type] = hash
+        options.hash = hash
+        options.hash_type = hash_type
       }
 
       if (dest) {
         let dests = dest.split('/')
-        console.log(dests, 'is')
         let parent = await sharelist.driver.mkdir(id, dests, {}, true)
         if (parent?.id) id = parent.id
       }
 
       let res = await sharelist.driver.upload(id, null, options)
+      if (res.completed) {
+        ctx.body = { completed: true }
+      } else {
+        let taskId = uploadManage.createTask({
+          id, name, size, hash, hash_type,
+          state: res.state,
+          dest
+        })
 
-      ctx.body = { uploadId: res.uploadId, start: res.start, completed: res.completed }
-
+        ctx.body = { taskId, start: res.start, completed: res.completed }
+      }
     },
     async upload(ctx) {
-      let { size, hash, hash_type, id, name, upload_id } = ctx.query
+      let { task_id, ...rest } = ctx.query
+
+      if (task_id && uploadManage.getTask(task_id)) {
+        rest = uploadManage.getTask(task_id)
+      }
+
+      let { size, hash, hash_type, id, name, upload_id } = rest
 
       let stream = ctx.req
 
       let options = { size, name, uploadId: upload_id }
       if (hash_type && hash) {
-        options[hash_type] = hash
+        options[hash_type] = hash.content
+        options.hash = hash
+        options.hash_type = hash_type
       }
 
       let controller = new AbortController()
       options.signal = controller.signal
 
       if (upload_id) {
-        uploadManage.add({ req: ctx.req, controller }, upload_id)
+        uploadManage.add({ req: ctx.req, controller, taskId: task_id }, upload_id)
+      }
+
+      options.setUploadState = (extraData) => {
+        uploadManage.updateTask(task_id, { extraData })
       }
 
       stream.pause()
@@ -380,12 +393,9 @@ module.exports = (sharelist, appConfig) => {
     },
 
     async tasks(ctx) {
-      let transfer = await sharelist.transfer.all()
-      let download = await sharelist.downloader.all()
+      let tasks = await sharelist.transfer.all()
 
-      ctx.body = {
-        transfer, download
-      }
+      ctx.body = tasks
     },
     async transfer(ctx) {
       let id = ctx.params.id
@@ -406,19 +416,6 @@ module.exports = (sharelist, appConfig) => {
     async retryTransfer(ctx) {
       let id = ctx.params.id
       ctx.body = await sharelist.transfer.retry(id)
-    },
-
-    async remoteDownloadResume(ctx) {
-      let id = ctx.params.id
-      ctx.body = await sharelist.downloader.resume(id)
-    },
-    async remoteDownloadPause(ctx) {
-      let id = ctx.params.id
-      ctx.body = await sharelist.downloader.pause(id)
-    },
-    async remoteDownloadRemove(ctx) {
-      let id = ctx.params.id
-      ctx.body = await sharelist.downloader.remove(id)
     },
 
     async remove(ctx) {
@@ -443,8 +440,8 @@ module.exports = (sharelist, appConfig) => {
       }
     },
     async hashSave(ctx) {
-      let { id, hash, name } = ctx.request.body
-      let res = await sharelist.driver.hashFile(id, { hash, name })
+      let { id, hash, name, size } = ctx.request.body
+      let res = await sharelist.driver.hashUpload(id, { hash, name, size })
       if (res) {
         res.name = name
         res.type = 'file'
@@ -453,7 +450,7 @@ module.exports = (sharelist, appConfig) => {
     },
 
     async update(ctx) {
-      let { id, name, dest, mode } = ctx.request.body
+      let { id, name, dest, mode, threadNum } = ctx.request.body
       if (name) {
         let res = await sharelist.driver.rename(id, name)
         ctx.body = { name: res.name }
@@ -467,7 +464,7 @@ module.exports = (sharelist, appConfig) => {
           let res = await sharelist.driver.mv(id, dest, mode == 'copy')
           ctx.body = {}
         } else {
-          await sharelist.transfer.create(id, dest, true)
+          await sharelist.transfer.create(id, dest, true, { threadNum })
           ctx.body = {}
         }
       }

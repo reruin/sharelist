@@ -11,7 +11,8 @@ const compareSemver = require('semver-compare-lite')
 const md5 = content => crypto.createHash('md5').update(content).digest("hex")
 
 const { request } = require('@sharelist/core')
-const { config } = require('process')
+
+const { HTTPDriver, HTTPSDriver } = require('./http')
 
 const plugins_mirror = {
   'github': 'https://raw.githubusercontent.com/linkdrive/plugins/master',
@@ -118,7 +119,7 @@ class Plugin {
       }
     }
 
-    return ret
+    return [HTTPDriver, HTTPSDriver, ...ret]
   }
 
   get(id) {
@@ -234,4 +235,4 @@ exports.createPlugin = (options) => {
   return new Plugin(options)
 }
 
-exports.pluginConfigKey = ['globalSearch', 'localSearch', 'uploadHash', 'hash', 'isRoot']
+exports.pluginConfigKey = ['search', 'hash', 'isRoot', 'multiThreading', 'readonly']

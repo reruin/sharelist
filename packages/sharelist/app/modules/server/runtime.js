@@ -6,6 +6,7 @@ const calculate = require('etag')
 const stat = promisify(fs.stat)
 const mime = require('mime')
 const { Readable } = require('stream')
+const { nanoid } = require('nanoid')
 
 const parseQuery = (str) => {
   let params = new URLSearchParams(str)
@@ -216,10 +217,12 @@ exports.send = async (sharelist, data) => {
         options.proxy = data.extra?.proxy_server
       }
       let { data: stream, status, error, headers } = await sharelist.request(download_url, options)
-      // if (headers['accept-ranges'] == 'bytes') {
-      //   status = 206
-      // }
-      console.log(status)
+
+      // compatible 
+      if (headers['accept-ranges'] == 'bytes' && headers['content-range']) {
+        status = 206
+      }
+
       if (error) {
         return {
           status: 500
@@ -232,13 +235,13 @@ exports.send = async (sharelist, data) => {
     }
   } else {
     let range = getRange(data.reqHeaders.range, data.size) || { start: 0, end: data.size - 1 }
-    let { stream, error, status, headers, acceptRanges = false } = await sharelist.driver.createReadStream(data.id, range)
+    let { stream, error, status, headers, enableRanges = false } = await sharelist.driver.createReadStream(data.id, range)
     let isReqRange = !!data.reqHeaders.range
     if (stream) {
-      let options = acceptRanges ? { range } : {}
+      let options = enableRanges ? { range } : {}
       return {
         headers: headers || createHeaders(data, options),
-        status: status || (isReqRange && acceptRanges ? 206 : 200),
+        status: status || (isReqRange && enableRanges ? 206 : 200),
         body: stream
       }
 
@@ -254,7 +257,7 @@ exports.send = async (sharelist, data) => {
 // 暂停 : destroy() => close. 完成 end => close. 客户端异常 error => close
 const createUploadManage = () => {
   let tasks = {}
-
+  let tasksMetaMap = {}
   const remove = (id) => {
     if (id && tasks[id]) {
       tasks[id].req.destroy(new Error('AbortError'))
@@ -272,11 +275,31 @@ const createUploadManage = () => {
     })
 
     data.req.once('close', () => {
+      if (tasksMetaMap[data.taskId]) {
+        delete tasksMetaMap[data.taskId]
+      }
       delete tasks[id]
     })
   }
 
-  return { remove, add }
+  //临时上传链
+  const createTask = (data) => {
+    let taskId = nanoid()
+    tasksMetaMap[taskId] = data
+    return taskId
+  }
+  const getTask = (taskId) => tasksMetaMap[taskId]
+
+  const updateTask = (taskId, data) => {
+    let src = tasksMetaMap[taskId]
+    if (src) {
+      for (let i in data) {
+        src[i] = data[i]
+      }
+    }
+  }
+
+  return { remove, add, createTask, getTask, updateTask }
 }
 
 const createUpdateManage = (sharelist) => {

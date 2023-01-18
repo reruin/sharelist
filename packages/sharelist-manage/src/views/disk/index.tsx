@@ -10,13 +10,14 @@ import MediaPlayer, { usePlayer } from '@/components/player'
 import Breadcrumb from './partial/breadcrumb'
 import Error from './partial/error'
 import { useSetting } from '@/hooks/useSetting'
-import { InfoCircleOutlined, LoadingOutlined, ScissorOutlined, EditOutlined, HddOutlined, FolderAddOutlined, EllipsisOutlined, DeleteOutlined, CloudSyncOutlined, PlusOutlined, CloudDownloadOutlined, DownloadOutlined, CloseCircleFilled, SwapOutlined, SortDescendingOutlined, CalendarOutlined, FieldBinaryOutlined, ArrowUpOutlined, ArrowDownOutlined } from '@ant-design/icons-vue'
+import { InfoCircleOutlined, LoadingOutlined, ScissorOutlined, EditOutlined, HddOutlined, FolderAddOutlined, EllipsisOutlined, DeleteOutlined, CloudSyncOutlined, PlusOutlined, CloudDownloadOutlined, DownloadOutlined, CloseCircleFilled, SwapOutlined, SortDescendingOutlined, CalendarOutlined, FieldBinaryOutlined, ArrowUpOutlined, ArrowDownOutlined, ClockCircleOutlined, MinusCircleOutlined } from '@ant-design/icons-vue'
 import useConfirm, { useApiConfirm } from '@/hooks/useConfirm'
-import { useRoute } from 'vue-router'
+import { useRoute, onBeforeRouteLeave } from 'vue-router'
 import { useApi } from '@/hooks/useApi'
 import { useActions } from './partial/action'
 import Task from './partial/task'
 import { useBoolean } from '@/hooks/useHooks'
+import { useLocalStorageState } from '@/hooks/useLocalStorage'
 import { Upload } from './partial/upload'
 import { useScroll } from '@/hooks/useScroll'
 import { useClipboard } from '@/hooks/useClipboard'
@@ -25,6 +26,8 @@ import { showImage } from '@/components/image'
 export default defineComponent({
   setup() {
     const { setConfig, clearCache, config } = useSetting()
+
+    const searchHistory = useLocalStorageState<Array<string>>('search_history', [])
 
     const confirmClearCache = useConfirm(clearCache, '确认', '确认清除缓存？')
 
@@ -40,8 +43,6 @@ export default defineComponent({
 
     const { setPlayer } = usePlayer('player')
 
-    const [actionVisible, { toggle: onActionVisibleChange }] = useBoolean(false)
-
     const driveEl: Ref<Element | any> = ref()
 
     const { node: pasteEl } = useClipboard((files) => {
@@ -56,7 +57,7 @@ export default defineComponent({
     onMounted(() => {
       setNode(driveEl.value)
       onUpdate(() => {
-        checkScroll()
+        setTimeout(checkScroll, 0)
       })
     })
 
@@ -91,7 +92,6 @@ export default defineComponent({
             files.value.filter((i: IFile) => isMediaSupport(i.name, 'image'))
 
           showImage(list.map(i => i.download_url), list.findIndex(i => i.id == data.id))
-
         }
         else {
           window.open(data.download_url)
@@ -185,7 +185,7 @@ export default defineComponent({
         file = [file]
       }
 
-      file.forEach(i => {
+      file.forEach((i: IFile) => {
         let a = document.createElement('a')
         let e = document.createEvent('MouseEvents')
         e.initEvent('click', false, false)
@@ -245,7 +245,6 @@ export default defineComponent({
           if (route.query.search) {
             target.search = route.query.search
           }
-          console.log('nav', target)
           setPath(target)
           scrollTo(0)
           // getFiles({ path: route.params.path as string })
@@ -253,11 +252,6 @@ export default defineComponent({
       },
       { immediate: true },
     )
-
-    const layout = computed(() => {
-      return diskConfig.value.isRoot ? 'grid' : 'list'
-    })
-
 
     const onTagClick = ({ path, index }: any = {}) => {
       if (path == '/') {
@@ -293,33 +287,69 @@ export default defineComponent({
 
     const onToggleSearch = () => {
       const onSearch = (value: string) => {
+        console.log(value)
         if (value) {
           // router.push({ path: router.currentRoute.value.path, query: { search: value } })
+          let historyRecords = [...searchHistory.value]
+
+          let idx = historyRecords.indexOf(value)
+          if (idx >= 0) {
+            historyRecords.splice(idx, 1)
+          }
+
+          historyRecords.unshift(value)
+
+          searchHistory.value = historyRecords
+
           setPath({ search: value, path: currentDisk.path, id: currentDisk.id })
           modal.destroy()
         }
       }
 
+      const remove = (value: string) => {
+        let idx = searchHistory.value.indexOf(value)
+        if (idx >= 0) {
+          searchHistory.value.splice(idx, 1)
+        }
+      }
+
 
       const options: Array<any> = []
+      const searchMode = diskConfig.value.search
 
-      if (diskConfig.globalSearch) {
+      const tips = ref(searchMode == 1 ? '* 仅支持全局搜索' : searchMode == 2 ? '* 仅支持搜索当前目录（不含子目录）' : '')
+      /*
+      if (searchMode == 1) {
         options.push({ label: '所有文件', value: 'global' })
       }
-      if (diskConfig.localSearch) {
+      if (searchMode > 1) {
         options.push({ label: '当前目录', value: 'local' })
       }
-
       const searchType = ref(options[0]?.value)
+*/
 
       const modal = Modal.confirm({
         class: 'fix-modal--alone',
         width: '560px',
         maskClosable: true,
         content: () => (
-          <div>
-            <InputSearch enter-button v-focus placeholder="搜索内容" onSearch={onSearch} />
-            {options.length ? <RadioGroup style="margin-top:8px;" options={options} value={searchType.value} onChange={(e) => searchType.value = e.target.value} name="radioGroup" ></RadioGroup> : null}
+          <div class="drive-search">
+            <div class="flex" >
+              {/* <input class="drive-search-input" type="text" placeholder="搜索文件" onKeypress={withModifiers(onEnter, ['enter'])} /> */}
+              <Input class="drive-search-input" enter-button placeholder="搜索文件" onPressEnter={e => onSearch(e.target.value)} />
+
+            </div>
+            {tips.value ? <div class="tips">{tips.value}</div> : null}
+            <div class="drive-search-history">
+              <div class="search-history__header">搜索记录</div>
+              <ul class="search-history__body">
+                {
+                  searchHistory.value.map((i) => <li class="search-history__item" onClick={() => onSearch(i)}><div class="flex"><ClockCircleOutlined style="margin-right:8px;" />{i}</div><MinusCircleOutlined onClick={withModifiers(() => remove(i), ['prevent', 'stop'])} /></li>)
+                }
+              </ul>
+
+            </div>
+            {/* {options.length ? <RadioGroup style="margin-top:8px;" options={options} value={searchType.value} onChange={(e) => searchType.value = e.target.value} name="radioGroup" ></RadioGroup> : null} */}
           </div>
         ),
       })
@@ -335,7 +365,7 @@ export default defineComponent({
         <div class="drive__header">
           <Breadcrumb onTagClick={onTagClick} paths={paths.value} />
           <div class="drive__actions">
-            {(diskConfig.value.globalSearch || diskConfig.value.localSearch) ? <Icon style={{ fontSize: '18px', marginRight: '16px' }} class="drive-action-search" type="icon-search" onClick={onToggleSearch} /> : null}
+            {(diskConfig.value.search) ? <Icon style={{ fontSize: '18px', marginRight: '16px' }} class="drive-action-search" type="icon-search" onClick={onToggleSearch} /> : null}
             <Popover overlayClassName='popover-padding-0' placement="topRight" destroyTooltipOnHide={true} arrowPointAtCenter={true} trigger={['click']}>
               {{
                 default: () => <Badge class="task-badge" dot><CloudSyncOutlined style={{ fontSize: '18px' }} /></Badge>,
@@ -392,7 +422,7 @@ export default defineComponent({
             </div>
           </div> : null
         }
-        <Dropdown destroyPopupOnHide={true} trigger={['contextmenu']} onVisibleChange={onContextChange} overlayClassName="dropdown--drive" v-slots={mainSlots}>
+        <Dropdown destroyPopupOnHide={false} trigger={['contextmenu']} onVisibleChange={onContextChange} overlayClassName="dropdown--drive" v-slots={mainSlots}>
           <div class="drive-body-wrap" ref={driveEl}>
             {/* <div class="drive-body-mask" onContextmenu={() => onHover(null)}>
 
@@ -404,7 +434,7 @@ export default defineComponent({
                   {files.value.map((i: IFile) => {
                     return (
                       <a class={["item", i.checked ? 'item--checked' : null]} onContextmenu={(e) => onHover(i, e)} href={paths.value.join('/') + '/' + i.name + '?download'} title={i.name} onClick={withModifiers(() => onClick(i), ['prevent'])}>
-                        <div class="item-check" onClick={withModifiers(() => onSelect(i), ['stop', 'prevent'])}><Checkbox checked={i.checked} /></div>
+                        <div class="item-check" onClick={withModifiers(() => onSelect(i), ['stop', 'prevent'])}><Checkbox checked={i.checked} onClick={withModifiers(() => onSelect(i), ['stop', 'prevent'])} /></div>
 
                         <div class="item-icon">
                           {

@@ -8,9 +8,24 @@ import { STATUS } from '../task'
 import { message } from 'ant-design-vue'
 import SHA1 from 'js-sha1'
 
-function readChunked(file: File, chunkCallback: any, endCallback: any) {
+const parseSize = (v: string) => {
+  if (!v) return { type: undefined, size: 0 }
+
+  let unitMap: Record<string, number> = { 'k': 1024, 'm': 1024 * 1024 }
+  let [_, type, num, unit] = v.toLowerCase().match(/(md5|sha1)?\-?(\d+)(k|m)?/i) || []
+  let size = num ? parseInt(num) : 0
+  if (unit && unitMap[unit]) {
+    size *= unitMap[unit]
+  }
+  return { type, size }
+}
+interface readChunkedOptions {
+  onChunk(...rest: Array<any>): any
+  onFinish(...rest: Array<any>): any
+  chunkSize: number
+}
+function readChunked(file: File, { onChunk, onFinish, chunkSize }: readChunkedOptions) {
   const fileSize = file.size
-  const chunkSize = 50 * 1024 * 1024 // 20MB
 
   let offset = 0
 
@@ -18,20 +33,18 @@ function readChunked(file: File, chunkCallback: any, endCallback: any) {
   reader.onload = function () {
     if (reader.error) {
       console.log(reader.error)
-      endCallback(reader.error || {})
+      onFinish(reader.error || {})
       return
     }
-    console.log(offset)
     offset += (reader as any).result.byteLength
     // offset += (reader as any).result.length
-    console.log(reader as any)
     // return
     // callback for handling read chunk
     // TODO: handle errors
-    chunkCallback(reader.result, offset, fileSize)
+    onChunk(reader.result, offset, fileSize)
 
     if (offset >= fileSize) {
-      endCallback(null)
+      onFinish(null)
       return
     } else {
       readNext()
@@ -39,7 +52,7 @@ function readChunked(file: File, chunkCallback: any, endCallback: any) {
   }
 
   reader.onerror = function (err) {
-    endCallback(err || {})
+    onFinish(err || {})
   }
 
   function readNext() {
@@ -50,37 +63,61 @@ function readChunked(file: File, chunkCallback: any, endCallback: any) {
 }
 
 //3032ac4e71df951cccff8fdebad5266c
-
-export const getHash = (file: File, hashtype: string, cb?: (...rest: Array<any>) => any): Promise<string> =>
+// single hash, head hash, chunk hash
+export const getHash = async (file: File, hashtype: string) =>
   new Promise((resolve, reject) => {
-    let parts = hashtype.split('-')
+    let parts = hashtype.split('_')
     let type = parts[0]
-    let headHashSize = parts[1] ? parseInt(parts[1]) : 0
+    let [headHash, partsHash] = parts.slice(1).map(parseSize)
     const hash = type == 'md5' ? new SparkMD5.ArrayBuffer() : type == 'sha1' ? SHA1.create() : null
-    console.log(type, headHashSize)
 
-    let ret: Array<string> = []
+    let defaultChunkSize = 50 * 1024 * 1024
+
+    let ret: any = {
+      head: '',
+      parts: []
+    } //Array<string> = []
+
+    if (partsHash?.size) {
+      defaultChunkSize = partsHash.size
+    }
+
+    const onEnd = () => resolve(ret)
 
     if (hash) {
-      readChunked(
-        file,
-        (chunk: any, offset: number) => {
-          // hash.update(chunk)
+      readChunked(file, {
+        chunkSize: defaultChunkSize,
+        onChunk(chunk: any, offset: number) {
+          // content hash update
           if (type == 'md5') {
-            if (headHashSize) {
-              ret.push(SparkMD5.ArrayBuffer.hash(chunk.slice(0, headHashSize * 1024)))
-            }
             hash.append(chunk)
           } else {
-            if (headHashSize) {
-              ret.push(SHA1(chunk.slice(0, headHashSize * 1024)))
-            }
             hash.update(chunk)
           }
-          cb?.(offset)
-          // task.readCompleted = offset
+
+          // console.log(ret.head, headHash)
+          // head hash
+          if (headHash?.size && !ret.head) {
+            let headHashType = headHash.type || type
+            if (headHashType) {
+              ret.head = SparkMD5.ArrayBuffer.hash(chunk.slice(0, headHash.size))
+            } else if (headHashType == 'sha1') {
+              ret.head = SHA1(chunk.slice(0, headHash.size))
+            }
+          }
+
+          // parts hash
+          if (partsHash?.size) {
+            let partsHashType = partsHash.type || type
+
+            if (partsHashType == 'md5') {
+              ret.parts.push(SparkMD5.ArrayBuffer.hash(chunk))
+            } else if (partsHashType == 'sha1') {
+              ret.parts.push(SHA1(chunk))
+            }
+          }
         },
-        (err: Error) => {
+        onFinish(err: Error) {
           if (err) {
             reject(err)
           } else {
@@ -89,10 +126,11 @@ export const getHash = (file: File, hashtype: string, cb?: (...rest: Array<any>)
             // resolve(final.toString(CryptoJS.enc.Hex))
 
             const final = type == 'md5' ? hash.end() : hash.hex()
-            ret.push(final)
-            resolve(ret.join('|'))
+            ret[type] = final
+            onEnd()
           }
-        },
+        }
+      }
       )
     }
   })
@@ -110,6 +148,7 @@ export const useUpload: IUseUpload = (): IUseUploadResult => {
   if (useUpload.instance) {
     return useUpload.instance
   }
+  const { reload, current } = useDisk()
 
   const tasks: Ref<Array<any>> = ref([])
 
@@ -133,7 +172,6 @@ export const useUpload: IUseUpload = (): IUseUploadResult => {
       dest,
       destId: id,
       index: 0,
-      uploadId: '',
       speed: 0,
       hashType,
       files: files.map(i => ({
@@ -164,7 +202,7 @@ export const useUpload: IUseUpload = (): IUseUploadResult => {
       let task = tasks.value[idx]
       let { index, files, hashType, destId } = task
 
-      let { file, uploadId, hash, dest } = files[index]
+      let { file, hash, dest, taskId } = files[index]
 
       if (!hash && hashType) {
         hash = await getHash(file, hashType)
@@ -188,7 +226,7 @@ export const useUpload: IUseUpload = (): IUseUploadResult => {
       try {
 
         //创建/查询任务
-        let taskData = await request.fileCreateUpload({ ...formData, dest, upload_id: uploadId || '' })
+        let taskData = await request.fileCreateUpload({ ...formData, dest, task_id: taskId })
 
         //快速上传
         if (taskData.completed) {
@@ -199,8 +237,8 @@ export const useUpload: IUseUpload = (): IUseUploadResult => {
           continue
         }
 
-        //任务ID不存在，直接标记失败
-        if (!taskData.uploadId) {
+        //! 任务ID不存在，直接标记失败
+        if (!taskData.taskId) {
           tasks.value[idx].status = STATUS.INIT_ERROR
           if (taskData.error) {
             tasks.value[idx].message = taskData.error.message
@@ -212,8 +250,8 @@ export const useUpload: IUseUpload = (): IUseUploadResult => {
         }
 
         //任务ID可能发生变化（如过期 导致原始的上传实例失效，后端会尝试生成新的上传实例，此时uploadId也会随之变化）
-        files[index].uploadId = taskData.uploadId
-        tasks.value[idx].uploadId = taskData.uploadId
+        tasks.value[idx].taskId = taskData.taskId
+        files[index].taskId = taskData.taskId
 
         let uploadFile = file
 
@@ -228,7 +266,7 @@ export const useUpload: IUseUpload = (): IUseUploadResult => {
         let lastTime: number = Date.now(), lastLoaded = 0
         let res = await request.fileUpload({
           ...formData,
-          uploadId: files[index].uploadId,
+          taskId: files[index].taskId,
           create: 0,
           stream: uploadFile,
           slice_size: formData.size - taskData.start,
@@ -265,7 +303,6 @@ export const useUpload: IUseUpload = (): IUseUploadResult => {
         }
       } catch (e) {
         console.log('error==>', e)
-        // taskData[taskId].uploadId = ''
         if (!tasks.value[idx].error.includes(index)) {
           tasks.value[idx].error.push(index)
         }
@@ -276,9 +313,18 @@ export const useUpload: IUseUpload = (): IUseUploadResult => {
       tasks.value[idx].index++
     }
 
+    message.success(`${tasks.value[idx].src} 已完成`)
+
     //finish
     if (tasks.value[idx].index >= tasks.value[idx].files.length) {
       tasks.value[idx].status = tasks.value[idx].error.length > 0 ? (tasks.value[idx].error.length == tasks.value[idx].count ? STATUS.ERROR : STATUS.DONE_WITH_ERROR) : STATUS.SUCCESS
+
+      // update page
+      console.log(current?.path, tasks.value[idx])
+      if (current?.path && current.path == tasks.value[idx].dest) {
+        reload()
+      }
+
       return
     }
 
@@ -298,7 +344,7 @@ export const useUpload: IUseUpload = (): IUseUploadResult => {
     if (idx == -1) {
       message.error('没有此任务')
     } else {
-      const res = await request.fileUploadCancel(tasks.value[idx].uploadId)
+      const res = await request.fileUploadCancel(tasks.value[idx].taskId)
 
       tasks.value[idx].cancel()
       tasks.value[idx].status = STATUS.PAUSE
@@ -351,7 +397,7 @@ export const Upload = defineComponent({
       let { uploadHash, id } = diskConfig.value
       let files = [].slice.call(e.target.files)
       let dest = '/' + [...paths.value].join('/')
-      console.log(uploadHash)
+      // console.log(uploadHash)
       if (uploadHash) {
         // let path = '/' + [...paths.value, file.name].join('/')
         // console.log(file, paths)
@@ -359,11 +405,16 @@ export const Upload = defineComponent({
       } else {
         await create(files, null, dest, id, props.type == 'dir')
       }
+
+      //clear select
+      if (file.value) {
+        file.value.value = ''
+      }
     }
 
     let inputProps: Record<string, any> = props.type == 'dir' ? { webkitdirectory: true, directory: true, multiple: true } : {}
     return () => <div onClick={onOpenFileDialog}>
-      <input {...inputProps} type="file" onChange={onChange} ref={file} accept="" onClick={e => e.stopPropagation()} capture={false} style="display:none;" />
+      <input {...inputProps} type="file" onChange={onChange} ref={file} accept="" onClick={e => e.stopPropagation()} capture={true} style="display:none;" />
       {slots.default?.()}
     </div>
 

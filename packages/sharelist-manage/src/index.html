@@ -6,37 +6,12 @@
   <link rel="icon" href="/favicon.ico" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="referrer" content="never">
-  <title>ITK</title>
-  <style>
-    .layout {
-      display: flex;
-      width: 100vh;
-      height: 100vh;
-    }
-  </style>
+  <title>sharelist</title>
 </head>
 
 <body>
-  <script type="module">
-    import { createApp } from 'https://unpkg.com/petite-vue?module'
-
-    createApp({
-      // exposed to all expressions
-      count: 0,
-      // getters
-      get plusOne() {
-        return this.count + 1
-      },
-      // methods
-      increment() {
-        this.count++
-      }
-    }).mount()
-  </script>
-
-  <div class="layout">
-
-  </div>
+  <div id="app"></div>
+  <script type="module" src="./main.ts"></script>
 </body>
 
 </html>

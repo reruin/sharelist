@@ -78,17 +78,15 @@ module.exports = (app) => {
    * 
    * @returns {object}
    */
-  const get = async ({ paths = [], id }) => {
+  const get = async ({ paths = [], id }, options) => {
     let data
 
     if (!id && paths) {
-      data = await stat(paths)
+      data = await stat(paths, more)
       id = data.id
     }
-
     if (id) {
-      let r = await getById(id)
-
+      let r = await getById(id, options)
       if (!r.error) {
         data = r
       }
@@ -133,18 +131,19 @@ module.exports = (app) => {
    * @param {*} uri 
    * @returns 
    */
-  const getById = async (uri) => {
-    let { drive, encode, config, id, name, isRoot } = getDrive(uri)
-    if (isRoot) {
-      return {
-        id: encode(id),
-        name,
-        type: 'folder'
-      }
-    }
+  const getById = async (uri, { more = false, enableCache = true } = {}) => {
+    let { drive, encode, config, id, name } = await getDrive(uri)
+
+    // if (isRoot(id)) {
+    //   return {
+    //     id: encode(id),
+    //     name,
+    //     type: 'folder'
+    //   }
+    // }
 
     let cacheId = `${encode(id)}#get`
-    if (config.cache !== false) {
+    if (config.cache !== false && enableCache) {
       let r = app.cache.get(cacheId)
       if (r) {
         console.log(`[CACHE] ${new Date().toISOString()} ${cacheId}`)
@@ -154,8 +153,7 @@ module.exports = (app) => {
 
     if (!drive?.get) return { error: { message: '' } }
 
-    let data = await drive.get(id)
-
+    let data = await drive.get(id, more)
     data.id = encode(data.id)
 
     //鉴于某些driver get 无法获取name和size，此处需通过 parent files 进行补充
@@ -197,7 +195,7 @@ module.exports = (app) => {
       return r
     }
 
-    let { drive, config, id } = getDrive(uri)
+    let { drive, config, id } = await getDrive(uri)
 
     if (drive?.get_download_url) {
 
@@ -227,32 +225,38 @@ module.exports = (app) => {
    * @param {number} options.start offset start
    * @param {number} options.end offset end
    * 
-   * @returns { stream , acceptRanges , headers? , status?  }
+   * @returns { stream , enableRanges , headers? , status?  }
    */
   const createReadStream = async (uri, options = {}) => {
-    let { drive, id } = getDrive(uri)
+    let { drive, id } = await getDrive(uri)
 
+    let default_ua = app.config.default_ua
+    console.log('dua', default_ua)
     if (drive?.createReadStream) {
       let stream = await drive.createReadStream(id, options)
       stream.once('error', () => { })
-      return { stream, acceptRanges: true }
+      return { stream, enableRanges: true }
     } else {
       let data = await get({ id: uri })
       if (data.download_url) {
-        let reqHeaders = options.reqHeaders || {}
+        let { start, end, reqHeaders = {}, ...reqOptions } = options || {}
 
         if (data.extra.proxy?.headers) {
           Object.assign(reqHeaders, data.extra.proxy.headers)
         }
-
-        if (options.start) {
-          reqHeaders['range'] = `bytes=${options.start}-${options.end || ''}`
+        if (data.extra.req_user_agent && !(reqHeaders['user-agent'] || reqHeaders['User-Agent'])) {
+          reqHeaders['user-agent'] = default_ua
         }
+        if (options.start !== undefined) {
+          reqHeaders['range'] = `bytes=${start}-${end || ''}`
+        }
+        reqOptions.headers = reqHeaders
+        reqOptions.responseType = 'stream'
 
-        let { data: stream, headers, status, error } = await request(data.download_url, { headers: reqHeaders, responseType: 'stream' })
+        let { data: stream, headers, status, error } = await request(data.download_url, reqOptions)
 
         if (!error) {
-          return { stream, headers, status, acceptRanges: headers?.['accept-ranges'] == 'bytes' || status == 206 || headers?.['content-range'] }
+          return { stream, headers, status, enableRanges: headers?.['accept-ranges'] == 'bytes' || status == 206 || headers?.['content-range'] }
         }
       }
     }
@@ -284,7 +288,7 @@ module.exports = (app) => {
    * @public
    */
   const createWriteStream = async (uri, options) => {
-    let { drive, id, encode, config } = getDrive(uri)
+    let { drive, id, encode, config } = await getDrive(uri)
 
     if (drive?.upload) {
       let passStream = new PassThrough()
@@ -310,7 +314,7 @@ module.exports = (app) => {
    * @param {number} options.size
    * @param {string} options.name
    * @param {string} options.hash
-   * @param {string} options.uploadId
+   * @param {object} options.state
    * @param {string} options.conflictBehavior replace|rename|fail
    * 
    * @returns {object}
@@ -318,11 +322,12 @@ module.exports = (app) => {
    * @public
    */
   const upload = async (uri, stream, options) => {
-    let { drive, id, config, encode } = getDrive(uri)
-
+    let { drive, id, config, encode } = await getDrive(uri)
     stream?.pause?.()
 
     if (drive?.upload) {
+      if (!options.state) options.state = {}
+      if (!options.hash) options.hash = {}
       let data = await drive.upload(id, stream, options)
       if (data.id) {
         data.id = encode(data.id)
@@ -348,7 +353,7 @@ module.exports = (app) => {
    * @public
    */
   const mkdir = async (uri, name, options = {}, strict = false) => {
-    let { drive, id, encode, config } = getDrive(uri)
+    let { drive, id, encode, config } = await getDrive(uri)
 
     if (drive?.mkdir) {
       if (typeof name == 'string') {
@@ -384,14 +389,14 @@ module.exports = (app) => {
 
   /**
    * remove
-   * @param {string} uri
+   * @param {string|Array<string>} uri
    * @param {object} options
    * @returns {object}
    * 
    * @public
    */
   const rm = async (uri) => {
-    let { drive, id, encode, config } = getDrive(uri)
+    let { drive, id, encode, config } = await getDrive(uri)
     if (drive?.rm) {
       let data = await drive.rm(id)
 
@@ -418,7 +423,7 @@ module.exports = (app) => {
    * @public
    */
   const rename = async (uri, name, options = {}) => {
-    let { drive, id, encode, config } = getDrive(uri)
+    let { drive, id, encode, config } = await getDrive(uri)
     if (drive?.rename) {
       let data = await drive.rename(id, name, options)
 
@@ -442,12 +447,12 @@ module.exports = (app) => {
   const mv = async (uri, target_uri, options = {}) => {
     if (app.isSameDrive(uri, target_uri)) {
 
-      let { drive, id, encode, config } = getDrive(uri)
+      let { drive, id, encode, config } = await getDrive(uri)
 
       if (drive?.mv) {
         let cache = config.cache !== false
 
-        let { id: target_id } = getDrive(target_uri)
+        let { id: target_id } = await getDrive(target_uri)
 
         // get origin parent id
         let originParentId
@@ -485,14 +490,13 @@ module.exports = (app) => {
   }
 
   const listById = async (uri, params = {}) => {
-    let { drive, id, encode, config } = getDrive(uri)
+    let { drive, id, encode, config } = await getDrive(uri)
 
     let { pagination, ...options } = params
 
     if (app.config.per_page && pagination !== false) {
       options.perPage = app.config.per_page
     }
-    console.log(uri, options, config)
     const cacheable = !options.search && config.cache !== false
 
     let cacheId = `${encode(id)}#list`
@@ -514,7 +518,12 @@ module.exports = (app) => {
 
     let { id: realId, files, maxAge, nextPage } = await drive.list(id, options)
 
-    files.forEach(i => i.id = encode(i.id))
+    files.forEach(i => {
+      i.id = encode(i.id)
+      if (i.extra?.parent_id) {
+        i.extra.parent_id = encode(i.extra.parent_id)
+      }
+    })
 
     let data = { id: encode(realId || id), files }
 
@@ -539,7 +548,7 @@ module.exports = (app) => {
    * @api private
    */
   const listFromPathAddressing = async (paths, params) => {
-    let hit = app.getRoot(params)
+    let hit = await app.getRoot(params)
     //扩展唯一的文件夹
     if (app.config.expand_single_disk && hit.files && hit.files.length == 1) {
       paths.unshift(hit.files[0].name)
@@ -569,26 +578,37 @@ module.exports = (app) => {
   }
 
   /**
-   * id 获取路径层级
+   * 根据id 获取路径层级
    * @param {*} uri 
    * @returns 
    */
   const pwd = async (uri) => {
     let dirs = []
-    let { encode, protocol, name, drive, id } = getDrive(uri)
+    let { encode, protocol, name, drive, id } = await getDrive(uri)
     if (drive.pwd) {
       dirs = await drive.pwd(id)
+      if (dirs) {
+        dirs.forEach(i => {
+          i.id = encode(i.id)
+        })
+      }
     } else {
-      while (uri) {
-        let data = await getById(uri)
+      while (id) {
+
+        if (drive.isRoot(id)) break
+
+        let data = await getById(encode(id))
+
+        if (!data) break
+
+        dirs.unshift(data)
 
         if (!data?.extra?.parent_id || data.id == '@drive_root') break
-        dirs.unshift(data)
-        // console.log(data, '<<')
-        uri = encode(data?.extra.parent_id)
+
+        id = data?.extra.parent_id
       }
     }
-
+    console.log('>>>>>pwd', dirs)
     return [{ id: 'root', name, type: 'folder' }, ...dirs.map(i => ({ id: i.id, name: i.name, type: i.type }))]
     // if(parent?.extra)
   }
@@ -597,23 +617,41 @@ module.exports = (app) => {
 
   }
 
+  const clearSession = async (uri, data) => {
+    let { drive, id } = await getDrive(uri)
+    drive.clearSession?.(id, data)
+  }
 
-  const hashFile = async (uri, { hash, name }) => {
-    let { drive, id, config, encode } = getDrive(uri)
+  const hashUpload = async (uri, { hash, name, size }) => {
+    let { drive, id, config, encode } = await getDrive(uri)
 
-    if (drive?.hashFile) {
-      let data = await drive.hashFile(id, { hash, name })
-      if (data.id) {
-        data.id = encode(data.id)
-        if (config.cache !== false) {
-          app.cache.remove(`${encode(id)}#list`)
-        }
-        return data
+    if (!config?.hashUpload) {
+      app.error({ code: 429 })
+    }
+    let hashType = typeof config.hashUpload == 'string' ? config.hashUpload : config.hashUpload.type
+    let options = {
+      name,
+      state: {},
+      hash: {
+        [hashType]: hash
       }
     }
-    app.error({ code: 404, message: "file is non-exist" })
+    if (size) {
+      options.size = size
+    }
+    let { completed, ...data } = await drive.upload(id, null, options)
 
+    if (completed) {
+      data.id = encode(data.id)
+      if (config.cache !== false) {
+        app.cache.remove(`${encode(id)}#list`)
+      }
+      return data
+    }
+    // }
+    app.error({ code: 404, message: "file is non-exist" })
   }
+
   return {
     list,
     get,
@@ -624,11 +662,11 @@ module.exports = (app) => {
     mv,
     pwd,
     upload,
-    hashFile,
+    hashUpload,
+    clearSession,
     createReadStream,
     createWriteStream,
     get_download_url,
-
     getContent
   }
 }

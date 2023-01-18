@@ -70,10 +70,12 @@ export default defineComponent({
         data.index = idx
         playerProgress.value = '0%'
 
+        //上传时间较短，预览地址可能尚未转码成功。
+        let source = Date.now() - file.ctime > 15 * 60 * 1000 ? (file.preview_url || file.download_url) : file.download_url
         player.source = {
           type: data.type,
           title: file.name,
-          sources: [{ src: file.preview_url || file.download_url, size: 'Raw' }],
+          sources: [{ src: source + "&t=" + Date.now(), size: 'Raw' }],
         }
 
         data.cur = { ...file }
@@ -97,14 +99,19 @@ export default defineComponent({
       }
     }
 
+    const onError = (e: any) => {
+      console.log(e)
+    }
+
     const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent)
 
     onMounted(() => {
       player = new Plyr(el.value, {
-        fullscreen: { enabled: true, fallback: true, iosNative: isIOS, container: undefined }
+        fullscreen: { enabled: true, fallback: true, iosNative: isIOS, container: undefined },
       })
       player.on('exitfullscreen', existFullScreen)
       player.on('timeupdate', onProgress)
+      player.on('error', onError)
     })
 
     onUnmounted(() => {

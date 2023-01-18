@@ -15,7 +15,6 @@ export default defineComponent({
   },
   emits: ['auth'],
   setup(props) {
-    console.log('auth init disk')
     const { setAuth } = useDisk()
 
     const token = ref('')

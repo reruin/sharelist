@@ -29,7 +29,7 @@ type ITask = {
   current: string
   count: number
   size: number
-  currentCompleted: number
+  currentLoaded: number
   completed: number
   message?: string
   readCompleted?: number,
@@ -39,7 +39,7 @@ type ITask = {
 }
 
 type TaskSet = {
-  transfer: Array<ITask>,
+  move: Array<ITask>,
   download: Array<ITask>,
 }
 
@@ -51,13 +51,17 @@ export default defineComponent({
 
     const { data, runAsync, loading, cancel } = useRequest<TaskSet>(async () => {
       let res = await request.tasks()
-      return res
+      return {
+        move: res.filter((i: ITask) => !i.srcId.startsWith('http')),
+        download: res.filter((i: ITask) => i.srcId.startsWith('http'))
+      }
     }, {
       pollingInterval: 1000,
       immediate: true,
       loadingDelay: 1000,
       pollingWhenHidden: false
     })
+
 
     const navSrc = (i: ITask) => {
       if (!i.srcId.startsWith('http')) {
@@ -116,30 +120,12 @@ export default defineComponent({
             i.status = idx < index ? 2 : idx > index ? 0 : 1
           }
         })
-        useShowFiles(files, i.id, '以下文件移动失败', retry)
+
+        useShowFiles(files, i.id, files.some((i: IFile) => i.status == 3))
       }
     }
 
-    const onDownloadResume = async (i: ITask) => {
-      let res = await request.resumeDownload(i.id)
-      if (res.error) {
-        message.error(res.error.message)
-      } else {
-        message.success('操作成功')
-      }
-    }
-
-    const onDownloadPause = async (i: ITask) => {
-      console.log('pause', i.id)
-      let res = await request.pauseDownload(i.id)
-      if (res.error) {
-        message.error(res.error.message)
-      } else {
-        message.success('操作成功')
-      }
-    }
-
-    const useShowFiles = (files: Array<any>, taskId: string, tips: string, retry?: any) => {
+    const useShowFiles = (files: Array<any>, taskId: string, showRetryButton?: boolean) => {
       let data = files.map((i: IFile) => {
         i.name = (i.dest ? `${i.dest}/` : '') + i.name
         i.type = 'file'
@@ -163,7 +149,7 @@ export default defineComponent({
                 </div>
               </div>
               {
-                retry ? <div class="modal-footer">
+                showRetryButton ? <div class="modal-footer">
                   <Button type="primary" onClick={() => retry(taskId, modal)}>重试</Button>
                 </div> : null
               }
@@ -175,7 +161,7 @@ export default defineComponent({
     }
 
     const queryUpload = async (i: ITask) => {
-      useShowFiles(i.files.filter((i: IFile) => i.message), i.id, '以下文件上传失败')
+      useShowFiles(i.files.filter((i: IFile) => i.message), i.id, false)
     }
 
     onUnmounted(() => {
@@ -199,7 +185,7 @@ export default defineComponent({
         await runAsync()
       }
     })
-    //<Progress size="small" percent={Math.floor(100 * (i.completed + i.currentCompleted) / i.size)} />
+    //<Progress size="small" percent={Math.floor(100 * (i.completed + i.currentLoaded) / i.size)} />
 
     const createTitle = (i: ITask, mid: string) => {
       let src = i.src.split('/').pop()
@@ -211,17 +197,17 @@ export default defineComponent({
       }
       return <div>
         <div class="item__title">
-          <a onClick={() => navSrc(i)} class="ellipsis" style="width:38%" title={src} {...attrs}>{src}</a>
+          <a onClick={() => navSrc(i)} class="ellipsis" style="width:45%" title={i.src} {...attrs}>{src}</a>
           <span class="item__title-link" style="margin:0 5px;">{mid}</span>
-          <a onClick={() => navDest(i)} class="ellipsis" style="width:38%" title={dest}>{dest}</a>
+          <a onClick={() => navDest(i)} class="ellipsis" style="width:30%" title={'/' + i.dest}>{dest}</a>
         </div>
         <div class="item-meta-description">
           {
             i.status == STATUS.INIT ?
               `正在创建中${i.readCompleted ? ('已读取' + Math.floor(100 * (i.readCompleted || 0) / i.size) + '%') : ''}`
               : (i.status == STATUS.INIT_ERROR || i.status == STATUS.ERROR) ? `失败${i.message ? (':' + i.message) : ''}`
-                : i.status == STATUS.SUCCESS ? <div class="flex"><span>{byte(i.completed)}</span><span class="item__dot"></span>已完成</div> : i.status == STATUS.DONE_WITH_ERROR ? '已完成 存在部分错误'
-                  : <div class="flex"><span>{byte(i.completed + i.currentCompleted, 2)}/{byte(i.size, 2)}</span><span class="item__dot"></span><span>{i.status == STATUS.PAUSE ? '已暂停' : `${byte(i.speed)}/S`}</span></div>
+                : i.status == STATUS.SUCCESS ? <div class="flex"><span>{byte(i.loaded)}</span><span class="item__dot"></span>已完成</div> : i.status == STATUS.DONE_WITH_ERROR ? '已完成 存在部分错误'
+                  : <div class="flex"><span>{byte(i.loaded + i.currentLoaded, 2)}/{byte(i.size, 2)}</span><span class="item__dot"></span><span>{i.status == STATUS.PAUSE ? '已暂停' : `${byte(i.speed)}/S`}</span></div>
           }
         </div>
         {
@@ -233,29 +219,33 @@ export default defineComponent({
       </div>
     }
 
-    const renderItem = ({ item: i, index }: { item: ITask, index: number }) => <div class="item">
-      {
-        (i.status == STATUS.PROGRESS || i.status == STATUS.PAUSE) ? <div class="item__progress" style={{ width: `${Math.floor(100 * (i.completed + i.currentCompleted) / i.size)}%` }}></div> : null
-      }
-      <div class="item__head"><Badge status={(i.status == STATUS.INIT || i.status == STATUS.PROGRESS) ? 'processing' : i.status == STATUS.SUCCESS ? 'success' : i.status == STATUS.ERROR ? 'error' : i.status == STATUS.DONE_WITH_ERROR ? 'warning' : 'default'} /></div>
-      <div class="item__body">{createTitle(i, '迁移至')}</div>
-      <div class="item__foot">
-        <div class="action">
-          <span>{
-            i.status == STATUS.PAUSE ? <ReloadOutlined onClick={() => onResume(i)} style={{ fontSize: '12px' }} /> :
-              i.status == STATUS.PROGRESS ? <PauseOutlined onClick={() => onPause(i)} style={{ fontSize: '12px' }} /> : null}
-          </span>
-          {
-            i.status != STATUS.PROGRESS ? <span style="margin-left:5px;" onClick={() => onQuery(i)}><InfoCircleOutlined style={{ fontSize: '12px' }} /></span> : null
-          }
-          <span style="margin-left:5px;" onClick={() => remove(i)}><CloseOutlined style={{ fontSize: '12px' }} /></span>
+    const renderItem = ({ item: i, index }: { item: ITask, index: number }) => {
+      let progress = `${Math.floor(100 * i.progress)}%`
+      return <div class="item">
+        {
+          (i.status == STATUS.PROGRESS || i.status == STATUS.PAUSE) ? <div class="item__progress" style={{ width: progress }}></div> : null
+        }
+        <div class="item__head"><Badge status={(i.status == STATUS.INIT || i.status == STATUS.PROGRESS) ? 'processing' : i.status == STATUS.SUCCESS ? 'success' : i.status == STATUS.ERROR ? 'error' : i.status == STATUS.DONE_WITH_ERROR ? 'warning' : 'default'} /></div>
+        {/* <div class="item__head"><Badge status={(i.status == STATUS.INIT || i.status == STATUS.PROGRESS) ? 'processing' : i.status == STATUS.SUCCESS ? 'success' : i.status == STATUS.ERROR ? 'error' : i.status == STATUS.DONE_WITH_ERROR ? 'warning' : 'default'} /></div> */}
+        <div class="item__body">{createTitle(i, '迁移至')}</div>
+        <div class="item__foot">
+          <div class="action">
+            <span>{
+              i.status == STATUS.PAUSE ? <ReloadOutlined onClick={() => onResume(i)} style={{ fontSize: '12px' }} /> :
+                i.status == STATUS.PROGRESS ? <PauseOutlined onClick={() => onPause(i)} style={{ fontSize: '12px' }} /> : null}
+            </span>
+            {
+              i.status != STATUS.PROGRESS ? <span style="margin-left:5px;" onClick={() => onQuery(i)}><InfoCircleOutlined style={{ fontSize: '12px' }} /></span> : null
+            }
+            <span style="margin-left:5px;" onClick={() => remove(i)}><CloseOutlined style={{ fontSize: '12px' }} /></span>
+          </div>
         </div>
       </div>
-    </div>
+    }
 
     const renderUploadItem = ({ item: i, index }: { item: ITask, index: number }) => <div class="item">
       {
-        i.status == 3 ? <div class="item__progress" style={{ width: `${Math.floor(100 * (i.completed + i.currentCompleted) / i.size)}%` }}></div> : null
+        i.status == 3 ? <div class="item__progress" style={{ width: `${Math.floor(100 * (i.loaded + i.currentLoaded) / i.size)}%` }}></div> : null
       }
       <div class="item__head"><Badge status={(i.status == STATUS.INIT || i.status == STATUS.PROGRESS) ? 'processing' : i.status == STATUS.SUCCESS ? 'success' : i.status == STATUS.ERROR ? 'error' : i.status == STATUS.DONE_WITH_ERROR ? 'warning' : 'default'} /></div>
       <div class="item__body">{createTitle(i, '上传至')}</div>
@@ -271,36 +261,17 @@ export default defineComponent({
       </div>
     </div>
 
-    const renderDownloadItem = ({ item: i, index }: { item: ITask, index: number }) => <div class="item">
-      {
-        (i.status == STATUS.PROGRESS || i.status == STATUS.PAUSE) ? <div class="item__progress" style={{ width: `${Math.floor(100 * (i.completed + i.currentCompleted) / i.size)}%` }}></div> : null
-      }
-      <div class="item__head"><Badge status={(i.status == STATUS.INIT || i.status == STATUS.PROGRESS) ? 'processing' : i.status == STATUS.SUCCESS ? 'success' : i.status == STATUS.ERROR ? 'error' : i.status == STATUS.DONE_WITH_ERROR ? 'warning' : 'default'} /></div>
-      <div class="item__body">{createTitle(i, '迁移至')}</div>
-      <div class="item__foot">
-        <div class="action">
-          <span>{
-            i.status == STATUS.PAUSE ? <ReloadOutlined onClick={() => onDownloadResume(i)} style={{ fontSize: '12px' }} /> :
-              i.status == STATUS.PROGRESS ? <PauseOutlined onClick={() => onDownloadPause(i)} style={{ fontSize: '12px' }} /> :
-                (i.status == STATUS.ERROR || i.status == STATUS.DONE_WITH_ERROR) ? <ReloadOutlined onClick={() => onDownloadResume(i)} style={{ fontSize: '12px' }} /> : null}
-          </span>
-          <span style="margin-left:5px;" onClick={() => removeDownloadTask(i)}><CloseOutlined style={{ fontSize: '12px' }} /></span>
-        </div>
-      </div>
-    </div>
-
     return () => <div class="task" onClick={e => e.stopPropagation()}>
       <Tabs centered>
         <Tabs.TabPane key="move" v-slots={{ tab: () => <div><CloudSyncOutlined />跨盘迁移</div> }}>
-          <Spin spinning={loading.value || removeLoading.value}>
-            <List class="task-list" dataSource={data?.value?.transfer} renderItem={renderItem}></List>
+          <Spin delay={3000} spinning={loading.value || removeLoading.value}>
+            <List class="task-list" dataSource={data?.value?.move} renderItem={renderItem}></List>
           </Spin>
         </Tabs.TabPane>
         <Tabs.TabPane key="download" v-slots={{ tab: () => <div><DownloadOutlined />离线下载</div> }}>
-          <Spin spinning={loading.value || removeDownloadLoading.value}>
-            <List class="task-list" dataSource={data?.value?.download} renderItem={renderDownloadItem}></List>
+          <Spin delay={3000} spinning={loading.value || removeDownloadLoading.value}>
+            <List class="task-list" dataSource={data?.value?.download} renderItem={renderItem}></List>
           </Spin>
-
         </Tabs.TabPane>
         <Tabs.TabPane key="upload" v-slots={{ tab: () => <div><FileSyncOutlined />文件上传</div> }}>
           <List class="task-list" dataSource={uploadTasks.value} renderItem={renderUploadItem}></List>

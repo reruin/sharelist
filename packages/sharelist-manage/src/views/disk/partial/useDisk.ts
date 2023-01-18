@@ -85,7 +85,7 @@ const useDisk: IUseDisk = (diskOptions: IUseDiskOption = { base: '/drive/folder'
   const current = <DiskState>reactive({ id: undefined, path: undefined, search: '', nextPage: '', orderBy: '' })
   const sortOption = useLocalStorageState<Record<string, any>>('ordeyBy', { key: 'name', type: 'asc' })
 
-  const { hasAuth, addAuth, getAuth, removeAuth, geneAuth } = useFolderAuth()
+  const { addAuth, removeAuth, geneAuth } = useFolderAuth()
 
   const basePath = diskOptions.base || ''
   const paths = computed(() => {
@@ -186,10 +186,6 @@ const useDisk: IUseDisk = (diskOptions: IUseDiskOption = { base: '/drive/folder'
 
       diskConfig.value = Object.assign(res.config || {}, { id: res.id })
 
-      current.path = options.path
-      current.id = options.id
-      current.search = options.search || undefined
-
       error.code = 0
       error.message = ''
 
@@ -200,6 +196,8 @@ const useDisk: IUseDisk = (diskOptions: IUseDiskOption = { base: '/drive/folder'
     }
 
     current.search = options.search || undefined
+    current.id = options.id
+    current.path = options.path
 
     if (diskOptions?.routeSlient !== true && !usePage && stateChange) {
       const target = options.path || ''
@@ -207,7 +205,13 @@ const useDisk: IUseDisk = (diskOptions: IUseDiskOption = { base: '/drive/folder'
       let url = (basePath + target).replace(/\/+/g, '/')
       if (current.search) {
         url += '?search=' + current.search
+        // only support global search
+        if (diskConfig.value.search == 1) {
+          url = basePath + '/' + diskConfig.value.drive + '?search=' + current.search
+          current.path = '/' + diskConfig.value.drive
+        }
       }
+
       router.push(url)
     }
 
@@ -216,24 +220,23 @@ const useDisk: IUseDisk = (diskOptions: IUseDiskOption = { base: '/drive/folder'
     updateHandlers.forEach((cb: Handler) => cb())
   }
 
-  const setPath = async ({ ...options }: IQuery = {}, reload = false) => {
+  const setPath = async ({ ...options }: IQuery = {}, reload = false, next = false) => {
     if (options.path) {
       options.path = options.path.replace(/\/{2,}/g, '/')
     }
-    if (options.search) {
-      reload = true
-    } else {
-      // if last route is search
-      if (current.search) {
-        reload = true
-      }
-    }
-    console.log(options.path, current.path)
-    if (options.path == current.path && !options.auth && !reload) return
 
+    const isSameQuery = options.path == current.path && options.search == current.search
+
+    if (isSameQuery && !options.auth && !reload) return
+
+    if (options.search) {
+      current.nextPage = undefined
+    }
     controller?.abort()
 
     loading.value = true
+
+    if (options.path != current.path) current.nextPage = ''
 
     if (options.id && !options.path) {
       const resp = await request.filePath({ id: options.id })
@@ -259,7 +262,7 @@ const useDisk: IUseDisk = (diskOptions: IUseDiskOption = { base: '/drive/folder'
   }
 
   const loadMore = () => {
-    console.log('====>', current.id, current.path)
+    console.log('====> load more', current.id, current.path)
     if (loading.value || !current.nextPage) {
       return
     }
@@ -270,6 +273,9 @@ const useDisk: IUseDisk = (diskOptions: IUseDiskOption = { base: '/drive/folder'
     })
   }
 
+  const reload = () => {
+    setPath({ id: current.id, path: current.path, search: current.search }, true)
+  }
   const mutate = (file: IFile, isRemove = false) => {
     const idx = files.value.findIndex((i) => i.id == file.id)
     if (idx >= 0) {
@@ -292,12 +298,14 @@ const useDisk: IUseDisk = (diskOptions: IUseDiskOption = { base: '/drive/folder'
     updateHandlers.push(cb)
     return cancel
   }
+
   const instance = {
     setPath,
     files,
     paths,
     loading,
     error,
+    reload,
     loadMore,
     diskConfig,
     mutate,

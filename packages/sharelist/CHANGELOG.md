@@ -1,3 +1,22 @@
+## 0.4.1 (2025-06-12)
+
+
+### Bug Fixes
+
+* fix some bugs ([23cd7f9](https://github.com/reruin/sharelist/commit/23cd7f99d5af27b08cba08109c2107a3a6d04089))
+* **guide:** fix wrong function call ([01e5a78](https://github.com/reruin/sharelist/commit/01e5a78f54b59ddcb8ac04b2d1c1297710f5946d))
+* **plugin:** baidu guide([#564](https://github.com/reruin/sharelist/issues/564)) ([219b524](https://github.com/reruin/sharelist/commit/219b524e0604751fae84eca3c65b350a479817eb))
+* **web:** fix bugs([#723](https://github.com/reruin/sharelist/issues/723),[#747](https://github.com/reruin/sharelist/issues/747)) ([10d2550](https://github.com/reruin/sharelist/commit/10d25502248811a2d313d442f40592c66a5cd443))
+
+
+### Features
+
+* support custom script/css ([8af3902](https://github.com/reruin/sharelist/commit/8af390226a63373477d597a6f6b231e1c34f6cfa))
+* **webdav:** auth ([2499979](https://github.com/reruin/sharelist/commit/2499979dcd8392864f505268411dbce15cd810dc))
+* **webdav:** support option configuration of webdav ([d667a83](https://github.com/reruin/sharelist/commit/d667a830f8008a857d6ae827213d76992edbe306))
+
+
+
 ## [0.3.15](https://github.com/reruin/sharelist/compare/v0.3.14...v0.3.15) (2022-01-05)
 
 

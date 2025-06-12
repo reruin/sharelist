@@ -6,6 +6,7 @@ dist/
 /packages/sharelist/cache/
 /packages/sharelist/web/
 /packages/sharelist/plugin/
+/packages/sharelist/example
 .vscode/
 *.lock
 *.log

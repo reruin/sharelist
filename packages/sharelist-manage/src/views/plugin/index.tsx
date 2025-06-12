@@ -33,7 +33,7 @@ export default defineComponent({
           closable: true,
           content: (
             <div>
-              <CodeEditor style="mac-height:65vh;" defaultValue={input} onUpdate={(data: string) => newData = data} />
+              <CodeEditor style="max-height:65vh;" defaultValue={input} onUpdate={(data: string) => newData = data} />
             </div>
           ),
           onOk: () => setPlugin(data.id, newData),

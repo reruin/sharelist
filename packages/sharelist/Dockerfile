@@ -1,11 +1,9 @@
-FROM node:14-alpine
+FROM node:20-alpine
 LABEL maintainer=reruin
 
 ADD . /sharelist/
 WORKDIR /sharelist
 VOLUME /sharelist/cache
-VOLUME /sharelist/theme
-VOLUME /sharelist/plugin
 
 RUN npm install --production
 

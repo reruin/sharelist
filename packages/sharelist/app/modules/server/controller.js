@@ -41,7 +41,6 @@ module.exports = (sharelist, appConfig) => {
   }
 
   const getManageFile = (file) => {
-    console.log(appConfig, '**')
     if (appConfig.manageDir) {
       return path.join(appConfig.manageDir, file)
     } else {

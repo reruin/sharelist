@@ -8,8 +8,6 @@ const createCache = require('./cache')
 
 const { createConfig, defaultConfigKey } = require('./config')
 
-const { watch } = require('@vue-reactivity/watch')
-
 const utils = require('./utils')
 
 const { createPlugin } = require('./plugin')
@@ -67,16 +65,18 @@ module.exports = async (options) => {
       }
     }
     config.drives = data
+    driver.loadConfig()
+
   }
 
   //if config update/create
-  watch(
-    () => config.drives,
-    (nv, ov) => {
-      console.log('drive config changed')
-      driver.loadConfig()
-    },
-  )
+  // watch(
+  //   () => config.drives,
+  //   (nv, ov) => {
+  //     console.log('drive config changed')
+  //     driver.loadConfig()
+  //   },
+  // )
 
   return {
     config,

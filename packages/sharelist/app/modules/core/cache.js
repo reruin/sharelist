@@ -1,7 +1,7 @@
 const createDB = require('./db')
 
-module.exports = (path, { autoSave = true } = {}) => {
-  let { data, save } = createDB(path, { autoSave })
+module.exports = (path) => {
+  let { data, save } = createDB(path)
 
   const get = (id) => {
     if (id === undefined) return data
@@ -17,6 +17,7 @@ module.exports = (path, { autoSave = true } = {}) => {
 
   const set = (id, value, max_age) => {
     data[id] = { data: value, expired_at: Date.now() + max_age }
+    save()
     return value
   }
 
@@ -28,15 +29,18 @@ module.exports = (path, { autoSave = true } = {}) => {
         delete data[key]
       }
     }
+    save()
   }
 
   const remove = (key) => {
     delete data[key]
+    save()
   }
 
   // remove expired data
   for (let key in data) {
     get(key, data)
+    save()
   }
 
   return {

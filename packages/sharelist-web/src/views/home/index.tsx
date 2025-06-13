@@ -21,7 +21,7 @@ export default defineComponent({
 
     const { config } = useConfig()
 
-    const { loading, files, error, setPath, paths, loadMore, diskConfig, current: currentDisk, setAuth, setSort, sortConfig } = useDisk()
+    const { loading, files, error, setPath, paths, loadMore, diskConfig, current: currentDisk, setAuth, setSort, sortConfig, onUpdate } = useDisk()
 
     const { id: mediaId, setPlayer } = usePlayer('player')
 
@@ -32,13 +32,12 @@ export default defineComponent({
     const driveEl = ref()
 
     onMounted(() => {
-      setNode(driveEl.value)
+      setNode(document.documentElement, window)
     })
 
     onUnmounted(() => {
       cancelScroll?.()
     })
-
 
     const onTagClick = ({ path, index }: any = {}) => {
       if (path == '/') {

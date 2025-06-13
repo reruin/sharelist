@@ -77,7 +77,7 @@ exports.getFiles = async (driver, config, runtime) => {
 
 
   if (data.config) {
-    console.log('SET data config', runtime.driveName)
+    // console.log('SET data config', runtime.driveName)
     data.config = filterConfig(data.config)
     data.config.drive = runtime.driveName
   }

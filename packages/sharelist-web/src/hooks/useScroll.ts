@@ -10,7 +10,7 @@ interface RequestOptions<T, P> {
 }
 
 interface actions<T> {
-  setNode(el: Element): void
+  setNode(el: Element, target: Element | Window): void
   scrollTo(pos: number): void
   cancel: () => void
   isScroll: Ref<boolean>
@@ -26,12 +26,12 @@ export const useScroll = <T extends useScrollOption, P extends Array<any>>(
 ): actions<T> => {
   let el: Element
   const isScroll = ref(false)
-  const setNode = (v: Element) => {
+  const setNode = (v: Element, target: Element | Window) => {
     if (el) {
       cancel()
     }
     el = v
-    el.addEventListener('scroll', onDomScroll)
+    target.addEventListener('scroll', onDomScroll)
   }
 
   const cancel = () => {

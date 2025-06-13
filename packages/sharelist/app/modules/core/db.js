@@ -4,10 +4,6 @@ const fs = require('fs')
 
 const writeFileAtomic = require('write-file-atomic')
 
-const { watch } = require('@vue-reactivity/watch')
-
-const { reactive } = require('@vue/reactivity')
-
 const mkdir = function (p) {
   if (fs.existsSync(p) == false) {
     mkdir(path.dirname(p))
@@ -72,11 +68,11 @@ const setData = (filepath, { base64 } = {}, value) => {
 
     writeFileAtomic.sync(filepath, value)
   } catch (error) {
-    //throw error;
+    throw error;
   }
 }
 
-const createdb = (path, { autoSave, debug } = { autoSave: false }, defaults = {}) => {
+const createdb = (path, { autoSave, debug } = {}, defaults = {}) => {
   let data = merge(defaults, getData(path))
 
   let handler
@@ -92,10 +88,6 @@ const createdb = (path, { autoSave, debug } = { autoSave: false }, defaults = {}
     })
   }
 
-  if (autoSave) {
-    data = reactive(data)
-    watch(data, save, { deep: true })
-  }
 
   return { data, save }
 }
